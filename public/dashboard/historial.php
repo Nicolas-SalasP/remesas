@@ -1,12 +1,15 @@
 <?php
-    // Proteger la página
+    // 1. Proteger la página: si no hay sesión, redirige al login.
     require_once '../../src/core/session.php';
-    require_once '../../src/database/db_connection.php';
     
+    // 2. Incluir la configuración y la conexión a la BD
+    require_once '../../src/database/connection.php';
+    
+    // 3. Definir título y cargar la cabecera del HTML
     $pageTitle = 'Mi Historial';
     require_once '../../src/templates/header.php';
 
-    // Obtener las transacciones del usuario logueado
+    // 4. LÓGICA PARA BUSCAR LAS TRANSACCIONES DEL USUARIO
     $userID = $_SESSION['user_id'];
     $transacciones = [];
     
@@ -32,50 +35,51 @@
     $conexion->close();
 ?>
 
-<div class="container page-content">
-    <h1>Mi Historial de Transacciones</h1>
-    
-    <?php if (empty($transacciones)): ?>
-        <p>Aún no has realizado ninguna transacción. <a href="/remesas/public/dashboard/">Haz tu primer envío aquí.</a></p>
-    <?php else: ?>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Fecha</th>
-                        <th>Destino</th>
-                        <th>Beneficiario</th>
-                        <th>Monto Enviado</th>
-                        <th>Monto a Recibir</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($transacciones as $tx): ?>
+<div class="container mt-4">
+    <div class="card p-4 p-md-5 shadow-sm">
+        <h1 class="mb-4">Mi Historial de Transacciones</h1>
+        
+        <?php if (empty($transacciones)): ?>
+            <div class="alert alert-info">Aún no has realizado ninguna transacción. <a href="/remesas/public/dashboard/">Haz tu primer envío aquí.</a></div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead class="table-light">
                         <tr>
-                            <td><?php echo htmlspecialchars($tx['TransaccionID']); ?></td>
-                            <td><?php echo date("d/m/Y H:i", strtotime($tx['FechaTransaccion'])); ?></td>
-                            <td><?php echo htmlspecialchars($tx['PaisDestino']); ?></td>
-                            <td><?php echo htmlspecialchars($tx['BeneficiarioAlias']); ?></td>
-                            <td><?php echo htmlspecialchars($tx['MontoOrigen']) . ' ' . htmlspecialchars($tx['MonedaOrigen']); ?></td>
-                            <td><?php echo htmlspecialchars($tx['MontoDestino']) . ' ' . htmlspecialchars($tx['MonedaDestino']); ?></td>
-                            <td><span class="status <?php echo strtolower(str_replace(' ', '-', $tx['Estado'])); ?>"><?php echo htmlspecialchars($tx['Estado']); ?></span></td>
-                            <td>
-                                <?php if ($tx['Estado'] == 'Pendiente de Pago'): ?>
-                                    <a href="#" class="action-link">Subir Comprobante</a>
-                                <?php endif; ?>
-                                <a href="#" class="action-link">Ver PDF</a>
-                            </td>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Destino</th>
+                            <th>Beneficiario</th>
+                            <th>Monto Enviado</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    <?php endif; ?>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($transacciones as $tx): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($tx['TransaccionID']); ?></td>
+                                <td><?php echo date("d/m/Y H:i", strtotime($tx['FechaTransaccion'])); ?></td>
+                                <td><?php echo htmlspecialchars($tx['PaisDestino']); ?></td>
+                                <td><?php echo htmlspecialchars($tx['BeneficiarioAlias']); ?></td>
+                                <td><?php echo htmlspecialchars(number_format($tx['MontoOrigen'], 2)) . ' ' . htmlspecialchars($tx['MonedaOrigen']); ?></td>
+                                <td><span class="badge <?php echo 'status-' . strtolower(str_replace(' ', '-', $tx['Estado'])); ?>"><?php echo htmlspecialchars($tx['Estado']); ?></span></td>
+                                <td>
+                                    <?php if ($tx['Estado'] == 'Pendiente de Pago'): ?>
+                                        <a href="#" class="btn btn-sm btn-warning">Subir Comprobante</a>
+                                    <?php endif; ?>
+                                    <a href="#" class="btn btn-sm btn-info">Ver PDF</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <?php
+    // 6. Cargar el pie de página
     require_once '../../src/templates/footer.php';
 ?>

@@ -1,245 +1,95 @@
-/* --- Variables de Color para fácil personalización --- */
+/* --- Variables de Color para la Marca --- */
 :root {
-    --primary-color: #0056b3; /* Un azul corporativo fuerte */
-    --secondary-color: #007bff; /* Un azul más brillante para interacciones */
-    --dark-color: #212529;      /* Texto principal */
-    --light-color: #f8f9fa;     /* Fondos suaves */
-    --gray-color: #6c757d;      /* Texto secundario */
-    --white-color: #ffffff;
-    --border-color: #dee2e6;
+    --primary-color: #0056b3;
+    --secondary-color: #007bff;
+    --dark-color: #212529;
+    --gray-color: #6c757d;
 }
 
-/* --- Reseteo y Estilos Globales --- */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
+/* --- Estilos Globales y Ajustes a Bootstrap --- */
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: var(--light-color);
-    color: var(--dark-color);
-    line-height: 1.6;
+    background-color: #f8f9fa; 
 }
 
-.container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
-}
-
-/* --- Cabecera y Navegación --- */
-.main-header {
-    background-color: var(--white-color);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.main-header .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
+/* --- Clases Personalizadas --- */
 .logo {
     font-size: 1.5rem;
     font-weight: 700;
+    color: var(--primary-color) !important; 
+}
+
+/* --- Estilos para el Formulario Multi-Paso --- */
+/* Por defecto, todos los pasos están ocultos */
+.form-step {
+    display: none;
+}
+/* La clase .active, que controla el JS, hace visible el paso actual */
+.form-step.active {
+    display: block;
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Estilos para Pestañas de Login/Registro --- */
+.auth-container {
+    max-width: 500px;
+    margin: 1rem auto;
+}
+.auth-tabs {
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1.5rem;
+}
+.tab-link {
+    padding: 0.8rem 1.2rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--gray-color);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px; /* Alinea con el borde inferior */
+}
+.tab-link.active {
     color: var(--primary-color);
-    text-decoration: none;
+    border-bottom-color: var(--primary-color);
+}
+.auth-form {
+    display: none;
+}
+.auth-form.active {
+    display: block;
 }
 
-.main-nav ul {
-    list-style: none;
-    display: flex;
-    gap: 1.5rem;
+/* --- Estilos para Badges de Estado en la tabla de Historial --- */
+.badge.status-pendiente-de-pago {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+.badge.status-verificando-pago {
+    background-color: #17a2b8 !important;
+}
+.badge.status-completada {
+    background-color: #28a745 !important;
+}
+.badge.status-cancelada {
+    background-color: #dc3545 !important;
 }
 
-.main-nav a {
+/* --- Estilos para el Footer --- */
+.main-footer .logo-footer {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.main-footer a.text-reset {
     text-decoration: none;
-    color: var(--dark-color);
-    font-weight: 500;
     transition: color 0.3s ease;
 }
-
-.main-nav a:hover {
-    color: var(--secondary-color);
+.main-footer a.text-reset:hover {
+    text-decoration: underline;
+    color: var(--secondary-color) !important;
 }
-
-/* --- Botones --- */
-.btn {
-    padding: 0.7rem 1.5rem;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.btn-primary {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-}
-
-.btn-primary:hover {
-    background-color: var(--secondary-color);
-    transform: translateY(-2px);
-}
-
-/* --- Contenido Principal --- */
-main {
-    padding: 3rem 0;
-}
-
-/* --- Pie de Página --- */
-.main-footer {
-    background-color: var(--dark-color);
-    color: var(--light-color);
-    text-align: center;
-    padding: 2rem 0;
-    margin-top: 3rem;
-}
-
-/* --- Estilos para la Página de Inicio --- */
-.hero {
-    text-align: center;
-    padding: 4rem 1rem;
-    background-color: var(--white-color);
-    border-radius: 8px;
-}
-
-.hero h1 {
-    font-size: 2.8rem;
-    margin-bottom: 1rem;
-    color: var(--primary-color);
-}
-
-.hero p {
-    font-size: 1.2rem;
-    color: var(--gray-color);
-    margin-bottom: 2rem;
-}
-
-.features {
-    display: flex;
-    gap: 2rem;
-    margin-top: 3rem;
-    text-align: center;
-}
-
-.feature-item {
-    background: var(--white-color);
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    flex: 1;
-}
-
-.feature-item h3 {
-    margin-bottom: 1rem;
-    color: var(--primary-color);
-}
-
-#chart-container {
-    background: var(--white-color);
-    padding: 2rem;
-    margin-top: 3rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-/* --- NUEVOS ESTILOS PARA PÁGINAS DE CONTENIDO Y FORMULARIOS --- */
-
-.page-content {
-    background-color: var(--white-color);
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.text-center { text-align: center; }
-.subtitle { font-size: 1.2rem; color: var(--gray-color); margin-bottom: 2rem; }
-.content-section { margin-bottom: 2rem; }
-
-/* Estilos para formularios de contacto y login/registro */
-.form-container-small, .auth-container {
-    max-width: 500px;
-    margin: 2rem auto;
-    background: var(--white-color);
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.form-group { margin-bottom: 1.2rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-.form-group input, .form-group select, .form-group textarea {
-    width: 100%; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-size: 1rem;
-}
-
-.btn-full-width { width: 100%; padding: 1rem; }
-.form-row { display: flex; gap: 1rem; }
-.form-row .form-group { flex: 1; }
-
-/* Estilos para Pestañas de Login/Registro */
-.auth-tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
-.tab-link {
-    padding: 0.8rem 1.2rem; border: none; background: none; cursor: pointer;
-    font-size: 1.1rem; color: var(--gray-color); font-weight: 500;
-    border-bottom: 3px solid transparent;
-}
-.tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-.auth-form { display: none; }
-.auth-form.active { display: block; }
-
-/* --- NUEVOS ESTILOS PARA DASHBOARD --- */
-.welcome-user {
-    margin-right: 1rem;
-    color: var(--gray-color);
-}
-.btn-secondary {
-    background-color: var(--gray-color);
-    color: var(--white-color);
-}
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-}
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 2rem;
-}
-th, td {
-    padding: 0.8rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
-th {
-    background-color: var(--light-color);
-    font-weight: 600;
-}
-.status {
-    padding: 0.2rem 0.6rem;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--white-color);
-}
-.status.pendiente-de-pago { background-color: #ffc107; color: var(--dark-color); }
-.status.verificando-pago { background-color: #17a2b8; }
-.status.completada { background-color: #28a745; }
-.status.cancelada { background-color: #dc3545; }
-
-.action-link {
-    font-size: 0.9rem;
-    color: var(--primary-color);
-    text-decoration: none;
-    margin-right: 0.5rem;
-}
-.action-link:hover { text-decoration: underline; }

@@ -1,5 +1,6 @@
 <?php
     $pageTitle = 'Ingresar o Registrarse';
+    $pageScript = 'login.js'; 
     require_once '../src/templates/header.php';
 ?>
 
@@ -11,65 +12,72 @@
         </div>
 
         <div id="login-form" class="auth-form active">
-            <form>
-                <div class="form-group">
-                    <label for="login-email">Correo Electrónico</label>
-                    <input type="email" id="login-email" required>
+            <form id="form-login">
+                <div class="mb-3">
+                    <label for="login-email" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control" id="login-email" name="email" required>
                 </div>
-                <div class="form-group">
-                    <label for="login-password">Contraseña</label>
-                    <input type="password" id="login-password" required>
+                <div class="mb-3">
+                    <label for="login-password" class="form-label">Contraseña</label>
+                    <input type="password" class="form-control" id="login-password" name="password" required>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full-width">Ingresar</button>
+                <button type="submit" class="btn btn-primary w-100 py-2">Ingresar</button>
             </form>
         </div>
 
         <div id="register-form" class="auth-form">
-            <form>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="reg-firstname">Primer Nombre</label>
-                        <input type="text" id="reg-firstname" required>
+            <form id="form-registro" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="reg-firstname" class="form-label">Primer Nombre</label>
+                        <input type="text" class="form-control" id="reg-firstname" name="primerNombre" required>
                     </div>
-                    <div class="form-group">
-                        <label for="reg-secondname">Segundo Nombre</label>
-                        <input type="text" id="reg-secondname">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="reg-lastname1">Primer Apellido</label>
-                        <input type="text" id="reg-lastname1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="reg-lastname2">Segundo Apellido</label>
-                        <input type="text" id="reg-lastname2">
+                    <div class="col-md-6 mb-3">
+                        <label for="reg-secondname" class="form-label">Segundo Nombre</label>
+                        <input type="text" class="form-control" id="reg-secondname" name="segundoNombre">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="reg-email">Correo Electrónico</label>
-                    <input type="email" id="reg-email" required>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="reg-lastname1" class="form-label">Primer Apellido</label>
+                        <input type="text" class="form-control" id="reg-lastname1" name="primerApellido" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="reg-lastname2" class="form-label">Segundo Apellido</label>
+                        <input type="text" class="form-control" id="reg-lastname2" name="segundoApellido">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="reg-doc-type">Tipo de Documento</label>
-                    <select id="reg-doc-type" required>
-                        <option value="">Selecciona...</option>
-                        <option value="RUT">RUT</option>
-                        <option value="Cédula Venezolana">Cédula Venezolana</option>
-                        <option value="Cédula Colombiana">Cédula Colombiana</option>
-                        <option value="Pasaporte">Pasaporte</option>
-                        <option value="Otro">Otro</option>
-                    </select>
+                <div class="mb-3">
+                    <label for="reg-email" class="form-label">Correo Electrónico</label>
+                    <input type="email" class="form-control" id="reg-email" name="email" required>
                 </div>
-                <div class="form-group">
-                    <label for="reg-doc-number">Número de Documento</label>
-                    <input type="text" id="reg-doc-number" required>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="reg-doc-type" class="form-label">Tipo de Documento</label>
+                        <select id="reg-doc-type" name="tipoDocumento" class="form-select" required>
+                            <option value="">Selecciona...</option>
+                            <option value="RUT">RUT</option>
+                            <option value="Cédula Venezolana">Cédula Venezolana</option>
+                            <option value="Cédula Colombiana">Cédula Colombiana</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="reg-doc-number" class="form-label">Número de Documento</label>
+                        <input type="text" class="form-control" id="reg-doc-number" name="numeroDocumento" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="reg-password">Crear Contraseña</label>
-                    <input type="password" id="reg-password" required>
+                <div class="mb-3">
+                    <label for="reg-doc-image" class="form-label">Imagen de tu Documento (JPG, PNG)</label>
+                    <input class="form-control" type="file" id="reg-doc-image" name="docImage" accept="image/png, image/jpeg" required>
+                    <div class="form-text">Asegúrate de que la imagen sea clara y legible.</div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full-width">Crear Cuenta</button>
+                <div class="mb-3">
+                    <label for="reg-password" class="form-label">Crear Contraseña</label>
+                    <input type="password" class="form-control" id="reg-password" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2">Crear Cuenta</button>
             </form>
         </div>
     </div>

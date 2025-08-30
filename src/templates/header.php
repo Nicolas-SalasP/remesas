@@ -1,5 +1,5 @@
 <?php
-    // Debemos iniciar la sesión en la cabecera para poder leer si el usuario está logueado
+    require_once __DIR__ . '/../config.php';
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
@@ -9,40 +9,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($pageTitle) ? $pageTitle . ' - Tu Empresa' : 'Tu Empresa de Remesas'; ?></title>
-    <link rel="stylesheet" href="/remesas/public/assets/css/style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) . ' - Tu Empresa' : 'Tu Empresa de Remesas'; ?></title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100 bg-light">
 
-    <header class="main-header">
+<header class="main-header shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white">
         <div class="container">
-            <a href="/remesas/public/index.php" class="logo">
-                TuLogo
-            </a>
-            <nav class="main-nav">
-                <ul>
-                    <li><a href="/remesas/public/index.php">Inicio</a></li>
+            <a class="navbar-brand logo" href="<?php echo BASE_URL; ?>/index.php">TuLogo</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
                     <?php if (isset($_SESSION['user_id'])): ?>
-                        <li><a href="/remesas/public/dashboard/">Realizar Transacción</a></li>
-                        <li><a href="/remesas/public/dashboard/historial.php">Mi Historial</a></li>
+                        <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
+                        <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>
                     <?php else: ?>
-                        <li><a href="/remesas/public/quienes-somos.php">Quiénes Somos</a></li>
-                        <li><a href="/remesas/public/contacto.php">Contacto</a></li>
+                        <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/quienes-somos.php">Quiénes Somos</a></li>
+                        <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/contacto.php">Contacto</a></li>
                     <?php endif; ?>
                 </ul>
-            </nav>
-            <div class="header-actions">
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <span class="welcome-user">Hola, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
-                    <a href="/remesas/public/logout.php" class="btn btn-secondary">Salir</a>
-                <?php else: ?>
-                    <a href="/remesas/public/login.php" class="btn btn-primary">Ingresar / Registrarse</a>
-                <?php endif; ?>
+                <div class="d-flex align-items-center">
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <span class="navbar-text me-3">Hola, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
+                        <a href="<?php echo BASE_URL; ?>/logout.php" class="btn btn-secondary">Salir</a>
+                    <?php else: ?>
+                        <a href="<?php echo BASE_URL; ?>/login.php" class="btn btn-primary">Ingresar / Registrarse</a>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-    </header>
-
-    <main>
+    </nav>
+</header>
+<main class="flex-grow-1 py-5">
