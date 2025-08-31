@@ -1,18 +1,13 @@
 <?php
 
 class UserController {
-    private $db; // Para guardar la conexión a la base de datos
+    private $db; 
 
-    // El constructor recibe la conexión a la BD cuando se crea el objeto
     public function __construct(mysqli $conexion) {
         $this->db = $conexion;
     }
 
-    /**
-     * Gestiona el registro de un nuevo usuario.
-     */
     public function register() {
-        // Leemos datos de $_POST y $_FILES, ya que el formulario envía FormData
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
         
@@ -67,9 +62,6 @@ class UserController {
         $stmt->close();
     }
 
-    /**
-     * Gestiona el inicio de sesión de un usuario.
-     */
     public function login() {
         $data = json_decode(file_get_contents('php://input'), true);
 
@@ -97,4 +89,5 @@ class UserController {
         }
         $stmt->close();
     }
+    
 }

@@ -53,11 +53,11 @@ const loadPaises = async (rol, selectElement) => {
 };
 
 const loadBeneficiaries = async (userID, paisID) => {
-    beneficiaryListDiv.innerHTML = '<p>Cargando...</p>';
+    beneficiaryListDiv.innerHTML = '<p class="text-muted">Cargando cuentas...</p>';
     try {
         const response = await fetch(`../api/?accion=getCuentas&userID=${userID}&paisID=${paisID}`);
         const cuentas = await response.json();
-        beneficiaryListDiv.innerHTML = ''; // Limpiar
+        beneficiaryListDiv.innerHTML = '';
         if (cuentas.length > 0) {
             cuentas.forEach(cuenta => {
                 beneficiaryListDiv.innerHTML += `
@@ -78,22 +78,28 @@ const calculateRate = async () => {
     const origenID = paisOrigenSelect.value;
     const destinoID = paisDestinoSelect.value;
     const monto = parseFloat(montoOrigenInput.value) || 0;
-    if (!origenID || !destinoID || monto <= 0) return;
+    if (!origenID || !destinoID || monto <= 0) {
+        tasaDisplayInput.value = '';
+        montoDestinoInput.value = '';
+        return;
+    }
     try {
         const response = await fetch(`../api/?accion=getTasa&origenID=${origenID}&destinoID=${destinoID}`);
         const tasaInfo = await response.json();
         if (tasaInfo && tasaInfo.ValorTasa) {
-            tasaDisplayInput.value = tasaInfo.ValorTasa;
+            const tasa = parseFloat(tasaInfo.ValorTasa);
+            tasaDisplayInput.value = tasa;
             selectedTasaIdInput.value = tasaInfo.TasaID;
-            montoDestinoInput.value = (monto * parseFloat(tasaInfo.ValorTasa)).toFixed(2);
+            montoDestinoInput.value = (monto * tasa).toFixed(2);
         } else {
              tasaDisplayInput.value = 'Ruta no disponible';
              montoDestinoInput.value = '';
         }
-    } catch (e) { /* Manejar error */ }
+    } catch (e) { console.error('Error calculando la tasa:', e); }
 };
 
 const createSummary = async () => {
+    // Aquí podrías hacer una llamada a la API para obtener los detalles completos del beneficiario si quisieras
     summaryContainer.innerHTML = `
         <div class="list-group">
             <div class="list-group-item d-flex justify-content-between"><span>País Origen:</span> <strong>${paisOrigenSelect.options[paisOrigenSelect.selectedIndex].text}</strong></div>
@@ -109,9 +115,9 @@ const submitTransaction = async () => {
         cuentaID: selectedCuentaIdInput.value,
         tasaID: selectedTasaIdInput.value,
         montoOrigen: montoOrigenInput.value,
-        monedaOrigen: 'CLP',
+        monedaOrigen: 'CLP', // Esto debería ser dinámico en el futuro
         montoDestino: montoDestinoInput.value,
-        monedaDestino: 'VES'
+        monedaDestino: 'VES' // Esto también
     };
     try {
         const response = await fetch('../api/?accion=createTransaccion', {
@@ -125,7 +131,7 @@ const submitTransaction = async () => {
             currentStep++;
             updateView();
         } else {
-            alert('Error: ' + result.error);
+            alert('Error al registrar la orden: ' + result.error);
         }
     } catch (e) { alert('No se pudo conectar con el servidor.'); }
 };
@@ -140,8 +146,9 @@ nextBtn.addEventListener('click', async () => {
             isValid = true;
         } else { alert('Debes seleccionar un país de origen y destino.'); }
     } else if (currentStep === 2) {
-        if (document.querySelector('input[name="beneficiary-radio"]:checked')) {
-            selectedCuentaIdInput.value = document.querySelector('input[name="beneficiary-radio"]:checked').value;
+        const selectedAccount = document.querySelector('input[name="beneficiary-radio"]:checked');
+        if (selectedAccount) {
+            selectedCuentaIdInput.value = selectedAccount.value;
             isValid = true;
         } else { alert('Debes seleccionar una cuenta de beneficiario.'); }
     } else if (currentStep === 3) {
@@ -150,6 +157,7 @@ nextBtn.addEventListener('click', async () => {
             isValid = true;
         } else { alert('Debes ingresar un monto válido.'); }
     }
+    
     if (isValid && currentStep < 4) {
         currentStep++;
         updateView();
@@ -163,7 +171,13 @@ prevBtn.addEventListener('click', () => {
     }
 });
 
-paisOrigenSelect.addEventListener('change', () => loadPaises('Destino', paisDestinoSelect));
+paisOrigenSelect.addEventListener('change', () => {
+    paisDestinoSelect.innerHTML = '<option value="">Cargando...</option>';
+    if (paisOrigenSelect.value) {
+        loadPaises('Destino', paisDestinoSelect);
+    }
+});
+
 montoOrigenInput.addEventListener('input', calculateRate);
 if(submitBtn) submitBtn.addEventListener('click', submitTransaction);
 
