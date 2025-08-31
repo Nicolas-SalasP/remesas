@@ -1,6 +1,5 @@
-import { calculateDv, formatRut } from '../components/rut-validator.js';
+import { calculateDv } from '../components/rut-validator.js';
 
-// El código se ejecuta al cargar, ya que este script solo se usa en la página de login.
 const authContainer = document.querySelector('.auth-container');
 if (authContainer) {
     const tabLinks = authContainer.querySelectorAll('.tab-link');
@@ -10,7 +9,7 @@ if (authContainer) {
     const docTypeSelect = document.getElementById('reg-doc-type');
     const docNumberInput = document.getElementById('reg-doc-number');
 
-    // --- LÓGICA PARA CAMBIAR ENTRE PESTAÑAS "INGRESAR" Y "REGISTRARSE" ---
+    // Lógica para cambiar entre pestañas (sin cambios)
     tabLinks.forEach(link => {
         link.addEventListener('click', () => {
             tabLinks.forEach(item => item.classList.remove('active'));
@@ -20,50 +19,20 @@ if (authContainer) {
         });
     });
     
-    // --- LÓGICA PARA EL FORMATEO INTELIGENTE DEL RUT ---
-    const handleRutInput = () => {
-        // Limpiar el input a solo números
-        let rutBody = docNumberInput.value.replace(/[^0-9]/g, '');
-        
-        // Truncar si es más largo que 9 dígitos
-        if (rutBody.length > 9) {
-            rutBody = rutBody.slice(0, 9);
-        }
+    // --- SE HA ELIMINADO LA LÓGICA DE FORMATEO EN TIEMPO REAL ---
 
-        // Solo formatear cuando el cuerpo del RUT es suficientemente largo
-        if (rutBody.length >= 7) {
-            const dv = calculateDv(rutBody);
-            docNumberInput.value = formatRut(rutBody + dv);
-        } else {
-            // Si es corto, solo mostrar los números limpios sin formato
-            docNumberInput.value = rutBody;
-        }
-    };
-    
-    // Activar/desactivar la lógica del RUT según el tipo de documento seleccionado
-    docTypeSelect.addEventListener('change', () => {
-        docNumberInput.value = '';
-        if (docTypeSelect.value === 'RUT') {
-            docNumberInput.setAttribute('maxlength', '12');
-            docNumberInput.addEventListener('input', handleRutInput);
-        } else {
-            docNumberInput.removeAttribute('maxlength');
-            docNumberInput.removeEventListener('input', handleRutInput);
-        }
-    });
-
-    // --- MANEJO DEL ENVÍO DEL FORMULARIO DE LOGIN ---
+    // Manejar envío del formulario de LOGIN
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = {
+        const loginData = {
             email: document.getElementById('login-email').value,
             password: document.getElementById('login-password').value
         };
         try {
-            const response = await fetch('api/?accion=loginUser', {
+            const response = await fetch(`${BASE_URL}/api/?accion=loginUser`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(loginData)
             });
             const result = await response.json();
             if (result.success) {
@@ -76,11 +45,11 @@ if (authContainer) {
         }
     });
 
-    // --- MANEJO DEL ENVÍO DEL FORMULARIO DE REGISTRO ---
+    // Manejar envío del formulario de REGISTRO
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // VALIDACIÓN DE RUT ANTES DE ENVIAR
+        // --- VALIDACIÓN DE RUT ANTES DE ENVIAR ---
         if (docTypeSelect.value === 'RUT') {
             const rutCompleto = docNumberInput.value.replace(/[^0-9kK]/g, '').toUpperCase();
             if (rutCompleto.length < 2) {
@@ -97,11 +66,10 @@ if (authContainer) {
             }
         }
         
-        // Si la validación pasa, se procede a enviar el formulario
         const formData = new FormData(registerForm);
         
         try {
-            const response = await fetch('api/?accion=registerUser', {
+            const response = await fetch(`${BASE_URL}/api/?accion=registerUser`, {
                 method: 'POST',
                 body: formData
             });

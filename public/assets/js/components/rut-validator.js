@@ -1,6 +1,3 @@
-/**
- * Calcula el Dígito Verificador (DV) de un RUT chileno.
- */
 export function calculateDv(rutBody) {
     let sum = 0;
     let multiplier = 2;

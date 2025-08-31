@@ -4,7 +4,7 @@
 $servidor = "localhost";
 $usuario_db = "root";
 $password_db = "";
-$nombre_db = "remesas_db";
+$nombre_db = "remesas_bd";
 
 // Para cPanel (en vivo):
 // $usuario_db = "usuario_cpanel_db";

@@ -1,6 +1,9 @@
-</main>
-
-<footer class="main-footer bg-dark text-white pt-5 pb-4 mt-auto">
+<?php
+    // Asegurarnos de que la configuración base siempre esté disponible en este archivo.
+    // require_once es seguro, no cargará el archivo dos veces si el header ya lo hizo.
+    require_once __DIR__ . '/../config.php';
+?>
+</main> <footer class="main-footer bg-dark text-white pt-5 pb-4 mt-auto">
     <div class="container text-center text-md-start">
         <div class="row">
             <div class="col-md-3 col-lg-4 col-xl-3 mx-auto mb-4">
