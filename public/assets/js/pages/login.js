@@ -1,5 +1,3 @@
-import { calculateDv } from '../components/rut-validator.js';
-
 const authContainer = document.querySelector('.auth-container');
 if (authContainer) {
     const tabLinks = authContainer.querySelectorAll('.tab-link');
@@ -9,7 +7,7 @@ if (authContainer) {
     const docTypeSelect = document.getElementById('reg-doc-type');
     const docNumberInput = document.getElementById('reg-doc-number');
 
-    // Lógica para cambiar entre pestañas (sin cambios)
+    // --- LÓGICA PARA CAMBIAR ENTRE PESTAÑAS "INGRESAR" Y "REGISTRARSE" ---
     tabLinks.forEach(link => {
         link.addEventListener('click', () => {
             tabLinks.forEach(item => item.classList.remove('active'));
@@ -19,20 +17,46 @@ if (authContainer) {
         });
     });
     
-    // --- SE HA ELIMINADO LA LÓGICA DE FORMATEO EN TIEMPO REAL ---
+    // --- LÓGICA PARA EL FORMATEO INTELIGENTE DEL RUT ---
+    const handleRutInput = () => {
+        let rutBody = docNumberInput.value.replace(/[^0-9]/g, '');
 
-    // Manejar envío del formulario de LOGIN
+        if (rutBody.length > 9) {
+            rutBody = rutBody.slice(0, 9);
+        }
+
+        if (rutBody.length >= 7) {
+            const dv = calculateDv(rutBody);
+            docNumberInput.value = formatRut(rutBody + dv);
+        } else {
+            docNumberInput.value = rutBody;
+        }
+    };
+    
+    // Activar/desactivar la lógica del RUT según el tipo de documento seleccionado
+    docTypeSelect.addEventListener('change', () => {
+        docNumberInput.value = '';
+        if (docTypeSelect.value === 'RUT') {
+            docNumberInput.setAttribute('maxlength', '12');
+            docNumberInput.addEventListener('input', handleRutInput);
+        } else {
+            docNumberInput.removeAttribute('maxlength');
+            docNumberInput.removeEventListener('input', handleRutInput);
+        }
+    });
+
+    // --- MANEJO DEL ENVÍO DEL FORMULARIO DE LOGIN ---
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const loginData = {
+        const formData = {
             email: document.getElementById('login-email').value,
             password: document.getElementById('login-password').value
         };
         try {
-            const response = await fetch(`${BASE_URL}/api/?accion=loginUser`, {
+            const response = await fetch('api/?accion=loginUser', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(loginData)
+                body: JSON.stringify(formData)
             });
             const result = await response.json();
             if (result.success) {
@@ -45,11 +69,11 @@ if (authContainer) {
         }
     });
 
-    // Manejar envío del formulario de REGISTRO
+    // --- MANEJO DEL ENVÍO DEL FORMULARIO DE REGISTRO ---
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // --- VALIDACIÓN DE RUT ANTES DE ENVIAR ---
+        // VALIDACIÓN DE RUT ANTES DE ENVIAR
         if (docTypeSelect.value === 'RUT') {
             const rutCompleto = docNumberInput.value.replace(/[^0-9kK]/g, '').toUpperCase();
             if (rutCompleto.length < 2) {
@@ -62,14 +86,14 @@ if (authContainer) {
 
             if (dvIngresado !== dvCalculado) {
                 alert('El RUT ingresado no es válido. Por favor, revísalo.');
-                return; // Detiene el envío si el DV no coincide
+                return;
             }
         }
         
         const formData = new FormData(registerForm);
         
         try {
-            const response = await fetch(`${BASE_URL}/api/?accion=registerUser`, {
+            const response = await fetch('api/?accion=registerUser', {
                 method: 'POST',
                 body: formData
             });

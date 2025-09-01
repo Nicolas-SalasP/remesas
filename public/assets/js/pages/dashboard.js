@@ -45,7 +45,7 @@ const loadPaises = async (rol, selectElement) => {
         const paises = await response.json();
         selectElement.innerHTML = '<option value="">Selecciona un país</option>';
         paises.forEach(pais => {
-            selectElement.innerHTML += `<option value="${pais.PaisID}">${pais.NombrePais}</option>`;
+            selectElement.innerHTML += `<option value="${pais.PaisID}" data-currency="${pais.CodigoMoneda}">${pais.NombrePais}</option>`;
         });
     } catch (error) {
         selectElement.innerHTML = '<option value="">Error al cargar</option>';
@@ -53,11 +53,11 @@ const loadPaises = async (rol, selectElement) => {
 };
 
 const loadBeneficiaries = async (userID, paisID) => {
-    beneficiaryListDiv.innerHTML = '<p class="text-muted">Cargando cuentas...</p>';
+    beneficiaryListDiv.innerHTML = '<p>Cargando...</p>';
     try {
-        const response = await fetch(`../api/?accion=getCuentas&userID=${userID}&paisID=${paisID}`);
+        const response = await fetch(`../api/?accion=getCuentas&paisID=${paisID}`);
         const cuentas = await response.json();
-        beneficiaryListDiv.innerHTML = '';
+        beneficiaryListDiv.innerHTML = ''; // Limpiar
         if (cuentas.length > 0) {
             cuentas.forEach(cuenta => {
                 beneficiaryListDiv.innerHTML += `
@@ -78,46 +78,60 @@ const calculateRate = async () => {
     const origenID = paisOrigenSelect.value;
     const destinoID = paisDestinoSelect.value;
     const monto = parseFloat(montoOrigenInput.value) || 0;
-    if (!origenID || !destinoID || monto <= 0) {
-        tasaDisplayInput.value = '';
-        montoDestinoInput.value = '';
-        return;
-    }
+    if (!origenID || !destinoID || monto <= 0) return;
     try {
         const response = await fetch(`../api/?accion=getTasa&origenID=${origenID}&destinoID=${destinoID}`);
         const tasaInfo = await response.json();
         if (tasaInfo && tasaInfo.ValorTasa) {
-            const tasa = parseFloat(tasaInfo.ValorTasa);
-            tasaDisplayInput.value = tasa;
+            tasaDisplayInput.value = tasaInfo.ValorTasa;
             selectedTasaIdInput.value = tasaInfo.TasaID;
-            montoDestinoInput.value = (monto * tasa).toFixed(2);
+            montoDestinoInput.value = (monto * parseFloat(tasaInfo.ValorTasa)).toFixed(2);
         } else {
              tasaDisplayInput.value = 'Ruta no disponible';
              montoDestinoInput.value = '';
         }
-    } catch (e) { console.error('Error calculando la tasa:', e); }
+    } catch (e) { /* Manejar error */ }
 };
 
 const createSummary = async () => {
-    // Aquí podrías hacer una llamada a la API para obtener los detalles completos del beneficiario si quisieras
+    const origenOption = paisOrigenSelect.options[paisOrigenSelect.selectedIndex];
+    const destinoOption = paisDestinoSelect.options[paisDestinoSelect.selectedIndex];
+    const monedaOrigen = origenOption.getAttribute('data-currency');
+    const monedaDestino = destinoOption.getAttribute('data-currency');
+
     summaryContainer.innerHTML = `
         <div class="list-group">
-            <div class="list-group-item d-flex justify-content-between"><span>País Origen:</span> <strong>${paisOrigenSelect.options[paisOrigenSelect.selectedIndex].text}</strong></div>
-            <div class="list-group-item d-flex justify-content-between"><span>País Destino:</span> <strong>${paisDestinoSelect.options[paisDestinoSelect.selectedIndex].text}</strong></div>
-            <div class="list-group-item d-flex justify-content-between"><span>Monto a Enviar:</span> <strong>${montoOrigenInput.value} CLP</strong></div>
-            <div class="list-group-item d-flex justify-content-between"><span>Monto a Recibir (Aprox.):</span> <strong>${montoDestinoInput.value} VES</strong></div>
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>País Origen:</span>
+                <strong>${origenOption.text}</strong>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>País Destino:</span>
+                <strong>${destinoOption.text}</strong>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Monto a Enviar:</span>
+                <strong>${montoOrigenInput.value} ${monedaOrigen}</strong>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span>Monto a Recibir (Aprox.):</span>
+                <strong>${montoDestinoInput.value} ${monedaDestino}</strong>
+            </div>
         </div>`;
 };
 
+
 const submitTransaction = async () => {
+    const formaDePagoSelect = document.getElementById('forma-pago');
+
     const transactionData = {
         userID: LOGGED_IN_USER_ID,
         cuentaID: selectedCuentaIdInput.value,
         tasaID: selectedTasaIdInput.value,
         montoOrigen: montoOrigenInput.value,
-        monedaOrigen: 'CLP', // Esto debería ser dinámico en el futuro
+        monedaOrigen: 'CLP',
         montoDestino: montoDestinoInput.value,
-        monedaDestino: 'VES' // Esto también
+        formaDePago: formaDePagoSelect.value 
     };
     try {
         const response = await fetch('../api/?accion=createTransaccion', {
@@ -131,11 +145,25 @@ const submitTransaction = async () => {
             currentStep++;
             updateView();
         } else {
-            alert('Error al registrar la orden: ' + result.error);
+            alert('Error: ' + result.error);
         }
     } catch (e) { alert('No se pudo conectar con el servidor.'); }
 };
 
+const loadFormasDePago = async () => {
+    const formaDePagoSelect = document.getElementById('forma-pago');
+    try {
+        const response = await fetch(`../api/?accion=getFormasDePago`);
+        const opciones = await response.json();
+        
+        formaDePagoSelect.innerHTML = '<option value="">Selecciona una opción...</option>';
+        opciones.forEach(opcion => {
+            formaDePagoSelect.innerHTML += `<option value="${opcion}">${opcion}</option>`;
+        });
+    } catch (error) {
+        formaDePagoSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+};
 
 // --- EVENT LISTENERS ---
 nextBtn.addEventListener('click', async () => {
@@ -146,9 +174,8 @@ nextBtn.addEventListener('click', async () => {
             isValid = true;
         } else { alert('Debes seleccionar un país de origen y destino.'); }
     } else if (currentStep === 2) {
-        const selectedAccount = document.querySelector('input[name="beneficiary-radio"]:checked');
-        if (selectedAccount) {
-            selectedCuentaIdInput.value = selectedAccount.value;
+        if (document.querySelector('input[name="beneficiary-radio"]:checked')) {
+            selectedCuentaIdInput.value = document.querySelector('input[name="beneficiary-radio"]:checked').value;
             isValid = true;
         } else { alert('Debes seleccionar una cuenta de beneficiario.'); }
     } else if (currentStep === 3) {
@@ -157,7 +184,6 @@ nextBtn.addEventListener('click', async () => {
             isValid = true;
         } else { alert('Debes ingresar un monto válido.'); }
     }
-    
     if (isValid && currentStep < 4) {
         currentStep++;
         updateView();
@@ -171,16 +197,84 @@ prevBtn.addEventListener('click', () => {
     }
 });
 
-paisOrigenSelect.addEventListener('change', () => {
-    paisDestinoSelect.innerHTML = '<option value="">Cargando...</option>';
-    if (paisOrigenSelect.value) {
-        loadPaises('Destino', paisDestinoSelect);
-    }
-});
-
+paisOrigenSelect.addEventListener('change', () => loadPaises('Destino', paisDestinoSelect));
 montoOrigenInput.addEventListener('input', calculateRate);
 if(submitBtn) submitBtn.addEventListener('click', submitTransaction);
 
-// --- INICIALIZACIÓN ---
+const addAccountBtn = document.getElementById('add-account-btn');
+const addAccountModalElement = document.getElementById('addAccountModal');
+const addAccountModal = new bootstrap.Modal(addAccountModalElement);
+const addBeneficiaryForm = document.getElementById('add-beneficiary-form');
+const benefPaisIdInput = document.getElementById('benef-pais-id');
+
+addAccountBtn.addEventListener('click', () => {
+    const paisDestinoID = paisDestinoSelect.value;
+    if (!paisDestinoID) {
+        alert('Por favor, selecciona un país de destino antes de añadir una cuenta.');
+        return;
+    }
+    benefPaisIdInput.value = paisDestinoID;
+    addAccountModal.show();
+});
+
+addBeneficiaryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(addBeneficiaryForm);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+        const response = await fetch('../api/?accion=addCuenta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert('¡Cuenta de beneficiario guardada con éxito!');
+            addAccountModal.hide();
+            addBeneficiaryForm.reset();
+            loadBeneficiaries(LOGGED_IN_USER_ID, paisDestinoSelect.value);
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error al guardar la cuenta:', error);
+        alert('No se pudo conectar con el servidor para guardar la cuenta.');
+    }
+});
+
+const numberFormatter = new Intl.NumberFormat('es-ES', {
+    style: 'decimal',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2
+});
+
+montoOrigenInput.addEventListener('blur', () => {
+    console.log('--- Evento BLUR Activado ---');
+    console.log('1. Valor inicial en el campo:', `"${montoOrigenInput.value}"`);
+
+    let valorLimpio = montoOrigenInput.value.replace(/\./g, ''); 
+    valorLimpio = valorLimpio.replace(',', '.'); 
+
+    const valorNumerico = parseFloat(valorLimpio);
+
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+        montoOrigenInput.value = '';
+        montoDestinoInput.value = '';
+        return;
+    }
+    const valorFormateado = numberFormatter.format(valorNumerico);
+    montoOrigenInput.value = valorFormateado;
+});
+
+montoOrigenInput.addEventListener('focus', () => {
+    if (!montoOrigenInput.value) return;
+    let valorLimpio = montoOrigenInput.value.replace(/\./g, '');
+    valorLimpio = valorLimpio.replace(',', '.');
+    montoOrigenInput.value = valorLimpio;
+});
+
+
 loadPaises('Origen', paisOrigenSelect);
+loadFormasDePago();
 updateView();

@@ -1,4 +1,5 @@
 <?php
+    require_once __DIR__ . '/../src/core/init.php';
     $pageTitle = 'Quiénes Somos';
     require_once '../src/templates/header.php';
 ?>

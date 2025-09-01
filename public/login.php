@@ -1,7 +1,12 @@
 <?php
-    $pageTitle = 'Ingresar o Registrarse';
-    $pageScript = 'login.js'; 
-    require_once '../src/templates/header.php';
+require_once __DIR__ . '/../src/core/init.php';
+
+$pageTitle = 'Ingresar o Registrarse';
+$pageScripts = [
+    'components/rut-validator.js', 
+    'pages/login.js'              
+]; 
+require_once __DIR__ . '/../src/templates/header.php';
 ?>
 
 <div class="container">
@@ -84,5 +89,5 @@
 </div>
 
 <?php
-    require_once '../src/templates/footer.php';
+require_once __DIR__ . '/../src/templates/footer.php';
 ?>

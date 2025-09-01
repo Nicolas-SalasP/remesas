@@ -1,7 +1,11 @@
 <?php
-    $pageTitle = 'Inicio';
-    $pageScript = 'home.js';
-    require_once '../src/templates/header.php';
+require_once __DIR__ . '/../src/core/init.php';
+
+
+$pageTitle = 'Inicio';
+$pageScript = 'home.js';
+
+require_once __DIR__ . '/../src/templates/header.php';
 ?>
 
 <div class="container">
@@ -9,7 +13,7 @@
     <section class="text-center py-5">
         <h1 class="display-4 fw-bold">Envía dinero a tus seres queridos</h1>
         <p class="lead text-muted col-lg-8 mx-auto">La forma más rápida, segura y confiable de realizar tus envíos, con las mejores tasas del mercado.</p>
-        <a href="/remesas/public/dashboard/" class="btn btn-primary btn-lg mt-3">Realizar una Transacción</a>
+        <a href="<?php echo BASE_URL; ?>/dashboard/" class="btn btn-primary btn-lg mt-3">Realizar una Transacción</a>
     </section>
 
     <section class="card shadow-sm mb-5">
@@ -49,5 +53,5 @@
 </div>
 
 <?php
-    require_once '../src/templates/footer.php';
+require_once __DIR__ . '/../src/templates/footer.php';
 ?>
