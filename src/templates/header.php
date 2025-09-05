@@ -14,7 +14,9 @@
 <header class="main-header shadow-sm">
     <nav class="navbar navbar-expand-lg navbar-light bg-white">
         <div class="container">
-            <a class="navbar-brand logo" href="<?php echo BASE_URL; ?>/index.php">TuLogo</a>
+            <a class="navbar-brand logo" href="<?php echo BASE_URL; ?>/index.php">
+                <img src="<?php echo BASE_URL; ?>/assets/img/logo.jpeg" alt="Logo JC Envios" height="30">
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -26,7 +28,7 @@
                         <?php if ($_SESSION['user_rol'] === 'Admin'): ?>
                             <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Ver Transacciones</a></li>
                             <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Gestionar Tasas</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
+                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/paises.php">Gestionar Países</a></li> <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
                         <?php else: ?>
                             <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
                             <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>

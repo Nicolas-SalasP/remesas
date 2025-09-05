@@ -53,6 +53,21 @@ switch ($accion) {
     case 'adminUploadProof':
         adminUploadProof($conexion);
         break;
+     case 'processTransaction':
+        processTransaction($conexion);
+        break;
+    case 'rejectTransaction': 
+        rejectTransaction($conexion);
+        break;
+    case 'addPais':
+        addPais($conexion);
+        break;
+    case 'updatePaisRol':
+        updatePaisRol($conexion);
+        break;
+    case 'togglePaisStatus':
+        togglePaisStatus($conexion);
+        break;
     default:
         echo json_encode(['success' => false, 'error' => 'Acción no válida']);
         exit();
@@ -162,7 +177,8 @@ function loginUser($conexion) {
 
 function getPaises($conexion) {
     $rol = $_GET['rol'] ?? 'Ambos';
-    $stmt = $conexion->prepare("SELECT PaisID, NombrePais, CodigoMoneda FROM Paises WHERE Rol = ? OR Rol = 'Ambos'");
+    $stmt = $conexion->prepare("SELECT PaisID, NombrePais, CodigoMoneda FROM Paises WHERE (Rol = ? OR Rol = 'Ambos') AND Activo = 1");
+    
     $stmt->bind_param("s", $rol);
     $stmt->execute();
     $resultado = $stmt->get_result();
@@ -481,6 +497,145 @@ function getFormasDePago($conexion) {
     $enumValues = explode(',', str_replace("'", "", $matches[1]));
     
     echo json_encode($enumValues);
+    exit();
+}
+
+function addPais($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    $nombrePais = $data['nombrePais'] ?? '';
+    $codigoMoneda = strtoupper($data['codigoMoneda'] ?? '');
+    $rol = $data['rol'] ?? '';
+
+    if (empty($nombrePais) || empty($codigoMoneda) || empty($rol) || strlen($codigoMoneda) !== 3) {
+        echo json_encode(['success' => false, 'error' => 'Todos los campos son obligatorios y el código de moneda debe tener 3 letras.']);
+        exit();
+    }
+
+    $stmt = $conexion->prepare("INSERT INTO Paises (NombrePais, CodigoMoneda, Rol) VALUES (?, ?, ?)");
+    $stmt->bind_param("sss", $nombrePais, $codigoMoneda, $rol);
+
+    if ($stmt->execute()) {
+        logAction($conexion, 'Admin añadió país', $_SESSION['user_id'], "País: $nombrePais ($codigoMoneda)");
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Error al guardar el país en la base de datos.']);
+    }
+    $stmt->close();
+    exit();
+}
+
+function togglePaisStatus($conexion) {
+    set_error_handler(function($errno, $errstr, $errfile, $errline) {
+        throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+    });
+
+    try {
+        if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+            echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+            exit();
+        }
+        $data = json_decode(file_get_contents('php://input'), true);
+        $paisId = $data['paisId'] ?? 0;
+        $newStatus = isset($data['newStatus']) ? (int)$data['newStatus'] : 0;
+
+        if (empty($paisId)) {
+            echo json_encode(['success' => false, 'error' => 'ID de país no válido.']);
+            exit();
+        }
+
+        $stmt = $conexion->prepare("UPDATE Paises SET Activo = ? WHERE PaisID = ?");
+        $stmt->bind_param("ii", $newStatus, $paisId);
+
+        if ($stmt->execute()) {
+            $statusText = $newStatus == 1 ? 'Activado' : 'Desactivado';
+            logAction($conexion, "Admin cambió estado de país", $_SESSION['user_id'], "País ID: $paisId, Nuevo Estado: $statusText");
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Error al actualizar el estado.']);
+        }
+        $stmt->close();
+
+    } catch (Throwable $e) {
+        echo json_encode(['success' => false, 'error' => 'Error de PHP: ' . $e->getMessage() . ' en la línea ' . $e->getLine()]);
+    } finally {
+        restore_error_handler();
+    }
+    exit();
+}
+
+function updatePaisRol($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+    $data = json_decode(file_get_contents('php://input'), true);
+    $paisId = $data['paisId'] ?? 0;
+    $newRole = $data['newRole'] ?? '';
+    
+    $rolesValidos = ['Origen', 'Destino', 'Ambos'];
+    if (empty($paisId) || !in_array($newRole, $rolesValidos)) {
+        echo json_encode(['success' => false, 'error' => 'Datos inválidos.']);
+        exit();
+    }
+
+    $stmt = $conexion->prepare("UPDATE Paises SET Rol = ? WHERE PaisID = ?");
+    $stmt->bind_param("si", $newRole, $paisId);
+
+    if ($stmt->execute()) {
+        logAction($conexion, "Admin cambió rol de país", $_SESSION['user_id'], "País ID: $paisId, Nuevo Rol: $newRole");
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Error al actualizar el rol.']);
+    }
+    $stmt->close();
+    exit();
+}
+
+function processTransaction($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+    $data = json_decode(file_get_contents('php://input'), true);
+    $transactionId = $data['transactionId'] ?? 0;
+    
+    $stmt = $conexion->prepare("UPDATE Transacciones SET Estado = 'En Proceso' WHERE TransaccionID = ? AND Estado = 'En Verificación'");
+    $stmt->bind_param("i", $transactionId);
+
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        logAction($conexion, 'Admin procesó transacción', $_SESSION['user_id'], "Transaccion ID: $transactionId");
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'No se pudo procesar la transacción o ya no estaba en estado de verificación.']);
+    }
+    $stmt->close();
+    exit();
+}
+
+function rejectTransaction($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+    $data = json_decode(file_get_contents('php://input'), true);
+    $transactionId = $data['transactionId'] ?? 0;
+    
+    $stmt = $conexion->prepare("UPDATE Transacciones SET Estado = 'Cancelado' WHERE TransaccionID = ? AND Estado = 'En Verificación'");
+    $stmt->bind_param("i", $transactionId);
+
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        logAction($conexion, 'Admin rechazó pago de transacción', $_SESSION['user_id'], "Transaccion ID: $transactionId");
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'No se pudo rechazar la transacción.']);
+    }
+    $stmt->close();
     exit();
 }
 ?>

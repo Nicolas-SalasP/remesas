@@ -30,7 +30,7 @@
             <div>
                 <a href="#!" class="btn btn-outline-light btn-floating m-1" role="button"><i class="bi bi-facebook"></i></a>
                 <a href="#!" class="btn btn-outline-light btn-floating m-1" role="button"><i class="bi bi-twitter-x"></i></a>
-                <a href="#!" class="btn btn-outline-light btn-floating m-1" role="button"><i class="bi bi-instagram"></i></a>
+                <a href="https://www.instagram.com/enviosjc?utm_source=qr&igsh=MTQybWcwdmRobGxybw==" class="btn btn-outline-light btn-floating m-1" role="button"><i class="bi bi-instagram"></i></a>
             </div>
         </div>
     </div>
