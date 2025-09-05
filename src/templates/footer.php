@@ -39,11 +39,11 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<?php if (isset($pageScripts) && is_array($pageScripts)): // Si es un array de scripts ?>
+<?php if (isset($pageScripts) && is_array($pageScripts)):?>
     <?php foreach ($pageScripts as $script): ?>
         <script src="<?php echo BASE_URL; ?>/assets/js/<?php echo htmlspecialchars($script); ?>"></script>
     <?php endforeach; ?>
-<?php elseif (isset($pageScript)): // Si es un solo script (para mantener compatibilidad) ?>
+<?php elseif (isset($pageScript)):?>
     <script src="<?php echo BASE_URL; ?>/assets/js/pages/<?php echo htmlspecialchars($pageScript); ?>"></script>
 <?php endif; ?>
 

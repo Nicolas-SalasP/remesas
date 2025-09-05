@@ -41,6 +41,18 @@ switch ($accion) {
     case 'getFormasDePago':
         getFormasDePago($conexion);
         break;
+    case 'updateTransactionStatus': 
+        updateTransactionStatus($conexion);
+        break;
+    case 'updateRate':
+        updateRate($conexion);
+        break;
+    case 'cancelTransaction':
+        cancelTransaction($conexion);
+        break;
+    case 'adminUploadProof':
+        adminUploadProof($conexion);
+        break;
     default:
         echo json_encode(['success' => false, 'error' => 'Acción no válida']);
         exit();
@@ -104,11 +116,16 @@ function registerUser($conexion) {
     $stmt->bind_param("sssssssss", $_POST['primerNombre'], $_POST['segundoNombre'], $_POST['primerApellido'], $_POST['segundoApellido'], $email, $passwordHash, $_POST['tipoDocumento'], $_POST['numeroDocumento'], $docImagenURL);
 
     if ($stmt->execute()) {
+        $nuevoUserID = $conexion->insert_id;
+        logAction($conexion, 'Registro de Usuario', $nuevoUserID);
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'error' => 'Error al registrar el usuario: ' . $stmt->error]);
     }
+
     $stmt->close();
+
+    
     exit();
 }
 
@@ -120,7 +137,7 @@ function loginUser($conexion) {
         exit();
     }
 
-    $stmt = $conexion->prepare("SELECT UserID, PasswordHash, PrimerNombre FROM Usuarios WHERE Email = ? AND VerificacionEstado = 'Aprobado'");
+    $stmt = $conexion->prepare("SELECT UserID, PasswordHash, PrimerNombre, Rol FROM Usuarios WHERE Email = ? AND VerificacionEstado = 'Aprobado'");
     $stmt->bind_param("s", $data['email']);
     $stmt->execute();
     $resultado = $stmt->get_result();
@@ -130,6 +147,8 @@ function loginUser($conexion) {
         if (password_verify($data['password'], $usuario['PasswordHash'])) {
             $_SESSION['user_id'] = $usuario['UserID'];
             $_SESSION['user_name'] = $usuario['PrimerNombre'];
+            $_SESSION['user_rol'] = $usuario['Rol'];
+            
             echo json_encode(['success' => true, 'redirect' => BASE_URL . '/dashboard/']);
         } else {
             echo json_encode(['success' => false, 'error' => 'La contraseña es incorrecta.']);
@@ -313,6 +332,133 @@ function uploadReceipt($conexion) {
         $stmt_update->bind_param("si", $dbPath, $transactionId);
         
         if ($stmt_update->execute()) {
+            logAction($conexion, 'Subida de Comprobante', $userId, "Transaccion ID: " . $transactionId);
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Error al actualizar la base de datos.']);
+        }
+        $stmt_update->close();
+    } else {
+        echo json_encode(['success' => false, 'error' => 'No se pudo guardar el archivo subido.']);
+    }
+    exit();
+}
+
+function updateTransactionStatus($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    $transactionId = $data['transactionId'] ?? 0;
+    $newStatus = $data['newStatus'] ?? '';
+
+    $estadosValidos = ['Pendiente de Pago', 'En Verificación', 'En Proceso', 'Pagado', 'Cancelado'];
+    if (empty($transactionId) || !in_array($newStatus, $estadosValidos)) {
+        echo json_encode(['success' => false, 'error' => 'Datos inválidos.']);
+        exit();
+    }
+    
+    $stmt = $conexion->prepare("UPDATE Transacciones SET Estado = ? WHERE TransaccionID = ?");
+    $stmt->bind_param("si", $newStatus, $transactionId);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Error al actualizar la base de datos.']);
+    }
+    $stmt->close();
+    exit();
+}
+
+function updateRate($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+
+    $data = json_decode(file_get_contents('php://input'), true);
+    $tasaId = $data['tasaId'] ?? 0;
+    $nuevoValor = $data['nuevoValor'] ?? 0;
+
+    if (empty($tasaId) || !is_numeric($nuevoValor) || $nuevoValor <= 0) {
+        echo json_encode(['success' => false, 'error' => 'Datos inválidos.']);
+        exit();
+    }
+    
+    $stmt = $conexion->prepare("UPDATE Tasas SET ValorTasa = ? WHERE TasaID = ?");
+    $stmt->bind_param("di", $nuevoValor, $tasaId);
+
+    if ($stmt->execute()) {
+        logAction($conexion, 'Admin actualizó tasa', $_SESSION['user_id'], "Tasa ID: $tasaId, Nuevo Valor: $nuevoValor");
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Error al actualizar la base de datos.']);
+    }
+    $stmt->close();
+    exit();
+}
+
+function cancelTransaction($conexion) {
+    if (!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'error' => 'Usuario no autenticado.']);
+        exit();
+    }
+    
+    $data = json_decode(file_get_contents('php://input'), true);
+    $transactionId = $data['transactionId'] ?? 0;
+    $userId = $_SESSION['user_id'];
+
+    if (empty($transactionId)) {
+        echo json_encode(['success' => false, 'error' => 'ID de transacción no válido.']);
+        exit();
+    }
+
+    $stmt = $conexion->prepare("UPDATE Transacciones SET Estado = 'Cancelado' WHERE TransaccionID = ? AND UserID = ? AND Estado = 'Pendiente de Pago'");
+    $stmt->bind_param("ii", $transactionId, $userId);
+
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        logAction($conexion, 'Usuario canceló transacción', $userId, "Transaccion ID: " . $transactionId);
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'No se pudo cancelar la transacción. Es posible que ya haya sido procesada.']);
+    }
+    $stmt->close();
+    exit();
+}
+
+function adminUploadProof($conexion) {
+    if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        echo json_encode(['success' => false, 'error' => 'Acceso denegado.']);
+        exit();
+    }
+
+    $transactionId = $_POST['transactionId'] ?? 0;
+
+    if (empty($transactionId) || !isset($_FILES['receiptFile']) || $_FILES['receiptFile']['error'] !== UPLOAD_ERR_OK) {
+        echo json_encode(['success' => false, 'error' => 'Datos incompletos o error en el archivo.']);
+        exit();
+    }
+
+    $uploadDir = 'uploads/proof_of_sending/';
+    $absoluteUploadDir = __DIR__ . '/../' . $uploadDir;
+    
+    if (!is_dir($absoluteUploadDir)) {
+        mkdir($absoluteUploadDir, 0755, true);
+    }
+
+    $fileExtension = pathinfo($_FILES['receiptFile']['name'], PATHINFO_EXTENSION);
+    $fileName = 'tx_envio_' . $transactionId . '_' . uniqid() . '.' . $fileExtension;
+    $uploadFile = $absoluteUploadDir . $fileName;
+    $dbPath = $uploadDir . $fileName;
+
+    if (move_uploaded_file($_FILES['receiptFile']['tmp_name'], $uploadFile)) {
+        $stmt_update = $conexion->prepare("UPDATE Transacciones SET ComprobanteEnvioURL = ?, Estado = 'Pagado' WHERE TransaccionID = ?");
+        $stmt_update->bind_param("si", $dbPath, $transactionId);
+        
+        if ($stmt_update->execute()) {
+            logAction($conexion, 'Admin subió comprobante de envío', $_SESSION['user_id'], "Transaccion ID: " . $transactionId);
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Error al actualizar la base de datos.']);

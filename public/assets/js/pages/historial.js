@@ -10,12 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Lógica para cuando se abre el modal
     uploadModalElement.addEventListener('show.bs.modal', function (event) {
-        // Obtenemos el botón que activó el modal
         const button = event.relatedTarget;
-        // Extraemos el ID de la transacción del atributo data-tx-id del botón
         const transactionId = button.getAttribute('data-tx-id');
-        
-        // Actualizamos el contenido del modal con el ID
         transactionIdField.value = transactionId;
         modalTxIdLabel.textContent = transactionId;
     });
@@ -45,4 +41,34 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('No se pudo conectar con el servidor.');
         }
     });
+
+const cancelButtons = document.querySelectorAll('.cancel-btn');
+
+cancelButtons.forEach(button => {
+    button.addEventListener('click', async (e) => {
+        const transactionId = e.target.dataset.txId;
+
+        if (!confirm(`¿Estás seguro de que quieres cancelar la transacción #${transactionId}? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch('../api/?accion=cancelTransaction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transactionId })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Transacción cancelada con éxito. La página se recargará.');
+                window.location.reload();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        } catch (error) {
+            alert('Error de conexión con el servidor.');
+        }
+    });
+});
 });

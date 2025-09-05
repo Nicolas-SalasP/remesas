@@ -7,7 +7,6 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
@@ -22,9 +21,16 @@
             <div class="collapse navbar-collapse" id="mainNavbar">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
+                    
                     <?php if (isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
-                        <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>
+                        <?php if ($_SESSION['user_rol'] === 'Admin'): ?>
+                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Ver Transacciones</a></li>
+                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Gestionar Tasas</a></li>
+                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
+                        <?php else: ?>
+                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
+                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>
+                        <?php endif; ?>
                     <?php else: ?>
                         <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/quienes-somos.php">Quiénes Somos</a></li>
                         <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/contacto.php">Contacto</a></li>

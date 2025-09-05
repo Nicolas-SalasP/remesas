@@ -9,7 +9,7 @@
         <div class="col-md-8 offset-md-2">
             <div class="card p-4 p-md-5 shadow-sm">
                 <div class="text-center mb-4">
-                    <h1>Ponte en Contacto</h1>
+                    <h1>Ponte en Contacto Hoy</h1>
                     <p class="lead text-muted">¿Tienes alguna duda? Estamos aquí para ayudarte.</p>
                 </div>
 

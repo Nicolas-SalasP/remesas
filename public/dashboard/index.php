@@ -1,14 +1,11 @@
 <?php
-// 1. Carga la configuración, inicia la sesión y conecta a la BD.
 require_once __DIR__ . '/../../src/core/init.php';
 
-// 2. Proteger la página: si no hay sesión, se redirige al login.
 if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/login.php');
     exit();
 }
 
-// 3. Definir variables para la página
 $pageTitle = 'Realizar Transacción';
 $pageScript = 'dashboard.js';
 require_once __DIR__ . '/../../src/templates/header.php';
