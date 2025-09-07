@@ -68,6 +68,12 @@ switch ($accion) {
     case 'togglePaisStatus':
         togglePaisStatus($conexion);
         break;
+    case 'requestPasswordReset':
+        requestPasswordReset($conexion);
+        break;
+    case 'performPasswordReset':
+        performPasswordReset($conexion);
+        break;
     default:
         echo json_encode(['success' => false, 'error' => 'Acción no válida']);
         exit();
@@ -152,24 +158,51 @@ function loginUser($conexion) {
         exit();
     }
 
-    $stmt = $conexion->prepare("SELECT UserID, PasswordHash, PrimerNombre, Rol FROM Usuarios WHERE Email = ? AND VerificacionEstado = 'Aprobado'");
+    $stmt = $conexion->prepare("SELECT UserID, PasswordHash, PrimerNombre, Rol, FailedLoginAttempts, LockoutUntil FROM Usuarios WHERE Email = ?");
     $stmt->bind_param("s", $data['email']);
     $stmt->execute();
     $resultado = $stmt->get_result();
 
     if ($resultado->num_rows === 1) {
         $usuario = $resultado->fetch_assoc();
+        if ($usuario['LockoutUntil'] && strtotime($usuario['LockoutUntil']) > time()) {
+            $tiempoRestante = strtotime($usuario['LockoutUntil']) - time();
+            echo json_encode(['success' => false, 'error' => "Cuenta bloqueada. Por favor, intenta de nuevo en " . ceil($tiempoRestante / 60) . " minutos."]);
+            exit();
+        }
+
         if (password_verify($data['password'], $usuario['PasswordHash'])) {
+            $stmt_reset = $conexion->prepare("UPDATE Usuarios SET FailedLoginAttempts = 0, LockoutUntil = NULL WHERE UserID = ?");
+            $stmt_reset->bind_param("i", $usuario['UserID']);
+            $stmt_reset->execute();
+            $stmt_reset->close();
+
             $_SESSION['user_id'] = $usuario['UserID'];
             $_SESSION['user_name'] = $usuario['PrimerNombre'];
             $_SESSION['user_rol'] = $usuario['Rol'];
             
+            logAction($conexion, 'Inicio de Sesión Exitoso', $usuario['UserID']);
             echo json_encode(['success' => true, 'redirect' => BASE_URL . '/dashboard/']);
         } else {
-            echo json_encode(['success' => false, 'error' => 'La contraseña es incorrecta.']);
+            $nuevosIntentos = $usuario['FailedLoginAttempts'] + 1;
+            $lockoutTime = NULL;
+
+            if ($nuevosIntentos >= 6) {
+                $lockoutTime = date("Y-m-d H:i:s", time() + 30 * 60);
+            } elseif ($nuevosIntentos >= 3) {
+                $lockoutTime = date("Y-m-d H:i:s", time() + 10 * 60);
+            }
+            
+            $stmt_fail = $conexion->prepare("UPDATE Usuarios SET FailedLoginAttempts = ?, LockoutUntil = ? WHERE UserID = ?");
+            $stmt_fail->bind_param("isi", $nuevosIntentos, $lockoutTime, $usuario['UserID']);
+            $stmt_fail->execute();
+            $stmt_fail->close();
+
+            logAction($conexion, 'Fallo de Inicio de Sesión', $usuario['UserID'], "Contraseña incorrecta");
+            echo json_encode(['success' => false, 'error' => 'Correo o contraseña incorrectos.']);
         }
     } else {
-        echo json_encode(['success' => false, 'error' => 'Usuario no encontrado o no verificado.']);
+        echo json_encode(['success' => false, 'error' => 'Correo o contraseña incorrectos.']);
     }
     $stmt->close();
     exit();
@@ -221,14 +254,22 @@ function getTasa($conexion) {
 }
 
 function addCuenta($conexion) {
-    $data = json_decode(file_get_contents('php://input'), true);
-    
     if (!isset($_SESSION['user_id'])) {
         echo json_encode(['success' => false, 'error' => 'Acceso no autorizado.']);
         exit();
     }
+    
+    $data = json_decode(file_get_contents('php://input'), true);
     $userID = $_SESSION['user_id'];
 
+    $requiredFields = ['paisID', 'alias', 'tipoBeneficiario', 'primerNombre', 'primerApellido', 'tipoDocumento', 'numeroDocumento', 'nombreBanco', 'numeroCuenta'];
+    foreach ($requiredFields as $field) {
+        if (empty($data[$field])) {
+            echo json_encode(['success' => false, 'error' => "El campo '$field' es obligatorio."]);
+            exit();
+        }
+    }
+    
     $stmt = $conexion->prepare(
         "INSERT INTO CuentasBeneficiarias (UserID, PaisID, Alias, TipoBeneficiario, TitularPrimerNombre, TitularSegundoNombre, TitularPrimerApellido, TitularSegundoApellido, TitularTipoDocumento, TitularNumeroDocumento, NombreBanco, NumeroCuenta, NumeroTelefono) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -237,16 +278,25 @@ function addCuenta($conexion) {
     $stmt->bind_param(
         "iisssssssssss", 
         $userID, 
-        $data['paisID'], $data['alias'], $data['tipoBeneficiario'], 
-        $data['primerNombre'], $data['segundoNombre'], $data['primerApellido'], $data['segundoApellido'], 
-        $data['tipoDocumento'], $data['numeroDocumento'], $data['nombreBanco'], 
-        $data['numeroCuenta'], $data['numeroTelefono']
+        $data['paisID'], 
+        $data['alias'], 
+        $data['tipoBeneficiario'], 
+        $data['primerNombre'], 
+        $data['segundoNombre'] ?? null,
+        $data['primerApellido'], 
+        $data['segundoApellido'] ?? null,
+        $data['tipoDocumento'], 
+        $data['numeroDocumento'], 
+        $data['nombreBanco'], 
+        $data['numeroCuenta'], 
+        $data['numeroTelefono'] ?? null
     );
 
     if ($stmt->execute()) {
+        logAction($conexion, 'Usuario añadió cuenta beneficiaria', $userID, "Alias: " . $data['alias']);
         echo json_encode(['success' => true, 'id' => $conexion->insert_id]);
     } else {
-        echo json_encode(['success' => false, 'error' => $stmt->error]);
+        echo json_encode(['success' => false, 'error' => 'Error al guardar la cuenta: ' . $stmt->error]);
     }
     $stmt->close();
     exit();
@@ -636,6 +686,81 @@ function rejectTransaction($conexion) {
         echo json_encode(['success' => false, 'error' => 'No se pudo rechazar la transacción.']);
     }
     $stmt->close();
+    exit();
+}
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+function requestPasswordReset($conexion) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $email = $data['email'] ?? '';
+
+    $stmt = $conexion->prepare("SELECT UserID FROM Usuarios WHERE Email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+
+    if ($usuario = $resultado->fetch_assoc()) {
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = date("Y-m-d H:i:s", time() + 10 * 60); 
+        
+        $stmt_insert = $conexion->prepare("INSERT INTO PasswordResets (UserID, Token, ExpiresAt) VALUES (?, ?, ?)");
+        $stmt_insert->bind_param("iss", $usuario['UserID'], $token, $expiresAt);
+        $stmt_insert->execute();
+
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = SMTP_USER;
+            $mail->Password = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port = SMTP_PORT;
+
+            $mail->setFrom(SMTP_USER, 'Tu Empresa de Remesas');
+            $mail->addAddress($email);
+
+            $resetLink = BASE_URL . '/reset-password.php?token=' . $token;
+            $mail->isHTML(true);
+            $mail->Subject = 'Restablecimiento de Contraseña';
+            $mail->Body    = "Hola,<br><br>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:<br><a href='{$resetLink}'>Restablecer mi contraseña</a><br><br>Este enlace expirará en 10 minutos.<br><br>Si no solicitaste esto, puedes ignorar este correo.";
+            
+            $mail->send();
+        } catch (Exception $e) {
+        }
+    }
+    echo json_encode(['success' => true, 'message' => 'Si tu correo está en nuestro sistema, recibirás un enlace para restablecer tu contraseña.']);
+    exit();
+}
+
+function performPasswordReset($conexion) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $token = $data['token'] ?? '';
+    $newPassword = $data['newPassword'] ?? '';
+
+    $stmt = $conexion->prepare("SELECT * FROM PasswordResets WHERE Token = ? AND Used = FALSE AND ExpiresAt > NOW()");
+    $stmt->bind_param("s", $token);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+
+    if ($reset = $resultado->fetch_assoc()) {
+        $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        
+        $stmt_user = $conexion->prepare("UPDATE Usuarios SET PasswordHash = ? WHERE UserID = ?");
+        $stmt_user->bind_param("si", $passwordHash, $reset['UserID']);
+        $stmt_user->execute();
+        
+        $stmt_token = $conexion->prepare("UPDATE PasswordResets SET Used = TRUE WHERE ResetID = ?");
+        $stmt_token->bind_param("i", $reset['ResetID']);
+        $stmt_token->execute();
+
+        logAction($conexion, 'Contraseña Restablecida', $reset['UserID']);
+        echo json_encode(['success' => true, 'message' => '¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.']);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'El enlace no es válido o ha expirado.']);
+    }
     exit();
 }
 ?>

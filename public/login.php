@@ -4,7 +4,7 @@ require_once __DIR__ . '/../src/core/init.php';
 $pageTitle = 'Ingresar o Registrarse';
 $pageScripts = [
     'components/rut-validator.js', 
-    'pages/login.js'              
+    'pages/login.js'               
 ]; 
 require_once __DIR__ . '/../src/templates/header.php';
 ?>
@@ -26,8 +26,12 @@ require_once __DIR__ . '/../src/templates/header.php';
                     <label for="login-password" class="form-label">Contraseña</label>
                     <input type="password" class="form-control" id="login-password" name="password" required>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 py-2">Ingresar</button>
-            </form>
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <a href="<?php echo BASE_URL; ?>/forgot-password.php">¿Olvidaste tu contraseña?</a>
+                    <button type="submit" class="btn btn-primary">Ingresar</button>
+                </div>
+                </form>
         </div>
 
         <div id="register-form" class="auth-form">

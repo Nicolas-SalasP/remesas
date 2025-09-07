@@ -98,24 +98,59 @@ require_once __DIR__ . '/../../src/templates/header.php';
       </div>
       <div class="modal-body">
         <form id="add-beneficiary-form">
-            <div class="mb-3"><label for="benef-alias" class="form-label">Alias de la cuenta (Ej: Papá, Ahorros Tía)</label><input type="text" class="form-control" id="benef-alias" name="alias" required></div>
             <div class="row">
-                <div class="col-md-6 mb-3"><label for="benef-firstname" class="form-label">Primer Nombre del Titular</label><input type="text" class="form-control" id="benef-firstname" name="primerNombre" required></div>
-                <div class="col-md-6 mb-3"><label for="benef-lastname" class="form-label">Primer Apellido del Titular</label><input type="text" class="form-control" id="benef-lastname" name="primerApellido" required></div>
+                <div class="col-md-6 mb-3">
+                    <label for="benef-alias" class="form-label">Alias de la cuenta (Ej: Papá, Ahorros Tía)</label>
+                    <input type="text" class="form-control" id="benef-alias" name="alias" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="benef-tipo" class="form-label">Tipo de Beneficiario</label>
+                    <select id="benef-tipo" name="tipoBeneficiario" class="form-select" required>
+                        <option value="Persona" selected>Persona</option>
+                        <option value="Empresa">Empresa</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="benef-firstname" class="form-label">Primer Nombre</label><input type="text" class="form-control" id="benef-firstname" name="primerNombre" required></div>
+                <div class="col-md-6 mb-3"><label for="benef-secondname" class="form-label">Segundo Nombre</label><input type="text" class="form-control" id="benef-secondname" name="segundoNombre"></div>
             </div>
             <div class="row">
-                <div class="col-md-6 mb-3"><label for="benef-doc-type" class="form-label">Tipo de Documento</label><select id="benef-doc-type" name="tipoDocumento" class="form-select" required><option value="">Selecciona...</option><option value="Cédula">Cédula</option><option value="Pasaporte">Pasaporte</option></select></div>
-                <div class="col-md-6 mb-3"><label for="benef-doc-number" class="form-label">Número de Documento</label><input type="text" class="form-control" id="benef-doc-number" name="numeroDocumento" required></div>
+                <div class="col-md-6 mb-3"><label for="benef-lastname" class="form-label">Primer Apellido</label><input type="text" class="form-control" id="benef-lastname" name="primerApellido" required></div>
+                <div class="col-md-6 mb-3"><label for="benef-secondname" class="form-label">Segundo Apellido</label><input type="text" class="form-control" id="benef-secondlastname" name="segundoApellido"></div>
             </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="benef-doc-type" class="form-label">Tipo de Documento</label>
+                    <select id="benef-doc-type" name="tipoDocumento" class="form-select" required>
+                        <option value="">Selecciona...</option>
+                        <option value="Cédula">Cédula de Identidad</option>
+                        <option value="DNI">DNI</option>
+                        <option value="Pasaporte">Pasaporte</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="benef-doc-number" class="form-label">Número de Documento</label>
+                    <input type="text" class="form-control" id="benef-doc-number" name="numeroDocumento" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="benef-phone-number" class="form-label">Número de Teléfono</label>
+                <div class="input-group">
+                    <select class="input-group-text" id="benef-phone-code" name="phoneCode"></select>
+                    <input type="tel" class="form-control" id="benef-phone-number" name="phoneNumber" required>
+                </div>
+            </div>
+            
             <div class="row">
                  <div class="col-md-6 mb-3"><label for="benef-bank" class="form-label">Nombre del Banco</label><input type="text" class="form-control" id="benef-bank" name="nombreBanco" required></div>
                 <div class="col-md-6 mb-3"><label for="benef-account-num" class="form-label">Número de Cuenta</label><input type="text" class="form-control" id="benef-account-num" name="numeroCuenta" required></div>
             </div>
-             <div class="mb-3"><label for="benef-phone" class="form-label">Número de Teléfono</label><input type="tel" class="form-control" id="benef-phone" name="numeroTelefono"></div>
+
             <input type="hidden" id="benef-pais-id" name="paisID">
-            <input type="hidden" name="tipoBeneficiario" value="Persona">
-            <input type="hidden" name="segundoNombre" value="">
-            <input type="hidden" name="segundoApellido" value="">
         </form>
       </div>
       <div class="modal-footer">
