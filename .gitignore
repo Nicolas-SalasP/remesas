@@ -1,8 +1,11 @@
 .env
-config.php
+/remesas_private/config.php
 # Carpeta de dependencias de Composer (se reinstala con "composer install")
-/vendor/
-/public/uploads/
+/remesas_private/vendor/
+
+/public_html/uploads/receipts
+/public_html/uploads/verifications
+/public_html/uploads/documents
 *.log
 .DS_Store
 Thumbs.db
