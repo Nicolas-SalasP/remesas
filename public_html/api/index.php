@@ -18,6 +18,8 @@ use App\Services\BeneficiaryService;
 use App\Controllers\AuthController;
 use App\Controllers\ClientController;
 use App\Controllers\AdminController;
+use App\Services\DashboardService;
+use App\Controllers\DashboardController;
 use Exception;
 
 header('Content-Type: application/json');
@@ -36,6 +38,7 @@ try {
     $logService = new LogService($db); 
     $notificationService = new NotificationService($logService); 
     $pdfService = new PDFService();
+    $dashboardService = new DashboardService($db);
     
     // Servicios de Negocio 
     $userService = new UserService($userRepository, $notificationService);
@@ -77,6 +80,7 @@ $routes = [
     'processTransaction'    => [AdminController::class, 'processTransaction'],
     'adminUploadProof'      => [AdminController::class, 'adminUploadProof'],
     'updateVerificationStatus'=> [AdminController::class, 'updateVerificationStatus'],
+    'getDashboardStats'     => [DashboardController::class, 'getStats'],
 ];
 
 if (isset($routes[$accion])) {
@@ -86,6 +90,7 @@ if (isset($routes[$accion])) {
         AuthController::class     => new AuthController($userService),
         ClientController::class   => new ClientController($transactionService, $pricingService, $beneficiaryService, $userService),
         AdminController::class    => new AdminController($transactionService, $pricingService, $userService),
+        DashboardController::class => new DashboardController($dashboardService),
         default => null
     };
 

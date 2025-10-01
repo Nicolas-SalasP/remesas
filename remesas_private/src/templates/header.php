@@ -33,6 +33,7 @@
                             <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/paises.php">Gestionar Países</a></li> 
                             <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/verificaciones.php">Verificaciones</a></li>
                             <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
+                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/dashboard.php">Dashboard</a></li>
                         <?php else: ?>
                             <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
                             <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>

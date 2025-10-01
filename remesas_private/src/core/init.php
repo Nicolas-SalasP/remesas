@@ -5,6 +5,8 @@ require_once __DIR__ . '/../../config.php';
 
 session_start();
 
+require_once __DIR__ . '/ErrorHandler.php';
+set_exception_handler('App\\Core\\exception_handler');
 
 $tiempo_limite = 15 * 60; 
 
