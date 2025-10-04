@@ -9,13 +9,16 @@ class UserService
 {
     private UserRepository $userRepository;
     private NotificationService $notificationService;
+    private FileHandlerService $fileHandler; 
 
     public function __construct(
         UserRepository $userRepository,
-        NotificationService $notificationService
+        NotificationService $notificationService,
+        FileHandlerService $fileHandler
     ) {
         $this->userRepository = $userRepository;
         $this->notificationService = $notificationService;
+        $this->fileHandler = $fileHandler; 
     }
 
     public function loginUser(string $email, string $password): array
@@ -25,38 +28,36 @@ class UserService
         if (!$user || !password_verify($password, $user['PasswordHash'])) {
             if ($user) {
             }
-            throw new Exception("Email o contraseña incorrectos.", 401);
+            throw new Exception("Correo electrónico o contraseña no válidos.", 401);
         }
 
         if ($user['LockoutUntil'] && strtotime($user['LockoutUntil']) > time()) {
-             throw new Exception("Cuenta bloqueada temporalmente.", 403);
+            throw new Exception("La cuenta está bloqueada. Inténtalo más tarde.", 403);
         }
-        $this->userRepository->updateLoginAttempts($user['UserID'], 0, null);
 
+        $this->userRepository->updateLoginAttempts($user['UserID'], 0, null);
+        $this->notificationService->logAdminAction($user['UserID'], 'Inicio de Sesión Exitoso', '');
         return $user;
     }
 
     public function registerUser(array $data): array
     {
-        // Validación de datos
-        if (empty($data['email']) || empty($data['password']) || empty($data['primerNombre']) || empty($data['primerApellido'])) {
-            throw new Exception("Todos los campos son obligatorios.", 400);
+        if (empty($data['primerNombre']) || empty($data['primerApellido']) || empty($data['email']) || empty($data['password'])) {
+            throw new Exception("Todos los campos marcados con * son obligatorios.", 400);
         }
-
         if (strlen($data['password']) < 6) {
             throw new Exception("La contraseña debe tener al menos 6 caracteres.", 400);
         }
-
         if ($this->userRepository->findByEmail($data['email'])) {
             throw new Exception("El correo electrónico ya está registrado.", 409);
         }
-
+        
         $data['passwordHash'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        
-        $userId = $this->userRepository->create($data);
-        
-        $this->notificationService->logAdminAction($userId, 'Registro de Usuario', 'Email: ' . $data['email']);
 
+        $userId = $this->userRepository->create($data);
+
+        $this->notificationService->logAdminAction($userId, 'Registro de Usuario', "Email: " . $data['email']);
+        
         return $this->userRepository->findByEmail($data['email']);
     }
 
@@ -95,9 +96,20 @@ class UserService
         return $this->userRepository->findUserById($userId) ?? [];
     }
 
-    public function uploadVerificationDocs(int $userId, string $pathFrente, string $pathReverso): void
+    public function uploadVerificationDocs(int $userId, array $files): void
     {
-        $this->userRepository->updateVerificationDocuments($userId, $pathFrente, $pathReverso);
+        if (!isset($files['docFrente']) || !isset($files['docReverso'])) {
+            throw new Exception("Debes subir ambos lados del documento.", 400);
+        }
+
+        $pathFrente = $this->fileHandler->saveVerificationFile($files['docFrente'], $userId, 'frente');
+        $pathReverso = $this->fileHandler->saveVerificationFile($files['docReverso'], $userId, 'reverso');
+
+        if ($this->userRepository->updateVerificationDocuments($userId, $pathFrente, $pathReverso)) {
+            $this->notificationService->logAdminAction($userId, 'Subida de Documentos de Verificación', "Usuario ID: $userId");
+        } else {
+            throw new Exception("No se pudieron guardar los documentos en la base de datos.", 500);
+        }
     }
     
     public function updateVerificationStatus(int $adminId, int $userId, string $newStatus): void
