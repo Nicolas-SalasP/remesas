@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Services\TransactionService;
 use App\Services\PricingService;
+use App\Services\DashboardService;
 use App\Services\UserService;
 use Exception;
 
@@ -12,15 +13,18 @@ class AdminController extends BaseController
     private TransactionService $txService;
     private PricingService $pricingService;
     private UserService $userService;
+    private DashboardService $dashboardService;
     
     public function __construct(
         TransactionService $txService,
         PricingService $pricingService,
-        UserService $userService
+        UserService $userService,
+        DashboardService $dashboardService
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
         $this->userService = $userService;
+        $this->dashboardService = $dashboardService;
         
         $this->ensureAdmin();
     }
@@ -132,5 +136,15 @@ class AdminController extends BaseController
         
         $this->txService->adminUploadProof($adminId, $transactionId, $dbPath);
         $this->sendJsonResponse(['success' => true]);
+    }
+
+    public function getDashboardStats(): void
+    {
+        try {
+            $stats = $this->dashboardService->getAdminDashboardStats();
+            $this->sendJsonResponse(['success' => true, 'stats' => $stats]);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
     }
 }

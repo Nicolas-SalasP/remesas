@@ -9,7 +9,7 @@ class UserService
 {
     private UserRepository $userRepository;
     private NotificationService $notificationService;
-    private FileHandlerService $fileHandler; 
+    private FileHandlerService $fileHandler;
 
     public function __construct(
         UserRepository $userRepository,
@@ -18,7 +18,7 @@ class UserService
     ) {
         $this->userRepository = $userRepository;
         $this->notificationService = $notificationService;
-        $this->fileHandler = $fileHandler; 
+        $this->fileHandler = $fileHandler;
     }
 
     public function loginUser(string $email, string $password): array
@@ -108,6 +108,8 @@ class UserService
         if ($this->userRepository->updateVerificationDocuments($userId, $pathFrente, $pathReverso)) {
             $this->notificationService->logAdminAction($userId, 'Subida de Documentos de Verificación', "Usuario ID: $userId");
         } else {
+            @unlink($pathFrente);
+            @unlink($pathReverso);
             throw new Exception("No se pudieron guardar los documentos en la base de datos.", 500);
         }
     }

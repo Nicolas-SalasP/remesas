@@ -57,7 +57,7 @@ class UserRepository
 
     public function findUserById(int $userId): ?array
     {
-        $sql = "SELECT UserID, PrimerNombre, Telefono 
+        $sql = "SELECT UserID, PrimerNombre, PrimerApellido, Email, Telefono, TipoDocumento, NumeroDocumento, VerificacionEstado 
                 FROM usuarios WHERE UserID = ?";
         
         $stmt = $this->db->prepare($sql);
@@ -119,5 +119,27 @@ class UserRepository
         $success = $stmt->execute();
         $stmt->close();
         return $success;
+    }
+
+    public function updateVerificationDocuments(int $userId, string $pathFrente, string $pathReverso): bool
+    {
+        $sql = "UPDATE usuarios SET DocumentoImagenURL_Frente = ?, DocumentoImagenURL_Reverso = ?, VerificacionEstado = 'Pendiente' WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ssi", $pathFrente, $pathReverso, $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+    
+    // --- MÉTODO PARA ESTADÍSTICAS ---
+
+    public function countAll(): int
+    {
+        $sql = "SELECT COUNT(UserID) as total FROM usuarios WHERE Rol = 'Usuario'";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($result['total'] ?? 0);
     }
 }

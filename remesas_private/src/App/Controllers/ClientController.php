@@ -50,17 +50,25 @@ class ClientController extends BaseController
     public function getCuentas(): void
     {
         $userId = $this->ensureLoggedIn();
-        $paisID = (int)($_GET['paisID'] ?? 0);
-        $cuentas = $this->beneficiaryService->getAccountsByCountry($userId, $paisID);
-        $this->sendJsonResponse($cuentas);
+        try {
+            $paisID = (int)($_GET['paisID'] ?? 0);
+            $cuentas = $this->beneficiaryService->getAccountsByCountry($userId, $paisID);
+            $this->sendJsonResponse($cuentas);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
+        }
     }
 
     public function addCuenta(): void
     {
         $userId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput(); 
-        $newId = $this->beneficiaryService->addAccount($userId, $data);
-        $this->sendJsonResponse(['success' => true, 'id' => $newId], 201);
+        try {
+            $data = $this->getJsonInput(); 
+            $newId = $this->beneficiaryService->addAccount($userId, $data);
+            $this->sendJsonResponse(['success' => true, 'id' => $newId], 201);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
+        }
     }
     
     // --- FLUJO DE REMESAS Y ESTADOS ---
@@ -108,18 +116,23 @@ class ClientController extends BaseController
     public function getUserProfile(): void
     {
         $userId = $this->ensureLoggedIn();
-        $profile = $this->userService->getUserProfile($userId);
-        $this->sendJsonResponse(['success' => true, 'profile' => $profile]);
+        try {
+            $profile = $this->userService->getUserProfile($userId);
+            $this->sendJsonResponse(['success' => true, 'profile' => $profile]);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 404);
+        }
     }
 
     public function uploadVerificationDocs(): void
     {
         $userId = $this->ensureLoggedIn();
         
-         $pathFrente = 'uploads/verifications/frente_' . $userId . '_' . uniqid() . '.jpg'; 
-         $pathReverso = 'uploads/verifications/reverso_' . $userId . '_' . uniqid() . '.jpg'; 
-         
-         $this->userService->uploadVerificationDocs($userId, $pathFrente, $pathReverso);
-         $this->sendJsonResponse(['success' => true, 'message' => 'Documentos subidos correctamente.']);
+        try {
+             $this->userService->uploadVerificationDocs($userId, $_FILES);
+             $this->sendJsonResponse(['success' => true, 'message' => 'Documentos subidos correctamente.']);
+        } catch (Exception $e) {
+             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
+        }
     }
 }

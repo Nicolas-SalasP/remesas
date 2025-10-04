@@ -1,86 +1,82 @@
 <?php
+
 namespace App\Services;
 
-use App\Database\Database;
+use App\Repositories\TransactionRepository;
+use App\Repositories\UserRepository;
 use Exception;
 
 class DashboardService
 {
-    private Database $db;
+    private TransactionRepository $transactionRepository;
+    private UserRepository $userRepository;
 
-    public function __construct(Database $db)
+    public function __construct(TransactionRepository $transactionRepository, UserRepository $userRepository)
     {
-        $this->db = $db;
+        $this->transactionRepository = $transactionRepository;
+        $this->userRepository = $userRepository;
     }
 
-    public function getTransactionStatsForChart(string $startDate, string $endDate): array
+    public function getAdminDashboardStats(): array
     {
-        $start = new \DateTime($startDate);
-        $end = new \DateTime($endDate);
-        $interval = $start->diff($end);
-        if ($interval->days > 30) {
-            throw new Exception("El rango de fechas no puede superar los 31 días.", 400);
-        }
-
-        $connection = $this->db->getConnection();
-        $sql = "
-            SELECT 
-                DATE(FechaTransaccion) AS fecha,
-                COUNT(TransaccionID) AS cantidad,
-                SUM(MontoOrigen) AS volumen
-            FROM transacciones
-            WHERE DATE(FechaTransaccion) BETWEEN ? AND ?
-            GROUP BY DATE(FechaTransaccion)
-            ORDER BY fecha ASC
-        ";
-
-        $stmt = $connection->prepare($sql);
-        $stmt->bind_param("ss", $startDate, $endDate);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $stats = $result->fetch_all(MYSQLI_ASSOC);
-        $stmt->close();
-
-        $labels = [];
-        $dateRange = [];
-        $currentDate = clone $start;
-        while ($currentDate <= $end) {
-            $dateKey = $currentDate->format('Y-m-d');
-            $labels[] = $currentDate->format('d/m');
-            $dateRange[$dateKey] = ['cantidad' => 0, 'volumen' => 0];
-            $currentDate->modify('+1 day');
-        }
-
-        foreach ($stats as $row) {
-            if (isset($dateRange[$row['fecha']])) {
-                $dateRange[$row['fecha']] = [
-                    'cantidad' => (int)$row['cantidad'],
-                    'volumen' => (float)$row['volumen']
-                ];
-            }
-        }
-
-        $transactionCounts = array_column(array_values($dateRange), 'cantidad');
-        $volumeData = array_column(array_values($dateRange), 'volumen');
+        $totalUsers = $this->userRepository->countAll();
+        $pendingTransactions = $this->transactionRepository->countByStatus(['En Verificación', 'En Proceso']);
+        $completedToday = $this->transactionRepository->countCompletedToday();
+        $totalVolume = $this->transactionRepository->getTotalVolume();
 
         return [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => 'Cantidad de Transacciones',
-                    'data' => $transactionCounts,
-                    'borderColor' => '#007bff',
-                    'backgroundColor' => 'rgba(0, 123, 255, 0.1)',
-                    'yAxisID' => 'y',
-                ],
-                [
-                    'label' => 'Volumen de Dinero (CLP)',
-                    'data' => $volumeData,
-                    'borderColor' => '#28a745',
-                    'backgroundColor' => 'rgba(40, 167, 69, 0.1)',
-                    'yAxisID' => 'y1',
-                ]
-            ]
+            'totalUsers' => $totalUsers,
+            'pendingTransactions' => $pendingTransactions,
+            'completedToday' => $completedToday,
+            'totalVolume' => number_format($totalVolume, 2, ',', '.') . ' CLP'
         ];
+    }
+
+    public function getDolarBcvData(): array
+    {
+        $cacheDir = __DIR__ . '/../../cache/';
+        $cacheFile = $cacheDir . 'dolar_bcv_history.json';
+        $cacheTime = 3600;
+
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
+            return json_decode(file_get_contents($cacheFile), true);
+        }
+
+        $startDate = date('Y-m-d', strtotime("-7 days"));
+        $apiUrl = "https://api.frankfurter.app/{$startDate}..?to=VES&from=USD";
+        
+        $response = @file_get_contents($apiUrl);
+
+        if ($response === false) {
+            throw new Exception("No se pudo conectar con la API de tasas de cambio.", 503);
+        }
+
+        $data = json_decode($response, true);
+        if (empty($data['rates'])) {
+            throw new Exception("La API de tasas de cambio no devolvió datos válidos.", 500);
+        }
+        
+        ksort($data['rates']);
+        $labels = [];
+        $dataPoints = [];
+        foreach ($data['rates'] as $date => $rates) {
+            $labels[] = date("d/m", strtotime($date));
+            $dataPoints[] = $rates['VES'];
+        }
+        
+        $output = [
+            'success' => true,
+            'valorActual' => end($dataPoints),
+            'labels' => $labels,
+            'dataPoints' => $dataPoints
+        ];
+
+        file_put_contents($cacheFile, json_encode($output));
+
+        return $output;
     }
 }
