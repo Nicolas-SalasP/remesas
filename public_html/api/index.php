@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
+// Importación de Clases
 use App\Database\Database;
 use App\Repositories\UserRepository;
 use App\Repositories\RateRepository;
@@ -15,12 +16,11 @@ use App\Services\UserService;
 use App\Services\PricingService;
 use App\Services\TransactionService;
 use App\Services\BeneficiaryService;
+use App\Services\DashboardService;
 use App\Controllers\AuthController;
 use App\Controllers\ClientController;
 use App\Controllers\AdminController;
-use App\Services\DashboardService;
 use App\Controllers\DashboardController;
-use Exception;
 
 header('Content-Type: application/json');
 
@@ -38,13 +38,14 @@ try {
     $logService = new LogService($db); 
     $notificationService = new NotificationService($logService); 
     $pdfService = new PDFService();
-    $dashboardService = new DashboardService($db);
     
     // Servicios de Negocio 
     $userService = new UserService($userRepository, $notificationService);
     $pricingService = new PricingService($rateRepository, $countryRepository, $notificationService);
     $beneficiaryService = new BeneficiaryService($beneficiaryRepository, $notificationService);
     $transactionService = new TransactionService($transactionRepository, $userRepository, $notificationService, $pdfService);
+    // Corregido: DashboardService espera un RateRepository, no la conexión a la BD.
+    $dashboardService = new DashboardService($rateRepository); 
 
 } catch (Exception $e) {
     error_log("Error de Inicialización DB: " . $e->getMessage());
@@ -56,13 +57,14 @@ try {
 $accion = $_GET['accion'] ?? '';
 
 $routes = [
-    // Rutas de Autenticación (Públicas)
+    // Rutas Públicas
     'loginUser'             => [AuthController::class, 'loginUser'],
     'registerUser'          => [AuthController::class, 'registerUser'],
     'requestPasswordReset'  => [AuthController::class, 'requestPasswordReset'],
     'performPasswordReset'  => [AuthController::class, 'performPasswordReset'],
     'getTasa'               => [ClientController::class, 'getTasa'],
     'getPaises'             => [ClientController::class, 'getPaises'],
+    'getDolarBcv'           => [DashboardController::class, 'getDolarBcvData'], // Ruta para el gráfico
 
     // Rutas de Cliente (Logueado)
     'getCuentas'            => [ClientController::class, 'getCuentas'],

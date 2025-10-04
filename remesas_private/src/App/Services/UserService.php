@@ -2,111 +2,118 @@
 
 namespace App\Services;
 
-use App\Repositories\RateRepository;
-use App\Repositories\CountryRepository;
+use App\Repositories\UserRepository;
 use Exception;
 
-class PricingService
+class UserService
 {
-    private RateRepository $rateRepository;
-    private CountryRepository $countryRepository;
+    private UserRepository $userRepository;
     private NotificationService $notificationService;
 
     public function __construct(
-        RateRepository $rateRepository,
-        CountryRepository $countryRepository,
-        NotificationService $notificationService 
+        UserRepository $userRepository,
+        NotificationService $notificationService
     ) {
-        $this->rateRepository = $rateRepository;
-        $this->countryRepository = $countryRepository;
+        $this->userRepository = $userRepository;
         $this->notificationService = $notificationService;
     }
 
-    // LÓGICA DE LECTURA (Frontend y App Móvil)
-
-    public function getCountriesByRole(string $role): array
+    public function loginUser(string $email, string $password): array
     {
-        $rolesValidos = ['Origen', 'Destino', 'Ambos'];
-        if (!in_array($role, $rolesValidos)) {
-            throw new Exception("Rol de país inválido.", 400);
+        $user = $this->userRepository->findByEmail($email);
+
+        if (!$user || !password_verify($password, $user['PasswordHash'])) {
+            if ($user) {
+            }
+            throw new Exception("Email o contraseña incorrectos.", 401);
         }
-        return $this->countryRepository->findByRoleAndStatus($role, true);
+
+        if ($user['LockoutUntil'] && strtotime($user['LockoutUntil']) > time()) {
+             throw new Exception("Cuenta bloqueada temporalmente.", 403);
+        }
+        $this->userRepository->updateLoginAttempts($user['UserID'], 0, null);
+
+        return $user;
     }
 
-    public function getCurrentRate(int $origenID, int $destinoID): array
+    public function registerUser(array $data): array
     {
-        if ($origenID === $destinoID) {
-            throw new Exception("El país de origen y destino no pueden ser iguales.", 400);
+        // Validación de datos
+        if (empty($data['email']) || empty($data['password']) || empty($data['primerNombre']) || empty($data['primerApellido'])) {
+            throw new Exception("Todos los campos son obligatorios.", 400);
         }
 
-        $tasaInfo = $this->rateRepository->findCurrentRate($origenID, $destinoID);
-
-        if (!$tasaInfo) {
-            throw new Exception("Ruta de remesa no configurada o inactiva.", 404);
+        if (strlen($data['password']) < 6) {
+            throw new Exception("La contraseña debe tener al menos 6 caracteres.", 400);
         }
+
+        if ($this->userRepository->findByEmail($data['email'])) {
+            throw new Exception("El correo electrónico ya está registrado.", 409);
+        }
+
+        $data['passwordHash'] = password_hash($data['password'], PASSWORD_DEFAULT);
         
-        return $tasaInfo;
+        $userId = $this->userRepository->create($data);
+        
+        $this->notificationService->logAdminAction($userId, 'Registro de Usuario', 'Email: ' . $data['email']);
+
+        return $this->userRepository->findByEmail($data['email']);
     }
 
-    // LÓGICA DE ADMINISTRACIÓN 
-
-    public function adminAddCountry(int $adminId, string $nombrePais, string $codigoMoneda, string $rol): bool
+    public function requestPasswordReset(string $email): void
     {
-        $rolesValidos = ['Origen', 'Destino', 'Ambos'];
-        if (empty($nombrePais) || strlen($codigoMoneda) !== 3 || !in_array($rol, $rolesValidos)) {
-            throw new Exception("Datos de país incompletos o código de moneda inválido (3 letras).", 400);
+        $user = $this->userRepository->findByEmail($email);
+        if ($user) {
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', time() + 3600); 
+            
+            if ($this->userRepository->createResetToken($user['UserID'], $token, $expires)) {
+                $this->notificationService->sendPasswordResetEmail($email, $token);
+            }
+        }
+    }
+
+    public function performPasswordReset(string $token, string $newPassword): void
+    {
+        if (strlen($newPassword) < 6) {
+            throw new Exception("La contraseña debe tener al menos 6 caracteres.", 400);
         }
 
-        try {
-            $newId = $this->countryRepository->create($nombrePais, strtoupper($codigoMoneda), $rol);
-            $this->notificationService->logAdminAction($adminId, 'Admin añadió país', "País: $nombrePais ($codigoMoneda)");
-            return $newId > 0;
-        } catch (Exception $e) {
-            throw new Exception('Error al guardar el país. Asegúrese de que el nombre no esté duplicado.', 500); 
+        $resetData = $this->userRepository->findValidResetToken($token);
+        if (!$resetData) {
+            throw new Exception("Token no válido o expirado.", 400);
         }
+
+        $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        if ($this->userRepository->updatePassword($resetData['UserID'], $passwordHash)) {
+            $this->userRepository->markTokenAsUsed($resetData['ResetID']);
+        }
+    }
+
+    public function getUserProfile(int $userId): array
+    {
+        return $this->userRepository->findUserById($userId) ?? [];
+    }
+
+    public function uploadVerificationDocs(int $userId, string $pathFrente, string $pathReverso): void
+    {
+        $this->userRepository->updateVerificationDocuments($userId, $pathFrente, $pathReverso);
     }
     
-    public function adminUpdateCountryRole(int $adminId, int $paisId, string $newRole): bool
+    public function updateVerificationStatus(int $adminId, int $userId, string $newStatus): void
     {
-        $rolesValidos = ['Origen', 'Destino', 'Ambos'];
-        if (empty($paisId) || !in_array($newRole, $rolesValidos)) {
-            throw new Exception("ID de país o rol no válido.", 400);
-        }
-
-        $success = $this->countryRepository->updateRole($paisId, $newRole);
-        
-        if ($success) {
-            $this->notificationService->logAdminAction($adminId, "Admin cambió rol de país", "País ID: $paisId, Nuevo Rol: $newRole");
-        }
-        return $success;
+       if(!in_array($newStatus, ['Verificado', 'Rechazado'])) {
+           throw new Exception("Estado de verificación no válido", 400);
+       }
+       $this->userRepository->updateVerificationStatus($userId, $newStatus);
+       $this->notificationService->logAdminAction($adminId, 'Admin actualizó estado de verificación', "Usuario ID: $userId, Nuevo Estado: $newStatus");
     }
 
-    public function adminToggleCountryStatus(int $adminId, int $paisId, bool $newStatus): bool
+    public function toggleUserBlock(int $adminId, int $userId, string $newStatus): void
     {
-        if (empty($paisId)) {
-            throw new Exception("ID de país no válido.", 400);
-        }
-
-        $success = $this->countryRepository->updateStatus($paisId, $newStatus);
-        
-        if ($success) {
-            $statusText = $newStatus ? 'Activado' : 'Desactivado';
-            $this->notificationService->logAdminAction($adminId, "Admin cambió estado de país", "País ID: $paisId, Nuevo Estado: $statusText");
-        }
-        return $success;
-    }
-
-    public function adminUpdateRate(int $adminId, int $tasaId, float $nuevoValor): bool
-    {
-        if ($nuevoValor <= 0 || !is_numeric($nuevoValor)) {
-            throw new Exception("El valor de la tasa debe ser un número positivo.", 400);
-        }
-
-        $success = $this->rateRepository->updateRateValue($tasaId, $nuevoValor);
-
-        if ($success) {
-            $this->notificationService->logAdminAction($adminId, 'Admin actualizó tasa', "Tasa ID: $tasaId, Nuevo Valor: $nuevoValor");
-        }
-        return $success;
+        $lockoutUntil = ($newStatus === 'blocked') ? date('Y-m-d H:i:s', time() + (10 * 365 * 24 * 60 * 60)) : null; // Bloqueo "permanente"
+        $this->userRepository->updateLoginAttempts($userId, 0, $lockoutUntil);
+        $actionText = $newStatus === 'blocked' ? 'Bloqueado' : 'Desbloqueado';
+        $this->notificationService->logAdminAction($adminId, "Admin cambió estado de usuario", "Usuario ID: $userId, Nuevo Estado: $actionText");
     }
 }

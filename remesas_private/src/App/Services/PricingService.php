@@ -15,7 +15,7 @@ class PricingService
     public function __construct(
         RateRepository $rateRepository,
         CountryRepository $countryRepository,
-        NotificationService $notificationService // Para logear acciones de administración
+        NotificationService $notificationService
     ) {
         $this->rateRepository = $rateRepository;
         $this->countryRepository = $countryRepository;
@@ -54,6 +54,4 @@ class PricingService
         }
         return $success;
     }
-    
-    // ... Aquí irían los métodos de administración para países (adminUpdateRole, adminToggleStatus) ...
 }
