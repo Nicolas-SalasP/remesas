@@ -1,8 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // ===================================================================
-    // ---- CONTROLADORES DE MODALES (SE DEFINEN UNA SOLA VEZ) ----
-    // ===================================================================
 
     // --- Controlador para el MODAL DE NOTIFICACIONES (Éxito/Error) ---
     const infoModalElement = document.getElementById('infoModal');
@@ -16,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.showInfoModal = (title, message, isSuccess = true, onHideCallback = null) => {
             modalTitle.textContent = title;
             modalBody.textContent = message;
-
             modalHeader.classList.remove('bg-success', 'bg-danger');
             modalCloseBtn.classList.remove('btn-success', 'btn-danger');
             
@@ -73,152 +68,156 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- LÓGICA DE LAS PÁGINAS DEL ADMIN ----
     // ===================================================================
 
-    // --- LÓGICA PARA FILTRAR TRANSACCIONES ---
-    const transactionsTableBody = document.getElementById('transactionsTableBody');
-    if (transactionsTableBody) {
-        // ... (Tu código de filtros de transacciones, si lo necesitas) ...
+    // --- LÓGICA PARA EL MODAL DE VERIFICACIÓN ---
+    const verificationModalElement = document.getElementById('verificationModal');
+    if (verificationModalElement) {
+        const verificationModal = new bootstrap.Modal(verificationModalElement);
+        const modalUserName = document.getElementById('modalUserName');
+        const modalImgFrente = document.getElementById('modalImgFrente');
+        const modalImgReverso = document.getElementById('modalImgReverso');
+        const actionButtons = verificationModalElement.querySelectorAll('.action-btn');
+        let currentUserId = null;
+
+        verificationModalElement.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            currentUserId = button.dataset.userId;
+            
+            modalUserName.textContent = button.dataset.userName;
+            modalImgFrente.src = `../view_secure_file.php?file=${button.dataset.imgFrente}`;
+            modalImgReverso.src = `../view_secure_file.php?file=${button.dataset.imgReverso}`;
+        });
+
+        actionButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const action = button.dataset.action;
+                if (!currentUserId) return;
+
+                const confirmed = await showConfirmModal(
+                    `Confirmar Acción`, 
+                    `¿Estás seguro de que quieres '${action}' la verificación para el usuario #${currentUserId}?`
+                );
+
+                if (confirmed) {
+                    try {
+                        const response = await fetch('../api/?accion=updateVerificationStatus', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId: currentUserId, newStatus: action })
+                        });
+                        const result = await response.json();
+
+                        verificationModal.hide();
+
+                        if (result.success) {
+                            showInfoModal('Éxito', `El usuario ha sido marcado como '${action}'.`, true);
+                            const rowToRemove = document.getElementById(`user-row-${currentUserId}`);
+                            if(rowToRemove) rowToRemove.remove();
+                        } else {
+                            showInfoModal('Error', result.error, false);
+                        }
+                    } catch (error) {
+                        showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
+                    }
+                }
+            });
+        });
     }
 
     // --- LÓGICA PARA GESTIONAR PAÍSES (ACTIVAR/DESACTIVAR) ---
-    const toggleStatusButtons = document.querySelectorAll('.toggle-status-btn');
-    if (toggleStatusButtons.length > 0) {
-        const performStatusToggle = async (paisId, newStatus, buttonElement) => {
+    document.querySelectorAll('.toggle-status-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const triggerButton = e.currentTarget;
+            const paisId = triggerButton.dataset.paisId;
+            const currentStatus = triggerButton.dataset.currentStatus;
+            const newStatus = currentStatus === '1' ? 0 : 1;
+            const newStatusText = newStatus === 1 ? 'Activo' : 'Inactivo';
+
+            const confirmed = await showConfirmModal('Confirmar Acción', `¿Seguro que quieres cambiar el estado de este país a "${newStatusText}"?`);
+            if (confirmed) {
+                try {
+                    const response = await fetch('../api/?accion=togglePaisStatus', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paisId: paisId, newStatus: newStatus })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        triggerButton.dataset.currentStatus = newStatus;
+                        triggerButton.textContent = newStatus === 1 ? 'Activo' : 'Inactivo';
+                        triggerButton.classList.toggle('btn-success', newStatus === 1);
+                        triggerButton.classList.toggle('btn-secondary', newStatus === 0);
+                        showInfoModal('Éxito', 'El estado del país ha sido actualizado.', true);
+                    } else {
+                        showInfoModal('Error', result.error, false);
+                    }
+                } catch (error) {
+                    showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
+                }
+            }
+        });
+    });
+
+    // --- LÓGICA PARA GESTIONAR PAÍSES (CAMBIAR ROL) ---
+    document.querySelectorAll('.role-select').forEach(select => {
+        select.addEventListener('change', async (e) => {
+            const paisId = e.target.dataset.paisId;
+            const newRole = e.target.value;
+            
+            const confirmed = await showConfirmModal('Confirmar Cambio de Rol', `¿Estás seguro de que quieres cambiar el rol de este país a "${newRole}"?`);
+            if (!confirmed) {
+                const originalOption = Array.from(e.target.options).find(opt => opt.defaultSelected);
+                if (originalOption) e.target.value = originalOption.value;
+                return;
+            }
+
             try {
-                const response = await fetch('../api/?accion=togglePaisStatus', {
+                const response = await fetch('../api/?accion=updatePaisRol', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ paisId: paisId, newStatus: newStatus })
+                    body: JSON.stringify({ paisId, newRole })
                 });
                 const result = await response.json();
                 if (result.success) {
-                    buttonElement.dataset.currentStatus = newStatus;
-                    buttonElement.textContent = newStatus === 1 ? 'Activo' : 'Inactivo';
-                    buttonElement.classList.toggle('btn-success', newStatus === 1);
-                    buttonElement.classList.toggle('btn-secondary', newStatus === 0);
-                    showInfoModal('Éxito', 'El estado del país ha sido actualizado.', true);
+                    showInfoModal('Éxito', '¡Rol actualizado con éxito!', true);
                 } else {
                     showInfoModal('Error', result.error, false);
                 }
             } catch (error) {
                 showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
             }
-        };
-
-        toggleStatusButtons.forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const triggerButton = e.currentTarget;
-                const paisId = triggerButton.dataset.paisId;
-                const currentStatus = triggerButton.dataset.currentStatus;
-                const newStatus = currentStatus === '1' ? 0 : 1;
-                const newStatusText = newStatus === 1 ? 'Activo' : 'Inactivo';
-
-                const confirmed = await showConfirmModal('Confirmar Acción', `¿Seguro que quieres cambiar el estado de este país a "${newStatusText}"?`);
-                if (confirmed) {
-                    await performStatusToggle(paisId, newStatus, triggerButton);
-                }
-            });
         });
-    }
-
-    // --- LÓGICA PARA GESTIONAR PAÍSES (CAMBIAR ROL) ---
-    const roleSelects = document.querySelectorAll('.role-select');
-    if (roleSelects.length > 0) {
-        roleSelects.forEach(select => {
-            select.addEventListener('change', async (e) => {
-                const paisId = e.target.dataset.paisId;
-                const newRole = e.target.value;
-                
-                const confirmed = await showConfirmModal('Confirmar Cambio de Rol', `¿Estás seguro de que quieres cambiar el rol de este país a "${newRole}"?`);
-                if (!confirmed) {
-                    const originalOption = Array.from(e.target.options).find(opt => opt.defaultSelected);
-                    if (originalOption) e.target.value = originalOption.value;
-                    return;
-                }
-
-                try {
-                    const response = await fetch('../api/?accion=updatePaisRol', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paisId, newRole })
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        showInfoModal('Éxito', '¡Rol actualizado con éxito!', true);
-                    } else {
-                        showInfoModal('Error', result.error, false);
-                    }
-                } catch (error) {
-                    showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
-                }
-            });
-        });
-    }
-
-    // --- LÓGICA PARA ACCIONES DE VERIFICACIÓN ---
-    const verificationButtons = document.querySelectorAll('.verification-action-btn');
-    if (verificationButtons.length > 0) {
-        verificationButtons.forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const userId = e.target.dataset.userId;
-                const action = e.target.dataset.action;
-                
-                const confirmed = await showConfirmModal('Confirmar Verificación', `¿Estás seguro de que quieres '${action}' la verificación para el usuario #${userId}?`);
-                if (!confirmed) return;
-
-                try {
-                    const response = await fetch('../api/?accion=updateVerificationStatus', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId, newStatus: action })
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        showInfoModal('Éxito', 'El estado de la verificación ha sido actualizado.', true, () => {
-                            window.location.reload();
-                        });
-                    } else {
-                        showInfoModal('Error', result.error, false);
-                    }
-                } catch (error) {
-                    showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
-                }
-            });
-        });
-    }
+    });
 
     // --- LÓGICA PARA BLOQUEAR/DESBLOQUEAR USUARIOS ---
-    const blockUserButtons = document.querySelectorAll('.block-user-btn');
-    if (blockUserButtons.length > 0) {
-        blockUserButtons.forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const userId = e.target.dataset.userId;
-                const currentStatus = e.target.dataset.currentStatus;
-                const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
-                const actionText = newStatus === 'blocked' ? 'BLOQUEAR' : 'DESBLOQUEAR';
+    document.querySelectorAll('.block-user-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const userId = e.target.dataset.userId;
+            const currentStatus = e.target.dataset.currentStatus;
+            const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
+            const actionText = newStatus === 'blocked' ? 'BLOQUEAR' : 'DESBLOQUEAR';
 
-                const confirmed = await showConfirmModal('Confirmar Acción', `¿Estás seguro de que quieres ${actionText} a este usuario?`);
-                if (!confirmed) return;
+            const confirmed = await showConfirmModal('Confirmar Acción', `¿Estás seguro de que quieres ${actionText} a este usuario?`);
+            if (!confirmed) return;
 
-                try {
-                    const response = await fetch('../api/?accion=toggleUserBlock', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId, newStatus })
+            try {
+                const response = await fetch('../api/?accion=toggleUserBlock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, newStatus })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    const successMessage = newStatus === 'blocked' ? 'Usuario bloqueado correctamente.' : 'Usuario desbloqueado correctamente.';
+                    showInfoModal('Éxito', successMessage, true, () => {
+                        window.location.reload();
                     });
-                    const result = await response.json();
-                    if (result.success) {
-                        const successMessage = newStatus === 'blocked' ? 'Usuario bloqueado correctamente.' : 'Usuario desbloqueado correctamente.';
-                        showInfoModal('Éxito', successMessage, true, () => {
-                            window.location.reload();
-                        });
-                    } else {
-                        showInfoModal('Error', result.error, false);
-                    }
-                } catch (error) {
-                    showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
+                } else {
+                    showInfoModal('Error', result.error, false);
                 }
-            });
+            } catch (error) {
+                showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
+            }
         });
-    }
+    });
 
 });

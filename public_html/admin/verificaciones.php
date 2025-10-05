@@ -22,34 +22,36 @@ $usuariosPendientes = $conexion->query("
     <p><a href="<?php echo BASE_URL; ?>/admin/">Volver al panel principal</a></p>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-hover">
+        <table class="table table-bordered table-hover" id="tabla-verificaciones">
             <thead class="table-light">
                 <tr>
                     <th>ID Usuario</th>
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Documento</th>
-                    <th>Imágenes</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($usuariosPendientes)): ?>
-                    <tr><td colspan="6" class="text-center">No hay usuarios pendientes de verificación.</td></tr>
+                    <tr><td colspan="5" class="text-center">No hay usuarios pendientes de verificación.</td></tr>
                 <?php else: ?>
                     <?php foreach ($usuariosPendientes as $usuario): ?>
-                        <tr>
+                        <tr id="user-row-<?php echo $usuario['UserID']; ?>">
                             <td><?php echo $usuario['UserID']; ?></td>
                             <td><?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?></td>
                             <td><?php echo htmlspecialchars($usuario['Email']); ?></td>
                             <td><?php echo htmlspecialchars($usuario['NumeroDocumento']); ?></td>
                             <td>
-                                <a href="<?php echo BASE_URL . '/' . $usuario['DocumentoImagenURL_Frente']; ?>" target="_blank" class="btn btn-sm btn-info">Ver Frente</a>
-                                <a href="<?php echo BASE_URL . '/' . $usuario['DocumentoImagenURL_Reverso']; ?>" target="_blank" class="btn btn-sm btn-info">Ver Reverso</a>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-success verification-action-btn" data-user-id="<?php echo $usuario['UserID']; ?>" data-action="Verificado">Aprobar</button>
-                                <button class="btn btn-sm btn-danger verification-action-btn" data-user-id="<?php echo $usuario['UserID']; ?>" data-action="Rechazado">Rechazar</button>
+                                <button class="btn btn-sm btn-primary review-btn" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#verificationModal"
+                                        data-user-id="<?php echo $usuario['UserID']; ?>"
+                                        data-user-name="<?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?>"
+                                        data-img-frente="<?php echo urlencode($usuario['DocumentoImagenURL_Frente']); ?>"
+                                        data-img-reverso="<?php echo urlencode($usuario['DocumentoImagenURL_Reverso']); ?>">
+                                    Revisar
+                                </button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -57,6 +59,34 @@ $usuariosPendientes = $conexion->query("
             </tbody>
         </table>
     </div>
+</div>
+
+<div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="verificationModalLabel">Revisar Verificación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <h6 class="mb-3">Usuario: <span id="modalUserName"></span></h6>
+        <div class="row">
+            <div class="col-md-6 text-center">
+                <p><strong>Frente del Documento</strong></p>
+                <img id="modalImgFrente" src="" class="img-fluid border rounded" alt="Frente del documento">
+            </div>
+            <div class="col-md-6 text-center">
+                <p><strong>Reverso del Documento</strong></p>
+                <img id="modalImgReverso" src="" class="img-fluid border rounded" alt="Reverso del documento">
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger action-btn" data-action="Rechazado">Rechazar</button>
+        <button type="button" class="btn btn-success action-btn" data-action="Verificado">Aprobar</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <?php
