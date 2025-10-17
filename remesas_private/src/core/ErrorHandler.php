@@ -2,26 +2,25 @@
 
 namespace App\Core;
 
-use Exception;
-
-function exception_handler(Exception $exception): void
+function exception_handler(\Throwable $exception): void
 {
     error_reporting(0);
     ini_set('display_errors', 0);
 
-    $statusCode = $exception->getCode();
+    $statusCode = method_exists($exception, 'getCode') ? $exception->getCode() : 500;
     if ($statusCode < 400 || $statusCode >= 600) {
         $statusCode = 500; 
     }
 
     $response = [
         'success' => false,
-        'error' => $exception->getMessage()
+        'error' => 'Ocurrió un error inesperado en el servidor.'
     ];
 
-   
-    if (IS_DEV_ENVIRONMENT) {
-        $response['trace'] = $exception->getTraceAsString();
+    if (defined('IS_DEV_ENVIRONMENT') && IS_DEV_ENVIRONMENT) {
+        $response['error'] = $exception->getMessage();
+        $response['trace'] = explode("\n", $exception->getTraceAsString());
+        $response['file'] = $exception->getFile() . ':' . $exception->getLine();
     }
 
     http_response_code($statusCode);
@@ -31,7 +30,7 @@ function exception_handler(Exception $exception): void
     error_log(
         "Excepción no controlada: " . $exception->getMessage() .
         " en " . $exception->getFile() .
-        " línea " . $exception->getLine()
+        " en la línea " . $exception->getLine()
     );
 
     exit();

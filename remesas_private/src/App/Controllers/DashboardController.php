@@ -1,7 +1,9 @@
 <?php
+
 namespace App\Controllers;
 
 use App\Services\DashboardService;
+use Exception;
 
 class DashboardController extends BaseController
 {
@@ -10,15 +12,26 @@ class DashboardController extends BaseController
     public function __construct(DashboardService $dashboardService)
     {
         $this->dashboardService = $dashboardService;
-        $this->ensureAdmin(); 
     }
 
     public function getStats(): void
     {
-        $endDate = $_GET['fecha_fin'] ?? date('Y-m-d');
-        $startDate = $_GET['fecha_inicio'] ?? date('Y-m-d', strtotime('-6 days', strtotime($endDate)));
+        try {
+            $stats = $this->dashboardService->getAdminDashboardStats();
+            $this->sendJsonResponse(['success' => true, 'stats' => $stats]);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
 
-        $stats = $this->dashboardService->getTransactionStatsForChart($startDate, $endDate);
-        $this->sendJsonResponse(['success' => true, 'stats' => $stats]);
+    public function getDolarBcvData(): void
+    {
+        try {
+            $data = $this->dashboardService->getDolarBcvData();
+            $this->sendJsonResponse($data);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'No se pudieron obtener los datos del gráfico en este momento.'], 500);
+        }
     }
 }
+

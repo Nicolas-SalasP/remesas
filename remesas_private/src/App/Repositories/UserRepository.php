@@ -131,8 +131,6 @@ class UserRepository
         return $success;
     }
     
-    // --- MÉTODO PARA ESTADÍSTICAS ---
-
     public function countAll(): int
     {
         $sql = "SELECT COUNT(UserID) as total FROM usuarios WHERE Rol = 'Usuario'";
@@ -141,5 +139,20 @@ class UserRepository
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return (int)($result['total'] ?? 0);
+    }
+
+    public function updateVerificationStatus(int $userId, string $newStatus): bool
+    {
+        $allowedStatus = ['Verificado', 'Rechazado', 'Pendiente', 'No Verificado'];
+        if (!in_array($newStatus, $allowedStatus)) {
+            return false;
+        }
+
+        $sql = "UPDATE usuarios SET VerificacionEstado = ? WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("si", $newStatus, $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
     }
 }
