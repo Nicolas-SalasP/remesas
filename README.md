@@ -57,9 +57,9 @@ JC Envíos es una aplicación web completa diseñada para facilitar el envío de
 
 * Chart.js: Para la visualización de gráficos, como el valor del dólar en la página de inicio.
 
-#$API:
+# $API:
 
-API RESTful interna: El frontend se comunica con el backend a través de una API que sigue principios REST, gestionando todas las operaciones de datos de forma centralizada a través de public_html/api/index.php.
+* API RESTful interna: El frontend se comunica con el backend a través de una API que sigue principios REST, gestionando todas las operaciones de datos de forma centralizada a través de public_html/api/index.php.
 
 
 
