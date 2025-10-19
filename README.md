@@ -64,6 +64,8 @@ JC Envíos es una aplicación web completa diseñada para facilitar el envío de
 
 
 # 📁 Estructura del Proyecto
+
+```
 /
 ├── public_html/            # Archivos públicos (Document Root)
 │   ├── admin/              # Vistas y lógica del panel de administración
@@ -84,3 +86,4 @@ JC Envíos es una aplicación web completa diseñada para facilitar el envío de
 │   └── config.php          # (No versionado) Credenciales y configuración
 │
 └── .gitignore              # Archivos y carpetas ignorados por Git
+```
