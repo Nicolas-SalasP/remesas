@@ -3,59 +3,59 @@ JC Envíos es una aplicación web completa diseñada para facilitar el envío de
 
 # ✨ Características Principales
 ## Para Clientes
-* * Registro y Autenticación de Usuarios: Sistema seguro de creación de cuentas e inicio de sesión.
+* Registro y Autenticación de Usuarios: Sistema seguro de creación de cuentas e inicio de sesión.
 
-* * Recuperación de Contraseña: Flujo de restablecimiento de contraseña a través de correo electrónico.
+* Recuperación de Contraseña: Flujo de restablecimiento de contraseña a través de correo electrónico.
 
-* * Verificación de Identidad: Proceso de verificación de cuenta mediante la subida de documentos de identidad para cumplir con los requisitos de seguridad antes de transaccionar.
+* Verificación de Identidad: Proceso de verificación de cuenta mediante la subida de documentos de identidad para cumplir con los requisitos de seguridad antes de transaccionar.
 
-* * Flujo de Transacción Guiado: Interfaz paso a paso para seleccionar la ruta del envío, el beneficiario y el monto a enviar.
+* Flujo de Transacción Guiado: Interfaz paso a paso para seleccionar la ruta del envío, el beneficiario y el monto a enviar.
 
-* * Gestión de Beneficiarios: Los usuarios pueden agregar y seleccionar cuentas de beneficiarios para agilizar futuros envíos.
+* Gestión de Beneficiarios: Los usuarios pueden agregar y seleccionar cuentas de beneficiarios para agilizar futuros envíos.
 
-* * Historial de Transacciones: Panel para que los usuarios puedan ver todas sus transacciones, verificar su estado y subir comprobantes de pago.
+* Historial de Transacciones: Panel para que los usuarios puedan ver todas sus transacciones, verificar su estado y subir comprobantes de pago.
 
-* * Generación de Comprobantes: Posibilidad de generar un comprobante en formato PDF para cada orden de envío.
+* Generación de Comprobantes: Posibilidad de generar un comprobante en formato PDF para cada orden de envío.
 
 ## Para Administradores
-* * Panel de Administración Centralizado: Dashboard para supervisar la actividad de la plataforma.
+* Panel de Administración Centralizado: Dashboard para supervisar la actividad de la plataforma.
 
-* * Gestión de Transacciones: Visualización de todas las transacciones, con opciones para confirmar pagos, procesar envíos y subir comprobantes de envío.
+* Gestión de Transacciones: Visualización de todas las transacciones, con opciones para confirmar pagos, procesar envíos y subir comprobantes de envío.
 
-* * Gestión de Usuarios: Panel para ver, bloquear y desbloquear usuarios del sistema.
+* Gestión de Usuarios: Panel para ver, bloquear y desbloquear usuarios del sistema.
 
-* * Verificación de Cuentas: Interfaz para revisar y aprobar o rechazar los documentos de verificación de identidad de los usuarios.
+* Verificación de Cuentas: Interfaz para revisar y aprobar o rechazar los documentos de verificación de identidad de los usuarios.
 
-* * Gestión de Tasas de Cambio: Funcionalidad para actualizar las tasas de cambio de las diferentes rutas de envío.
+* Gestión de Tasas de Cambio: Funcionalidad para actualizar las tasas de cambio de las diferentes rutas de envío.
 
-* * Gestión de Países: Panel para administrar los países de origen y destino, así como su estado (activo/inactivo).
+* Gestión de Países: Panel para administrar los países de origen y destino, así como su estado (activo/inactivo).
 
-* * Logs del Sistema: Visualización de un registro de todas las acciones importantes que ocurren en la aplicación para auditoría y depuración.
+* Logs del Sistema: Visualización de un registro de todas las acciones importantes que ocurren en la aplicación para auditoría y depuración.
 
 # 🛠️ Tecnologías Utilizadas
 ##Backend:
 
-PHP: Lenguaje principal del lado del servidor.
+* PHP: Lenguaje principal del lado del servidor.
 
-Arquitectura por Capas: El proyecto sigue una estructura organizada en Controladores, Servicios y Repositorios para una clara separación de responsabilidades.
+* Arquitectura por Capas: El proyecto sigue una estructura organizada en Controladores, Servicios y Repositorios para una clara separación de responsabilidades.
 
-MySQL: Base de datos para almacenar toda la información.
+* MySQL: Base de datos para almacenar toda la información.
 
-Composer: Gestor de dependencias para PHP (PHPMailer, Twilio SDK).
+* Composer: Gestor de dependencias para PHP (PHPMailer, Twilio SDK).
 
-FPDF: Librería utilizada para la generación de documentos PDF.
+* FPDF: Librería utilizada para la generación de documentos PDF.
 
-PHPMailer: Para el envío de correos electrónicos, como en la recuperación de contraseñas.
+* PHPMailer: Para el envío de correos electrónicos, como en la recuperación de contraseñas.
 
 ## Frontend:
 
-HTML5, CSS3: Estructura y estilos de la aplicación.
+* HTML5, CSS3: Estructura y estilos de la aplicación.
 
-JavaScript (Vanilla): Lógica del lado del cliente para interactividad, validaciones y comunicación con la API.
+* JavaScript (Vanilla): Lógica del lado del cliente para interactividad, validaciones y comunicación con la API.
 
-Bootstrap 5: Framework CSS para un diseño responsive y componentes de interfaz modernos.
+* Bootstrap 5: Framework CSS para un diseño responsive y componentes de interfaz modernos.
 
-Chart.js: Para la visualización de gráficos, como el valor del dólar en la página de inicio.
+* Chart.js: Para la visualización de gráficos, como el valor del dólar en la página de inicio.
 
 #$API:
 
