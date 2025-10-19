@@ -1,7 +1,7 @@
-#JC Envíos - Plataforma de Remesas
+# JC Envíos - Plataforma de Remesas
 JC Envíos es una aplicación web completa diseñada para facilitar el envío de remesas de dinero de forma segura, rápida y confiable. La plataforma permite a los usuarios registrados realizar transacciones, gestionar beneficiarios y hacer seguimiento de sus envíos, mientras que los administradores cuentan con un panel de control para gestionar usuarios, tasas de cambio y operaciones.
 
-#✨ Características Principales
+# ✨ Características Principales
 ##Para Clientes
 Registro y Autenticación de Usuarios: Sistema seguro de creación de cuentas e inicio de sesión.
 
@@ -17,7 +17,7 @@ Historial de Transacciones: Panel para que los usuarios puedan ver todas sus tra
 
 Generación de Comprobantes: Posibilidad de generar un comprobante en formato PDF para cada orden de envío.
 
-##Para Administradores
+## Para Administradores
 Panel de Administración Centralizado: Dashboard para supervisar la actividad de la plataforma.
 
 Gestión de Transacciones: Visualización de todas las transacciones, con opciones para confirmar pagos, procesar envíos y subir comprobantes de envío.
@@ -32,7 +32,7 @@ Gestión de Países: Panel para administrar los países de origen y destino, as�
 
 Logs del Sistema: Visualización de un registro de todas las acciones importantes que ocurren en la aplicación para auditoría y depuración.
 
-#🛠️ Tecnologías Utilizadas
+# 🛠️ Tecnologías Utilizadas
 ##Backend:
 
 PHP: Lenguaje principal del lado del servidor.
@@ -47,7 +47,7 @@ FPDF: Librería utilizada para la generación de documentos PDF.
 
 PHPMailer: Para el envío de correos electrónicos, como en la recuperación de contraseñas.
 
-##Frontend:
+## Frontend:
 
 HTML5, CSS3: Estructura y estilos de la aplicación.
 
@@ -63,7 +63,7 @@ API RESTful interna: El frontend se comunica con el backend a través de una API
 
 
 
-#📁 Estructura del Proyecto
+# 📁 Estructura del Proyecto
 /
 ├── public_html/            # Archivos públicos (Document Root)
 │   ├── admin/              # Vistas y lógica del panel de administración
