@@ -7,6 +7,7 @@ use App\Repositories\BeneficiaryRepository;
 use App\Repositories\RateRepository;
 use App\Repositories\UserRepository;
 use Exception;
+use App\Services\FileHandlerService;
 
 class TransactionService
 {
@@ -14,17 +15,20 @@ class TransactionService
     private UserRepository $userRepository;
     private NotificationService $notificationService;
     private PDFService $pdfService;
-
+    private FileHandlerService $fileHandler;
+    
     public function __construct(
         TransactionRepository $txRepository,
         UserRepository $userRepository,
         NotificationService $notificationService,
-        PDFService $pdfService
+        PDFService $pdfService,
+        FileHandlerService $fileHandler 
     ) {
         $this->txRepository = $txRepository;
         $this->userRepository = $userRepository;
         $this->notificationService = $notificationService;
         $this->pdfService = $pdfService;
+        $this->fileHandler = $fileHandler; 
     }
 
     // LÓGICA DEL FLUJO TRANSACCIONAL DEL CLIENTE
@@ -32,47 +36,71 @@ class TransactionService
     public function createTransaction(array $data): int
     {
         $client = $this->userRepository->findUserById($data['userID']);
-        
+
+        if (!$client) {
+            throw new Exception("Usuario no encontrado.", 404);
+        }
         if ($client['VerificacionEstado'] !== 'Verificado') {
-            throw new Exception("Tu cuenta debe estar verificada para realizar transacciones.", 403); 
+            throw new Exception("Tu cuenta debe estar verificada para realizar transacciones.", 403);
         }
         if (empty($client['Telefono'])) {
-            throw new Exception("El número de teléfono del perfil es requerido para enviar notificaciones.", 400);
+             error_log("Intento de transacción sin teléfono registrado para UserID: {$data['userID']}");
+            throw new Exception("Falta tu número de teléfono en el perfil. Actualízalo para poder realizar transacciones.", 400);
+        }
+        $requiredFields = ['userID', 'cuentaID', 'tasaID', 'montoOrigen', 'monedaOrigen', 'montoDestino', 'monedaDestino', 'formaDePago'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || (is_string($data[$field]) && trim($data[$field]) === '')) {
+                 throw new Exception("Faltan datos para crear la transacción. Campo requerido: $field", 400);
+            }
         }
         
-        $transactionId = $this->txRepository->create($data);
-        
-        $txData = $this->txRepository->getFullTransactionDetails($transactionId);
-
-        $txData['TelefonoCliente'] = $client['Telefono'];
-        $txData['PrimerNombre'] = $client['PrimerNombre'];
         try {
-            $pdfContent = $this->pdfService->generateOrder($txData); // Genera el PDF binario
+            $transactionId = $this->txRepository->create($data);
+    
+            $txData = $this->txRepository->getFullTransactionDetails($transactionId);
+            if (!$txData) {
+                 throw new Exception("No se pudieron obtener los detalles completos de la transacción recién creada.", 500);
+            }
+    
+            $txData['TelefonoCliente'] = $client['Telefono'];
+            $txData['PrimerNombre'] = $client['PrimerNombre'];
+    
+            $pdfContent = $this->pdfService->generateOrder($txData);
+            $pdfUrl = $this->fileHandler->savePdfTemporarily($pdfContent, $transactionId);
+    
+            $whatsappSent = $this->notificationService->sendOrderToClientWhatsApp($txData, $pdfUrl);
             
-            // A. Notificar al Cliente (WhatsApp)
-            $this->notificationService->sendOrderToClientWhatsApp($txData, $pdfContent);
+            if (!$whatsappSent) {
+                 $this->notificationService->logAdminAction($data['userID'], 'Advertencia Notificación', "TX ID $transactionId: No se pudo enviar WhatsApp al cliente.");
+            }
             
-            // B. Notificar al Proveedor (WhatsApp)
-            $this->notificationService->sendOrderToProviderWhatsApp($txData, $pdfContent);
+            $this->notificationService->logAdminAction($data['userID'], 'Creación de Transacción', "TX ID: $transactionId - Notificación WhatsApp: " . ($whatsappSent ? 'Éxito' : 'Fallo'));
+            return $transactionId;
 
         } catch (Exception $e) {
-            // Si la automatización falla (ej. API de WhatsApp caída), marcamos el error en los logs.
-            $this->notificationService->logAdminAction($data['userID'], 'Error Crítico de Automatización', "TX ID $transactionId: Fallo en envío de WhatsApp. Revisión Manual.");
-            // Permitimos que la orden se cree para no frustrar al cliente.
+             error_log("Error al crear transacción o notificar: " . $e->getMessage());
+            throw $e; 
         }
-        
-        $this->notificationService->logAdminAction($data['userID'], 'Creación de Transacción', "TX ID: $transactionId");
-        return $transactionId;
     }
 
     public function uploadUserReceipt(int $txId, int $userId, string $path): bool
     {
-        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $path);
-        
-        if ($affectedRows === 0) {
-            throw new Exception("No se pudo subir el comprobante. La orden no existe o ya está en proceso.", 409);
+        if (empty($path)) {
+             throw new Exception("La ruta del archivo es inválida.", 500);
         }
-        
+        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $path);
+
+        if ($affectedRows === 0) {
+            $txExists = $this->txRepository->getFullTransactionDetails($txId);
+            if (!$txExists || $txExists['UserID'] != $userId) {
+                 throw new Exception("La transacción no existe o no te pertenece.", 404);
+            } elseif ($txExists['Estado'] !== 'Pendiente de Pago') {
+                 throw new Exception("No se puede subir comprobante. El estado actual es '{$txExists['Estado']}'.", 409);
+            } else {
+                 throw new Exception("No se pudo actualizar la transacción. Inténtalo de nuevo.", 500);
+            }
+        }
+
         $this->notificationService->logAdminAction($userId, 'Subida de Comprobante', "TX ID: $txId");
         return true;
     }
@@ -82,9 +110,16 @@ class TransactionService
         $affectedRows = $this->txRepository->cancel($txId, $userId);
 
         if ($affectedRows === 0) {
-            throw new Exception("No se pudo cancelar. La transacción ya fue procesada.", 409);
+             $txExists = $this->txRepository->getFullTransactionDetails($txId);
+            if (!$txExists || $txExists['UserID'] != $userId) {
+                 throw new Exception("La transacción no existe o no te pertenece.", 404);
+            } elseif ($txExists['Estado'] !== 'Pendiente de Pago') {
+                throw new Exception("No se puede cancelar. El estado actual es '{$txExists['Estado']}'.", 409);
+            } else {
+                 throw new Exception("No se pudo cancelar la transacción. Inténtalo de nuevo.", 500);
+            }
         }
-        
+
         $this->notificationService->logAdminAction($userId, 'Usuario canceló transacción', "TX ID: $txId");
         return true;
     }
@@ -96,10 +131,17 @@ class TransactionService
         $affectedRows = $this->txRepository->updateStatus($txId, 'En Proceso', 'En Verificación');
 
         if ($affectedRows === 0) {
-            throw new Exception("El estado de la transacción no es 'En Verificación'.", 409);
+            $txExists = $this->txRepository->getFullTransactionDetails($txId);
+             if (!$txExists) {
+                 throw new Exception("La transacción no existe.", 404);
+            } elseif ($txExists['Estado'] !== 'En Verificación') {
+                throw new Exception("El estado de la transacción es '{$txExists['Estado']}', no 'En Verificación'.", 409);
+            } else {
+                 throw new Exception("No se pudo confirmar el pago. Inténtalo de nuevo.", 500);
+            }
         }
-        
-        $this->notificationService->logAdminAction($adminId, 'Admin procesó transacción', "TX ID: $txId. Pago confirmado.");
+
+        $this->notificationService->logAdminAction($adminId, 'Admin confirmó pago', "TX ID: $txId. Estado cambiado a 'En Proceso'.");
         return true;
     }
 
@@ -108,26 +150,47 @@ class TransactionService
         $affectedRows = $this->txRepository->updateStatus($txId, 'Cancelado', 'En Verificación');
 
         if ($affectedRows === 0) {
-            throw new Exception("El estado de la transacción no es 'En Verificación'.", 409);
+            $txExists = $this->txRepository->getFullTransactionDetails($txId);
+             if (!$txExists) {
+                 throw new Exception("La transacción no existe.", 404);
+            } elseif ($txExists['Estado'] !== 'En Verificación') {
+                throw new Exception("El estado de la transacción es '{$txExists['Estado']}', no 'En Verificación'.", 409);
+            } else {
+                 throw new Exception("No se pudo rechazar el pago. Inténtalo de nuevo.", 500);
+            }
         }
-        
-        $this->notificationService->logAdminAction($adminId, 'Admin rechazó pago de transacción', "TX ID: $txId. Monto no recibido.");
+
+        $this->notificationService->logAdminAction($adminId, 'Admin rechazó pago', "TX ID: $txId. Estado cambiado a 'Cancelado'.");
         return true;
     }
 
     public function adminUploadProof(int $adminId, int $txId, string $proofPath): bool
     {
+         if (empty($proofPath)) {
+             throw new Exception("La ruta del comprobante de envío es inválida.", 500);
+        }
+        
         $affectedRows = $this->txRepository->uploadAdminProof($txId, $proofPath);
 
         if ($affectedRows === 0) {
-            throw new Exception("El estado de la transacción debe ser 'En Proceso'.", 409);
+             $txExists = $this->txRepository->getFullTransactionDetails($txId);
+             if (!$txExists) {
+                 throw new Exception("La transacción no existe.", 404);
+            } elseif ($txExists['Estado'] !== 'En Proceso') {
+                throw new Exception("El estado de la transacción es '{$txExists['Estado']}', no 'En Proceso'.", 409);
+            } else {
+                 throw new Exception("No se pudo subir el comprobante de envío. Inténtalo de nuevo.", 500);
+            }
         }
-        
+
         $txData = $this->txRepository->getFullTransactionDetails($txId);
+        if ($txData && !empty($txData['TelefonoCliente'])) {
+            $this->notificationService->sendPaymentConfirmationToClientWhatsApp($txData);
+        } else {
+             $this->notificationService->logAdminAction($adminId, 'Advertencia Notificación', "TX ID $txId: No se pudo notificar al cliente sobre el pago (faltan datos).");
+        }
 
-        $this->notificationService->sendPaymentConfirmationToClientWhatsApp($txData);
-
-        $this->notificationService->logAdminAction($adminId, 'Admin subió comprobante de envío', "TX ID: $txId. Pago finalizado.");
+        $this->notificationService->logAdminAction($adminId, 'Admin completó transacción', "TX ID: $txId. Comprobante de envío subido. Estado: 'Pagado'.");
         return true;
     }
 }
