@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controllers;
 
 use Exception;
@@ -16,9 +15,15 @@ abstract class BaseController
 
     protected function getJsonInput(): array
     {
-        $data = json_decode(file_get_contents('php://input'), true);
+        $input = file_get_contents('php://input');
+        if ($input === false || $input === '') {
+            return [];
+        }
+        $data = json_decode($input, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'JSON mal formado.'], 400);
+            error_log("Error al decodificar JSON: " . json_last_error_msg() . " - Input: " . substr($input, 0, 500));
+            $this->sendJsonResponse(['success' => false, 'error' => 'Los datos enviados no tienen un formato JSON válido.'], 400);
+            exit();
         }
         return $data ?? [];
     }
@@ -26,15 +31,22 @@ abstract class BaseController
     protected function ensureLoggedIn(): int
     {
         if (!isset($_SESSION['user_id'])) {
-            $this->sendJsonResponse(['success' => false, 'error' => 'Usuario no autenticado.'], 401);
+            $this->sendJsonResponse(['success' => false, 'error' => 'Acceso denegado. Se requiere iniciar sesión.'], 401);
+            exit();
+        }
+        if (isset($_SESSION['2fa_user_id'])) {
+             $this->sendJsonResponse(['success' => false, 'error' => 'Verificación 2FA pendiente.'], 403);
+             exit();
         }
         return (int)$_SESSION['user_id'];
     }
 
     protected function ensureAdmin(): void
     {
-        if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+        $userId = $this->ensureLoggedIn();
+        if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') {
             $this->sendJsonResponse(['success' => false, 'error' => 'Acceso denegado. Se requiere rol de administrador.'], 403);
+            exit();
         }
     }
 }

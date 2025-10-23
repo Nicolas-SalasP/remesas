@@ -1,33 +1,46 @@
 <?php
-
 namespace App\Controllers;
 
 use App\Services\TransactionService;
 use App\Services\PricingService;
-use App\Services\BeneficiaryService;
+use App\Services\CuentasBeneficiariasService;
 use App\Services\UserService;
+use App\Repositories\FormaPagoRepository;
+use App\Repositories\TipoBeneficiarioRepository;
+use App\Repositories\TipoDocumentoRepository;
+use App\Services\FileHandlerService; 
 use Exception;
 
 class ClientController extends BaseController
 {
     private TransactionService $txService;
     private PricingService $pricingService;
-    private BeneficiaryService $beneficiaryService;
+    private CuentasBeneficiariasService $cuentasBeneficiariasService;
     private UserService $userService;
+    private FormaPagoRepository $formaPagoRepo;
+    private TipoBeneficiarioRepository $tipoBeneficiarioRepo;
+    private TipoDocumentoRepository $tipoDocumentoRepo;
+    private FileHandlerService $fileHandler; 
 
     public function __construct(
         TransactionService $txService,
         PricingService $pricingService,
-        BeneficiaryService $beneficiaryService,
-        UserService $userService
+        CuentasBeneficiariasService $cuentasBeneficiariasService,
+        UserService $userService,
+        FormaPagoRepository $formaPagoRepo,
+        TipoBeneficiarioRepository $tipoBeneficiarioRepo,
+        TipoDocumentoRepository $tipoDocumentoRepo,
+        FileHandlerService $fileHandler 
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
-        $this->beneficiaryService = $beneficiaryService;
+        $this->cuentasBeneficiariasService = $cuentasBeneficiariasService;
         $this->userService = $userService;
+        $this->formaPagoRepo = $formaPagoRepo;
+        $this->tipoBeneficiarioRepo = $tipoBeneficiarioRepo;
+        $this->tipoDocumentoRepo = $tipoDocumentoRepo;
+        $this->fileHandler = $fileHandler; 
     }
-    
-    // CONSULTAS DE PRECIOS Y PAÍSES 
 
     public function getPaises(): void
     {
@@ -40,45 +53,52 @@ class ClientController extends BaseController
     {
         $origenID = (int)($_GET['origenID'] ?? 0);
         $destinoID = (int)($_GET['destinoID'] ?? 0);
-
         $tasa = $this->pricingService->getCurrentRate($origenID, $destinoID);
         $this->sendJsonResponse($tasa);
     }
 
-    // --- GESTIÓN DE CUENTAS DE BENEFICIARIO ---
+    public function getFormasDePago(): void
+    {
+        $formasPago = $this->formaPagoRepo->findAllActive();
+        $nombres = array_column($formasPago, 'Nombre');
+        $this->sendJsonResponse($nombres);
+    }
+
+    public function getBeneficiaryTypes(): void
+    {
+        $tipos = $this->tipoBeneficiarioRepo->findAllActive();
+        $nombres = array_column($tipos, 'Nombre');
+        $this->sendJsonResponse($nombres);
+    }
+
+     public function getDocumentTypes(): void
+    {
+        $tipos = $this->tipoDocumentoRepo->findAllActive();
+        $response = array_map(fn($tipo) => ['id' => $tipo['TipoDocumentoID'], 'nombre' => $tipo['NombreDocumento']], $tipos);
+        $this->sendJsonResponse($response);
+    }
 
     public function getCuentas(): void
     {
         $userId = $this->ensureLoggedIn();
-        try {
-            $paisID = (int)($_GET['paisID'] ?? 0);
-            $cuentas = $this->beneficiaryService->getAccountsByCountry($userId, $paisID);
-            $this->sendJsonResponse($cuentas);
-        } catch (Exception $e) {
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
-        }
+        $paisID = (int)($_GET['paisID'] ?? 0);
+        $cuentas = $this->cuentasBeneficiariasService->getAccountsByUser($userId, $paisID ?: null); 
+        $this->sendJsonResponse($cuentas);
     }
 
     public function addCuenta(): void
     {
         $userId = $this->ensureLoggedIn();
-        try {
-            $data = $this->getJsonInput(); 
-            $newId = $this->beneficiaryService->addAccount($userId, $data);
-            $this->sendJsonResponse(['success' => true, 'id' => $newId], 201);
-        } catch (Exception $e) {
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
-        }
+        $data = $this->getJsonInput();
+        $newId = $this->cuentasBeneficiariasService->addAccount($userId, $data);
+        $this->sendJsonResponse(['success' => true, 'id' => $newId], 201);
     }
-    
-    // --- FLUJO DE REMESAS Y ESTADOS ---
 
     public function createTransaccion(): void
     {
         $userId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput(); 
+        $data = $this->getJsonInput();
         $data['userID'] = $userId;
-
         $transactionId = $this->txService->createTransaction($data);
         $this->sendJsonResponse(['success' => true, 'transaccionID' => $transactionId], 201);
     }
@@ -86,7 +106,7 @@ class ClientController extends BaseController
     public function cancelTransaction(): void
     {
         $userId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput(); 
+        $data = $this->getJsonInput();
         $this->txService->cancelTransaction($data['transactionId'] ?? 0, $userId);
         $this->sendJsonResponse(['success' => true]);
     }
@@ -94,45 +114,36 @@ class ClientController extends BaseController
     public function uploadReceipt(): void
     {
         $userId = $this->ensureLoggedIn();
-        $transactionId = $_POST['transactionId'] ?? 0;
+        $transactionId = (int)($_POST['transactionId'] ?? 0);
 
-        if (empty($transactionId) || !isset($_FILES['receiptFile'])) {
-            throw new Exception('Datos incompletos o archivo no subido.', 400);
+        if ($transactionId <= 0 || !isset($_FILES['receiptFile'])) {
+            throw new Exception('ID de transacción inválido o archivo no subido.', 400);
         }
 
-        // Usas el nuevo servicio
-        $dbPath = $this->fileHandlerService->handleUpload(
-            $_FILES['receiptFile'],
-            'uploads/receipts/',
-            'tx_' . $transactionId
-        );
+        try {
+             $directory = 'receipts'; 
+             $filenamePrefix = 'tx_recibo_' . $transactionId;
+             $dbPath = $this->fileHandler->handleGenericUpload($_FILES['receiptFile'], $directory, $filenamePrefix);
 
-        $this->txService->uploadUserReceipt($transactionId, $userId, $dbPath);
-        $this->sendJsonResponse(['success' => true]);
+            $this->txService->uploadUserReceipt($transactionId, $userId, $dbPath);
+            $this->sendJsonResponse(['success' => true]);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
+        }
     }
 
-    // --- ACCIONES DE PERFIL Y VERIFICACIÓN ---
 
     public function getUserProfile(): void
     {
         $userId = $this->ensureLoggedIn();
-        try {
-            $profile = $this->userService->getUserProfile($userId);
-            $this->sendJsonResponse(['success' => true, 'profile' => $profile]);
-        } catch (Exception $e) {
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 404);
-        }
+        $profile = $this->userService->getUserProfile($userId);
+        $this->sendJsonResponse(['success' => true, 'profile' => $profile]);
     }
 
     public function uploadVerificationDocs(): void
     {
         $userId = $this->ensureLoggedIn();
-        
-        try {
-             $this->userService->uploadVerificationDocs($userId, $_FILES);
-             $this->sendJsonResponse(['success' => true, 'message' => 'Documentos subidos correctamente.']);
-        } catch (Exception $e) {
-             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
-        }
+        $this->userService->uploadVerificationDocs($userId, $_FILES);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Documentos subidos correctamente. Serán revisados.']);
     }
 }
