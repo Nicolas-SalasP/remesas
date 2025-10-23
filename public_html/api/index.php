@@ -79,6 +79,8 @@ try {
         'uploadReceipt'         => [ClientController::class, 'uploadReceipt', 'POST'],
         'getUserProfile'        => [ClientController::class, 'getUserProfile', 'GET'],
         'uploadVerificationDocs'=> [ClientController::class, 'uploadVerificationDocs', 'POST'],
+        'getFormasDePago'       => [ClientController::class, 'getFormasDePago', 'GET'], 
+        'getBeneficiaryTypes'   => [ClientController::class, 'getBeneficiaryTypes', 'GET'],
 
         // Rutas de Admin 
         'updateRate'            => [AdminController::class, 'updateRate', 'POST'], 
@@ -95,12 +97,6 @@ try {
 
     if (isset($routes[$accion])) {
         list($controllerClass, $methodName, $expectedMethod) = $routes[$accion];
-
-        if ($requestMethod !== $expectedMethod) {
-             http_response_code(405); 
-             echo json_encode(['success' => false, 'error' => 'Método HTTP no permitido para esta acción.']);
-            exit();
-        }
 
         $controller = $container->get($controllerClass);
 

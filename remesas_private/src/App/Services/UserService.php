@@ -125,7 +125,7 @@ class UserService
 
     public function toggleUserBlock(int $adminId, int $userId, string $newStatus): void
     {
-        $lockoutUntil = ($newStatus === 'blocked') ? date('Y-m-d H:i:s', time() + (10 * 365 * 24 * 60 * 60)) : null; // Bloqueo "permanente"
+        $lockoutUntil = ($newStatus === 'blocked') ? date('Y-m-d H:i:s', time() + (10 * 365 * 24 * 60 * 60)) : null; 
         $this->userRepository->updateLoginAttempts($userId, 0, $lockoutUntil);
         $actionText = $newStatus === 'blocked' ? 'Bloqueado' : 'Desbloqueado';
         $this->notificationService->logAdminAction($adminId, "Admin cambió estado de usuario", "Usuario ID: $userId, Nuevo Estado: $actionText");

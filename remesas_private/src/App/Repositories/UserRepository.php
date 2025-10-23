@@ -16,39 +16,60 @@ class UserRepository
 
     public function findByEmail(string $email): ?array
     {
-        $sql = "SELECT UserID, PasswordHash, PrimerNombre, Rol, VerificacionEstado, FailedLoginAttempts, LockoutUntil 
-                FROM usuarios WHERE Email = ?";
-        
+        $sql = "SELECT
+                    U.UserID, U.PasswordHash, U.PrimerNombre, U.FailedLoginAttempts, U.LockoutUntil,
+                    R.RolID, R.NombreRol AS Rol,
+                    EV.EstadoID AS VerificacionEstadoID, EV.NombreEstado AS VerificacionEstado,
+                    U.twofa_enabled 
+                FROM usuarios U
+                LEFT JOIN roles R ON U.RolID = R.RolID
+                LEFT JOIN estados_verificacion EV ON U.VerificacionEstadoID = EV.EstadoID
+                WHERE U.Email = ? LIMIT 1";
+
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("s", $email);
         $stmt->execute();
-        
+
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        
+
         return $result;
     }
 
     public function create(array $data): int
     {
-        $sql = "INSERT INTO usuarios (PrimerNombre, SegundoNombre, PrimerApellido, SegundoApellido, Email, PasswordHash, TipoDocumento, NumeroDocumento, VerificacionEstado) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'No Verificado')";
-        
+         $estadoVerificacionInicialID = $data['verificacionEstadoID'] ?? 1; 
+         $rolUsuarioID = $data['rolID'] ?? 3; 
+
+        $sql = "INSERT INTO usuarios (PrimerNombre, SegundoNombre, PrimerApellido, SegundoApellido, Email, PasswordHash, Telefono, TipoDocumentoID, NumeroDocumento, VerificacionEstadoID, RolID)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         $stmt = $this->db->prepare($sql);
-        
-        $stmt->bind_param("ssssssss", 
-            $data['primerNombre'], 
-            $data['segundoNombre'], 
-            $data['primerApellido'], 
-            $data['segundoApellido'], 
-            $data['email'], 
-            $data['passwordHash'], 
-            $data['tipoDocumento'], 
-            $data['numeroDocumento']
+
+        $stmt->bind_param("sssssssiisi", 
+            $data['primerNombre'],
+            $data['segundoNombre'] ?? null, 
+            $data['primerApellido'],
+            $data['segundoApellido'] ?? null, 
+            $data['email'],
+            $data['passwordHash'],
+            $data['telefono'] ?? null,
+            $data['tipoDocumentoID'], 
+            $data['numeroDocumento'],
+            $estadoVerificacionInicialID,
+            $rolUsuarioID 
         );
 
         if (!$stmt->execute()) {
-             throw new Exception("Error al insertar usuario: " . $stmt->error);
+             error_log("Error al insertar usuario: " . $stmt->error . " - Data: " . print_r($data, true));
+            if ($stmt->errno == 1062) { 
+                 if (strpos($stmt->error, 'Email_UNIQUE') !== false) {
+                    throw new Exception("El correo electrónico ya está registrado.", 409);
+                 } elseif (strpos($stmt->error, 'NumeroDocumento_UNIQUE') !== false) {
+                     throw new Exception("El número de documento ya está registrado.", 409);
+                 }
+            }
+             throw new Exception("Error al registrar el usuario.", 500);
         }
         $newId = $stmt->insert_id;
         $stmt->close();
@@ -57,19 +78,32 @@ class UserRepository
 
     public function findUserById(int $userId): ?array
     {
-        $sql = "SELECT UserID, PrimerNombre, PrimerApellido, Email, Telefono, TipoDocumento, NumeroDocumento, VerificacionEstado 
-                FROM usuarios WHERE UserID = ?";
-        
+        $sql = "SELECT
+                    U.UserID, U.PrimerNombre, U.SegundoNombre, U.PrimerApellido, U.SegundoApellido,
+                    U.Email, U.Telefono, U.NumeroDocumento,
+                    U.DocumentoImagenURL_Frente, U.DocumentoImagenURL_Reverso,
+                    U.FailedLoginAttempts, U.LockoutUntil, U.FechaRegistro,
+                    U.twofa_enabled, 
+                    R.RolID, R.NombreRol AS Rol,
+                    EV.EstadoID AS VerificacionEstadoID, EV.NombreEstado AS VerificacionEstado,
+                    TD.TipoDocumentoID, TD.NombreDocumento AS TipoDocumento
+                FROM usuarios U
+                LEFT JOIN roles R ON U.RolID = R.RolID
+                LEFT JOIN estados_verificacion EV ON U.VerificacionEstadoID = EV.EstadoID
+                LEFT JOIN tipos_documento TD ON U.TipoDocumentoID = TD.TipoDocumentoID
+                WHERE U.UserID = ?";
+
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("i", $userId);
         $stmt->execute();
-        
+
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        
+
         return $result;
     }
 
+    // --- MÉTODOS DE LOGIN Y BLOQUEO ---
     public function updateLoginAttempts(int $userId, int $attempts, ?string $lockoutUntil): bool
     {
         $sql = "UPDATE usuarios SET FailedLoginAttempts = ?, LockoutUntil = ? WHERE UserID = ?";
@@ -80,9 +114,12 @@ class UserRepository
         return $success;
     }
 
+    // --- MÉTODOS DE RESTABLECIMIENTO DE CONTRASEÑA ---
     public function createResetToken(int $userId, string $token, string $expiresAt): bool
     {
-        $sql = "INSERT INTO PasswordResets (UserID, Token, ExpiresAt) VALUES (?, ?, ?)";
+        $this->invalidatePreviousTokens($userId);
+
+        $sql = "INSERT INTO passwordresets (UserID, Token, ExpiresAt) VALUES (?, ?, ?)";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("iss", $userId, $token, $expiresAt);
         $success = $stmt->execute();
@@ -92,7 +129,7 @@ class UserRepository
 
     public function findValidResetToken(string $token): ?array
     {
-        $sql = "SELECT * FROM PasswordResets WHERE Token = ? AND Used = FALSE AND ExpiresAt > NOW()";
+        $sql = "SELECT ResetID, UserID FROM passwordresets WHERE Token = ? AND Used = FALSE AND ExpiresAt > NOW()";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("s", $token);
         $stmt->execute();
@@ -113,7 +150,7 @@ class UserRepository
 
     public function markTokenAsUsed(int $resetId): bool
     {
-        $sql = "UPDATE PasswordResets SET Used = TRUE WHERE ResetID = ?";
+        $sql = "UPDATE passwordresets SET Used = TRUE WHERE ResetID = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("i", $resetId);
         $success = $stmt->execute();
@@ -121,36 +158,127 @@ class UserRepository
         return $success;
     }
 
-    public function updateVerificationDocuments(int $userId, string $pathFrente, string $pathReverso): bool
+    private function invalidatePreviousTokens(int $userId): void
     {
-        $sql = "UPDATE usuarios SET DocumentoImagenURL_Frente = ?, DocumentoImagenURL_Reverso = ?, VerificacionEstado = 'Pendiente' WHERE UserID = ?";
+        $sql = "UPDATE passwordresets SET Used = TRUE WHERE UserID = ? AND Used = FALSE";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("ssi", $pathFrente, $pathReverso, $userId);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $stmt->close();
+    }
+
+    // --- MÉTODOS DE VERIFICACIÓN ---
+    public function updateVerificationDocuments(int $userId, string $pathFrente, string $pathReverso, int $estadoPendienteID): bool
+    {
+        $sql = "UPDATE usuarios SET DocumentoImagenURL_Frente = ?, DocumentoImagenURL_Reverso = ?, VerificacionEstadoID = ? WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ssii", $pathFrente, $pathReverso, $estadoPendienteID, $userId);
         $success = $stmt->execute();
         $stmt->close();
         return $success;
     }
-    
+
+    public function updateVerificationStatus(int $userId, int $newStatusID): bool
+    {
+        $sql = "UPDATE usuarios SET VerificacionEstadoID = ? WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ii", $newStatusID, $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    // --- MÉTODOS DE CONTEO Y UTILIDAD ---
     public function countAll(): int
     {
-        $sql = "SELECT COUNT(UserID) as total FROM usuarios WHERE Rol = 'Usuario'";
+        $adminRolID = 1;
+        $sql = "SELECT COUNT(UserID) as total FROM usuarios WHERE RolID != ?";
         $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $adminRolID);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return (int)($result['total'] ?? 0);
     }
 
-    public function updateVerificationStatus(int $userId, string $newStatus): bool
+     public function findEstadoVerificacionIdByName(string $nombreEstado): ?int
     {
-        $allowedStatus = ['Verificado', 'Rechazado', 'Pendiente', 'No Verificado'];
-        if (!in_array($newStatus, $allowedStatus)) {
-            return false;
-        }
+         $sql = "SELECT EstadoID FROM estados_verificacion WHERE NombreEstado = ? LIMIT 1";
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("s", $nombreEstado);
+         $stmt->execute();
+         $result = $stmt->get_result()->fetch_assoc();
+         $stmt->close();
+         return $result['EstadoID'] ?? null;
+    }
 
-        $sql = "UPDATE usuarios SET VerificacionEstado = ? WHERE UserID = ?";
+     public function findRolIdByName(string $nombreRol): ?int
+    {
+         $sql = "SELECT RolID FROM roles WHERE NombreRol = ? LIMIT 1";
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("s", $nombreRol);
+         $stmt->execute();
+         $result = $stmt->get_result()->fetch_assoc();
+         $stmt->close();
+         return $result['RolID'] ?? null;
+    }
+     public function findTipoDocumentoIdByName(string $nombreDocumento): ?int
+    {
+         $sql = "SELECT TipoDocumentoID FROM tipos_documento WHERE NombreDocumento = ? LIMIT 1";
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("s", $nombreDocumento);
+         $stmt->execute();
+         $result = $stmt->get_result()->fetch_assoc();
+         $stmt->close();
+         return $result['TipoDocumentoID'] ?? null;
+    }
+
+     // --- MÉTODOS PARA 2FA ---
+     public function get2FASecret(int $userId): ?string {
+         $sql = "SELECT twofa_secret FROM usuarios WHERE UserID = ? AND twofa_enabled = TRUE"; 
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("i", $userId);
+         $stmt->execute();
+         $result = $stmt->get_result()->fetch_assoc();
+         $stmt->close();
+         return $result['twofa_secret'] ?? null;
+     }
+
+
+     public function update2FASecret(int $userId, string $encryptedSecret): bool {
+         $sql = "UPDATE usuarios SET twofa_secret = ?, twofa_enabled = FALSE WHERE UserID = ?";
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("si", $encryptedSecret, $userId);
+         $success = $stmt->execute();
+         $stmt->close();
+         return $success;
+     }
+
+     public function enable2FA(int $userId, string $encryptedBackupCodes): bool {
+         $sql = "UPDATE usuarios SET twofa_enabled = TRUE, twofa_backup_codes = ? WHERE UserID = ? AND twofa_secret IS NOT NULL"; 
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("si", $encryptedBackupCodes, $userId);
+         $success = $stmt->execute();
+         $stmt->close();
+         return $success && $stmt->affected_rows > 0; 
+     }
+
+    public function getBackupCodes(int $userId): ?string
+    {
+        $sql = "SELECT twofa_backup_codes FROM usuarios WHERE UserID = ?";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("si", $newStatus, $userId);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result['twofa_backup_codes'] ?? null;
+    }
+
+    public function updateBackupCodes(int $userId, string $newEncryptedBackupCodes): bool
+    {
+        $sql = "UPDATE usuarios SET twofa_backup_codes = ? WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("si", $newEncryptedBackupCodes, $userId);
         $success = $stmt->execute();
         $stmt->close();
         return $success;

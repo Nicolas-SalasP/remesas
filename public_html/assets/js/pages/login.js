@@ -43,27 +43,41 @@ if (authContainer) {
     });
 
     loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = {
-            email: document.getElementById('login-email').value,
-            password: document.getElementById('login-password').value
-        };
-        try {
-            const response = await fetch('api/?accion=loginUser', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            const result = await response.json();
-            if (result.success) {
-                window.location.href = result.redirect;
-            } else {
-                alert('Error: ' + result.error);
-            }
-        } catch (error) {
-            alert('No se pudo conectar con el servidor.');
+    e.preventDefault();
+    const submitButton = loginForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Ingresando...';
+
+    const formData = {
+        email: document.getElementById('login-email').value,
+        password: document.getElementById('login-password').value
+    };
+
+    try {
+        const response = await fetch('api/?accion=loginUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            window.location.href = result.redirect;
+        } else {
+            const errorMessage = result.error || 'Correo electrónico o contraseña no válidos. Inténtalo nuevamente.';
+            showInfoModal('Error de Inicio de Sesión', errorMessage, false);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Ingresar';
         }
-    });
+
+    } catch (error) {
+        console.error('Error de red o parseo:', error);
+        showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.', false);
+        submitButton.disabled = false;
+        submitButton.textContent = 'Ingresar';
+    }
+});
 
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -71,7 +85,7 @@ if (authContainer) {
             const rutCompleto = docNumberInput.value.replace(/[^0-9kK]/g, '').toUpperCase();
             if (rutCompleto.length < 2) {
                 alert('El RUT ingresado es demasiado corto.');
-                return; // Detiene el envío
+                return; 
             }
             const body = rutCompleto.slice(0, -1);
             const dvIngresado = rutCompleto.slice(-1);
