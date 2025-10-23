@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             verificationModalInstance = bootstrap.Modal.getOrCreateInstance(verificationModalElement);
         } catch (e) {
-            console.error("Error al inicializar el modal de verificación de Bootstrap:", e);
-            return; 
+            console.error("Error al inicializar el modal de verificación:", e);
+            return;
         }
 
         const modalUserName = document.getElementById('modalUserName');
@@ -17,13 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         verificationModalElement.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
-            if (!button) return; 
-
+            if (!button) return;
             currentUserId = button.dataset.userId;
             const userName = button.dataset.userName || 'Usuario Desconocido';
             const imgFrente = button.dataset.imgFrente || '';
             const imgReverso = button.dataset.imgReverso || '';
-
             modalUserName.textContent = userName;
             modalImgFrente.src = imgFrente ? `../admin/view_secure_file.php?file=${encodeURIComponent(imgFrente)}` : '';
             modalImgReverso.src = imgReverso ? `../admin/view_secure_file.php?file=${encodeURIComponent(imgReverso)}` : '';
@@ -39,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `Confirmar Acción`,
                     `¿Estás seguro de que quieres '${action}' la verificación para el usuario #${currentUserId}?`
                 );
-
                 if (confirmed) {
                     try {
                         const response = await fetch('../api/?accion=updateVerificationStatus', {
@@ -48,9 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             body: JSON.stringify({ userId: currentUserId, newStatus: action })
                         });
                         const result = await response.json();
-
-                        verificationModalInstance.hide(); 
-
+                        verificationModalInstance.hide();
                         if (result.success) {
                             window.showInfoModal('Éxito', `El usuario ha sido marcado como '${action}'.`, true);
                             const rowToRemove = document.getElementById(`user-row-${currentUserId}`);
@@ -59,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             window.showInfoModal('Error', result.error || 'Ocurrió un problema.', false);
                         }
                     } catch (error) {
-                         console.error("Error en la petición updateVerificationStatus:", error);
+                         console.error("Error en updateVerificationStatus:", error);
                         window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
                     }
                 }
@@ -85,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const result = await response.json();
                     if (result.success) {
                         triggerButton.dataset.currentStatus = newStatus;
-                        triggerButton.textContent = newStatusText; 
+                        triggerButton.textContent = newStatusText;
                         triggerButton.classList.toggle('btn-success', newStatus === 1);
                         triggerButton.classList.toggle('btn-secondary', newStatus === 0);
                         window.showInfoModal('Éxito', 'El estado del país ha sido actualizado.', true);
@@ -93,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.showInfoModal('Error', result.error || 'No se pudo actualizar el estado.', false);
                     }
                 } catch (error) {
-                    console.error("Error en la petición togglePaisStatus:", error);
+                    console.error("Error en togglePaisStatus:", error);
                     window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
                 }
             }
@@ -101,18 +96,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.querySelectorAll('.role-select').forEach(select => {
-        const originalValue = select.value; 
+        let originalValue = select.value;
+        select.addEventListener('focus', () => { originalValue = select.value; }); 
 
         select.addEventListener('change', async (e) => {
             const paisId = e.target.dataset.paisId;
             const newRole = e.target.value;
             const confirmed = await window.showConfirmModal('Confirmar Cambio de Rol', `¿Estás seguro de que quieres cambiar el rol de este país a "${newRole}"?`);
-
             if (!confirmed) {
-                e.target.value = originalValue; 
+                e.target.value = originalValue;
                 return;
             }
-
             try {
                 const response = await fetch('../api/?accion=updatePaisRol', {
                     method: 'POST',
@@ -121,18 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (result.success) {
-                    const selectedOption = e.target.querySelector(`option[value="${newRole}"]`);
-                    if(selectedOption) {
-                       Array.from(e.target.options).forEach(opt => opt.defaultSelected = false);
-                       selectedOption.defaultSelected = true;
-                    }
+                    originalValue = newRole; 
                     window.showInfoModal('Éxito', '¡Rol actualizado con éxito!', true);
                 } else {
-                    e.target.value = originalValue; 
+                    e.target.value = originalValue;
                     window.showInfoModal('Error', result.error || 'No se pudo actualizar el rol.', false);
                 }
             } catch (error) {
-                console.error("Error en la petición updatePaisRol:", error);
+                console.error("Error en updatePaisRol:", error);
                 e.target.value = originalValue;
                 window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
             }
@@ -141,15 +131,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.block-user-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
-            const triggerButton = e.currentTarget; 
+            const triggerButton = e.currentTarget;
             const userId = triggerButton.dataset.userId;
             const currentStatus = triggerButton.dataset.currentStatus;
             const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
             const actionText = newStatus === 'blocked' ? 'BLOQUEAR' : 'DESBLOQUEAR';
-
             const confirmed = await window.showConfirmModal('Confirmar Acción', `¿Estás seguro de que quieres ${actionText} a este usuario?`);
             if (!confirmed) return;
-
             try {
                 const response = await fetch('../api/?accion=toggleUserBlock', {
                     method: 'POST',
@@ -160,18 +148,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.success) {
                     const successMessage = newStatus === 'blocked' ? 'Usuario bloqueado correctamente.' : 'Usuario desbloqueado correctamente.';
                     window.showInfoModal('Éxito', successMessage, true, () => {
-                        window.location.reload(); 
+                        window.location.reload();
                     });
                 } else {
                     window.showInfoModal('Error', result.error || 'No se pudo cambiar el estado del usuario.', false);
                 }
             } catch (error) {
-                 console.error("Error en la petición toggleUserBlock:", error);
+                 console.error("Error en toggleUserBlock:", error);
                 window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
             }
         });
     });
-
 
     document.querySelectorAll('.process-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
@@ -227,9 +214,8 @@ document.addEventListener('DOMContentLoaded', () => {
          try {
             adminUploadModalInstance = bootstrap.Modal.getOrCreateInstance(adminUploadModalElement);
         } catch (e) {
-            console.error("Error al inicializar el modal de subida admin:", e);
+            console.error("Error al inicializar modal adminUpload:", e);
         }
-
         const adminTxIdLabel = document.getElementById('modal-admin-tx-id');
         const adminTransactionIdField = document.getElementById('adminTransactionIdField');
         const adminUploadForm = document.getElementById('admin-upload-form');
@@ -238,29 +224,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const button = event.relatedTarget;
              if (!button) return;
             const txId = button.dataset.txId;
-            adminTxIdLabel.textContent = txId;
-            adminTransactionIdField.value = txId;
+            if(adminTxIdLabel) adminTxIdLabel.textContent = txId;
+            if(adminTransactionIdField) adminTransactionIdField.value = txId;
         });
 
         if (adminUploadForm) {
             adminUploadForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 if (!adminUploadModalInstance) return;
-
                 const formData = new FormData(adminUploadForm);
                 const submitButton = adminUploadForm.querySelector('button[type="submit"]');
                 submitButton.disabled = true;
                 submitButton.textContent = 'Subiendo...';
-
                 try {
                     const response = await fetch('../api/?accion=adminUploadProof', {
                         method: 'POST',
                         body: formData
                     });
                     const result = await response.json();
-
-                    adminUploadModalInstance.hide(); 
-
+                    adminUploadModalInstance.hide();
                     if (result.success) {
                         window.showInfoModal('Éxito', 'Comprobante de envío subido y transacción completada.', true, () => window.location.reload());
                     } else {
@@ -277,6 +259,4 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-
-
-}); 
+});
