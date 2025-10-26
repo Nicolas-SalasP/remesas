@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.role-select').forEach(select => {
         let originalValue = select.value;
-        select.addEventListener('focus', () => { originalValue = select.value; }); 
+        select.addEventListener('focus', () => { originalValue = select.value; });
 
         select.addEventListener('change', async (e) => {
             const paisId = e.target.dataset.paisId;
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (result.success) {
-                    originalValue = newRole; 
+                    originalValue = newRole;
                     window.showInfoModal('Éxito', '¡Rol actualizado con éxito!', true);
                 } else {
                     e.target.value = originalValue;
@@ -259,4 +259,217 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+
+    // LÓGICA MODAL VISUALIZACIÓN ---
+    const viewModalElement = document.getElementById('viewComprobanteModal');
+    if (viewModalElement) {
+        const viewModalInstance = new bootstrap.Modal(viewModalElement);
+        const modalContent = document.getElementById('comprobante-content');
+        const modalPlaceholder = document.getElementById('comprobante-placeholder');
+        const downloadButton = document.getElementById('download-comprobante');
+        const filenameSpan = document.getElementById('comprobante-filename');
+        const navigationDiv = document.getElementById('comprobante-navigation');
+        const prevButton = document.getElementById('prev-comprobante');
+        const nextButton = document.getElementById('next-comprobante');
+        const indicatorSpan = document.getElementById('comprobante-indicator');
+        const modalLabel = document.getElementById('viewComprobanteModalLabel');
+
+        let comprobantes = [];
+        let currentIndex = 0;
+        let currentTxId = null;
+
+        const showComprobante = (index) => {
+            modalContent.innerHTML = '';
+            modalPlaceholder.textContent = 'Cargando comprobante...';
+            modalPlaceholder.classList.remove('d-none', 'text-danger');
+            downloadButton.classList.add('disabled');
+            downloadButton.href = '#';
+            filenameSpan.textContent = '';
+
+
+            if (!comprobantes[index]) {
+                 console.error("Índice de comprobante inválido:", index);
+                 modalPlaceholder.textContent = 'Error: No se encontró información del comprobante.';
+                 modalPlaceholder.classList.add('text-danger');
+                 return;
+            };
+
+            currentIndex = index;
+            const current = comprobantes[index];
+            const originalUrl = current.url;
+            const type = current.type;
+
+            if (typeof baseUrlJs === 'undefined') {
+                console.error('baseUrlJs no está definida. Asegúrate de que se define en footer.php.');
+                modalPlaceholder.textContent = 'Error de configuración: No se pudo determinar la URL base.';
+                modalPlaceholder.classList.add('text-danger');
+                return;
+            }
+            
+            const secureUrl = `${baseUrlJs}/dashboard/ver-comprobante.php?id=${currentTxId}&type=${type}`;
+            
+            const fileName = decodeURIComponent(originalUrl.split('/').pop().split('?')[0]);
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const typeText = type === 'user' ? 'Comprobante de Pago' : 'Comprobante de Envío';
+
+            modalLabel.textContent = `${typeText} (Transacción #${currentTxId})`;
+            downloadButton.href = secureUrl;
+            downloadButton.download = fileName;
+            filenameSpan.textContent = fileName;
+
+            try {
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(fileExtension)) {
+                    const img = document.createElement('img');
+                    img.src = secureUrl;
+                    img.alt = typeText;
+                    img.classList.add('img-fluid', 'rounded');
+                    img.style.maxHeight = '75vh';
+                    img.style.display = 'none';
+                    img.onload = () => {
+                        modalPlaceholder.classList.add('d-none');
+                        img.style.display = 'block';
+                        downloadButton.classList.remove('disabled');
+                    };
+                    img.onerror = () => {
+                         console.error("Error al cargar imagen desde:", secureUrl);
+                         modalPlaceholder.textContent = `Error al cargar la imagen. Verifica que el archivo exista y los permisos sean correctos.`;
+                         modalPlaceholder.classList.add('text-danger');
+                         modalPlaceholder.classList.remove('d-none');
+                         downloadButton.classList.remove('disabled');
+                    }
+                    modalContent.appendChild(img);
+                } else if (fileExtension === 'pdf') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = secureUrl;
+                    iframe.style.width = '100%';
+                    iframe.style.height = '75vh';
+                    iframe.style.border = 'none';
+                    iframe.title = typeText;
+                    iframe.onload = () => {
+                        modalPlaceholder.classList.add('d-none');
+                        downloadButton.classList.remove('disabled');
+                    }
+                    iframe.innerHTML = '<p class="p-3 text-warning">Tu navegador no soporta la previsualización de PDF. Usa el botón de descarga.</p>';
+                    modalContent.appendChild(iframe);
+
+                    setTimeout(() => {
+                        if (modalPlaceholder.classList.contains('d-none')) {
+                             downloadButton.classList.remove('disabled');
+                        } else {
+                            modalPlaceholder.textContent = 'La previsualización del PDF está tardando o no es compatible. Intenta descargarlo.';
+                            modalPlaceholder.classList.remove('d-none');
+                            downloadButton.classList.remove('disabled');
+                        }
+                    }, 5000);
+
+                } else {
+                    modalPlaceholder.textContent = `No se puede previsualizar este tipo de archivo (${fileExtension}).`;
+                    modalPlaceholder.classList.remove('d-none');
+                    downloadButton.classList.remove('disabled');
+                }
+            } catch (e) {
+                 console.error("Error al crear elemento de visualización:", e);
+                 modalPlaceholder.textContent = 'Ocurrió un error al intentar mostrar el archivo.';
+                 modalPlaceholder.classList.add('text-danger');
+                 modalPlaceholder.classList.remove('d-none');
+                 downloadButton.classList.add('disabled');
+                 downloadButton.href = '#';
+            }
+
+
+            if (comprobantes.length > 1) {
+                indicatorSpan.textContent = `${index + 1} / ${comprobantes.length}`;
+                prevButton.disabled = (index === 0);
+                nextButton.disabled = (index === comprobantes.length - 1);
+            } else {
+                 prevButton.disabled = true;
+                 nextButton.disabled = true;
+            }
+        };
+
+        viewModalElement.addEventListener('show.bs.modal', (event) => {
+            const button = event.relatedTarget;
+            if (!button || !button.classList.contains('view-comprobante-btn-admin')) {
+                return;
+            }
+
+            const userUrl = button.dataset.comprobanteUrl || '';
+            const adminUrl = button.dataset.envioUrl || '';
+            const startType = button.dataset.startType || 'user';
+            currentTxId = button.dataset.txId || 'N/A';
+
+            comprobantes = [];
+            if (userUrl) {
+                comprobantes.push({ type: 'user', url: userUrl, name: 'Comprobante de Pago' });
+            }
+            if (adminUrl) {
+                comprobantes.push({ type: 'admin', url: adminUrl, name: 'Comprobante de Envío' });
+            }
+
+            if (comprobantes.length > 1) {
+                navigationDiv.classList.remove('d-none');
+            } else {
+                navigationDiv.classList.add('d-none');
+            }
+
+            currentIndex = 0;
+            if (startType === 'admin' && adminUrl) {
+                const adminIndex = comprobantes.findIndex(c => c.type === 'admin');
+                if (adminIndex !== -1) {
+                    currentIndex = adminIndex;
+                }
+            }
+
+            modalContent.innerHTML = '';
+            modalPlaceholder.classList.remove('d-none', 'text-danger');
+            modalPlaceholder.textContent = 'Cargando comprobante...';
+            downloadButton.href = '#';
+            downloadButton.classList.add('disabled');
+            filenameSpan.textContent = '';
+            modalLabel.textContent = `Visor de Comprobantes (Transacción #${currentTxId})`;
+
+
+            if (comprobantes.length > 0) {
+                 setTimeout(() => showComprobante(currentIndex), 100);
+            } else {
+                modalPlaceholder.textContent = 'No hay comprobantes disponibles para esta transacción.';
+                modalPlaceholder.classList.remove('d-none');
+                downloadButton.classList.add('disabled');
+                navigationDiv.classList.add('d-none');
+            }
+        });
+
+        prevButton.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                showComprobante(currentIndex - 1);
+            }
+        });
+
+        nextButton.addEventListener('click', () => {
+            if (currentIndex < comprobantes.length - 1) {
+                showComprobante(currentIndex + 1);
+            }
+        });
+
+         viewModalElement.addEventListener('hidden.bs.modal', () => {
+             modalContent.innerHTML = '';
+              const mediaElement = modalContent.querySelector('iframe, embed, img');
+              if (mediaElement) mediaElement.src = 'about:blank';
+
+             modalPlaceholder.classList.remove('d-none', 'text-danger');
+             modalPlaceholder.textContent = 'Cargando comprobante...';
+             downloadButton.href = '#';
+             downloadButton.classList.remove('disabled');
+             filenameSpan.textContent = '';
+             navigationDiv.classList.add('d-none');
+             modalLabel.textContent = 'Visor de Comprobantes';
+             comprobantes = [];
+             currentIndex = 0;
+             currentTxId = null;
+         });
+
+    } else {
+         console.warn("No se encontró el elemento para el modal de visualización.");
+    }
+
 });

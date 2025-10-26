@@ -10,16 +10,15 @@ $pageScript = 'admin.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $transacciones = $conexion->query("
-    SELECT
-        T.*, -- Seleccionar todas las columnas de transacciones
-        U.PrimerNombre, U.PrimerApellido,
-        CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombreCompleto,
-        ET.NombreEstado AS EstadoNombre -- Obtener el nombre del estado
+    SELECT T.*,
+           U.PrimerNombre, U.PrimerApellido,
+           CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombreCompleto,
+           ET.NombreEstado AS EstadoNombre
     FROM transacciones T
     JOIN usuarios U ON T.UserID = U.UserID
-    JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID -- Corregido nombre tabla
-    JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID -- JOIN con estados_transaccion
-    WHERE ET.NombreEstado IN ('En Verificación', 'En Proceso') -- Filtrar por NombreEstado
+    JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
+    JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
+    WHERE ET.NombreEstado IN ('En Verificación', 'En Proceso')
     ORDER BY T.FechaTransaccion ASC
 ")->fetch_all(MYSQLI_ASSOC);
 ?>
@@ -51,13 +50,21 @@ $transacciones = $conexion->query("
                             <td>
                                 <?php ?>
                                 <?php if (!empty($tx['ComprobanteURL'])): ?>
-                                    <a href="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']); ?>" target="_blank" class="btn btn-sm btn-info">Ver Comprobante</a>
+                                <button class="btn btn-sm btn-info view-comprobante-btn-admin"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewComprobanteModal"
+                                        data-tx-id="<?php echo $tx['TransaccionID']; ?>"
+                                        data-comprobante-url="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']); ?>"
+                                        data-envio-url="<?php echo !empty($tx['ComprobanteEnvioURL']) ? BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']) : ''; ?>"
+                                        data-start-type="user">
+                                    Ver Comprobante
+                                </button>
                                 <?php else: ?>
-                                    <span class="text-muted">No disponible</span>
+                                    <span class="text-muted">No subido</span>
                                 <?php endif; ?>
+                                <?php ?>
                             </td>
                             <td>
-                                <?php ?>
                                 <?php if ($tx['EstadoNombre'] == 'En Verificación'): ?>
                                     <button class="btn btn-sm btn-success process-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Confirmar y Procesar</button>
                                     <button class="btn btn-sm btn-danger reject-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Rechazar Pago</button>
@@ -78,7 +85,30 @@ $transacciones = $conexion->query("
     </div>
 </div>
 
-<?php // Modal (sin cambios, omitido para brevedad) ?>
+<div class="modal fade" id="adminUploadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Subir Comprobante de Envío</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Estás subiendo el comprobante para la transacción <strong id="modal-admin-tx-id"></strong>.</p>
+        <form id="admin-upload-form" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="adminReceiptFile" class="form-label">Selecciona el archivo</label>
+                <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required>
+            </div>
+            <input type="hidden" id="adminTransactionIdField" name="transactionId">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary" form="admin-upload-form">Confirmar Envío</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <?php
 require_once __DIR__ . '/../../remesas_private/src/templates/footer.php';

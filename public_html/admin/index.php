@@ -2,38 +2,31 @@
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') { die("Acceso denegado."); }
 
-function getStatusBadgeClass($status) {
-    switch ($status) {
+function getStatusBadgeClass($statusName) {
+    switch ($statusName) {
         case 'Pagado': return 'bg-success';
         case 'En Proceso': return 'bg-primary';
         case 'En Verificación': return 'bg-info text-dark';
         case 'Cancelado': return 'bg-danger';
-        case 'Pendiente de Pago':
-        default: return 'bg-warning text-dark';
+        case 'Pendiente de Pago': return 'bg-warning text-dark';
+        default: return 'bg-secondary';
     }
 }
 
 $pageTitle = 'Panel de Administración';
-$pageScript = 'admin.js'; 
+$pageScript = 'admin.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
-$sql = "
-    SELECT 
-        T.TransaccionID, T.FechaTransaccion, T.ComprobanteURL, T.ComprobanteEnvioURL,
-        U.PrimerNombre, U.PrimerApellido, 
-        CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombreCompleto,
-        ET.NombreEstado AS Estado
+$transacciones = $conexion->query("
+    SELECT T.*, U.PrimerNombre, U.PrimerApellido,
+           CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombreCompleto,
+           ET.NombreEstado AS EstadoNombre
     FROM transacciones T
     JOIN usuarios U ON T.UserID = U.UserID
     JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
-    JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
+    LEFT JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
     ORDER BY T.FechaTransaccion DESC
-";
-$resultado = $conexion->query($sql);
-$transacciones = ($resultado) ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
-if (!$resultado) {
-    error_log("Error en consulta admin/index.php: " . $conexion->error);
-}
+")->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <div class="container mt-4">
@@ -59,33 +52,53 @@ if (!$resultado) {
                 </tr>
             </thead>
             <tbody id="transactionsTableBody">
-                <?php if (empty($transacciones)): ?>
-                     <tr><td colspan="7" class="text-center">No se encontraron transacciones.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($transacciones as $tx): ?>
-                        <tr>
-                            <td><?php echo $tx['TransaccionID']; ?></td>
-                            <td><?php echo htmlspecialchars(date("d/m/y H:i", strtotime($tx['FechaTransaccion']))); ?></td>
-                            <td class="search-user"><?php echo htmlspecialchars($tx['PrimerNombre'] . ' ' . $tx['PrimerApellido']); ?></td>
-                            <td class="search-beneficiary"><?php echo htmlspecialchars($tx['BeneficiarioNombreCompleto']); ?></td>
-                            <td>
-                                <span class="badge <?php echo getStatusBadgeClass($tx['Estado']); ?>">
-                                    <?php echo htmlspecialchars($tx['Estado']); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if (!empty($tx['ComprobanteURL'])): ?>
-                                    <a href="<?php echo BASE_URL; ?>/admin/view_secure_file.php?file=<?php echo urlencode($tx['ComprobanteURL']); ?>" target="_blank" class="btn btn-sm btn-info">Ver</a>
-                                <?php else: ?><span class="text-muted">N/A</span><?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if (!empty($tx['ComprobanteEnvioURL'])): ?>
-                                    <a href="<?php echo BASE_URL; ?>/admin/view_secure_file.php?file=<?php echo urlencode($tx['ComprobanteEnvioURL']); ?>" target="_blank" class="btn btn-sm btn-success">Ver</a>
-                                <?php else: ?><span class="text-muted">N/A</span><?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php foreach ($transacciones as $tx): ?>
+                    <tr>
+                        <td><?php echo $tx['TransaccionID']; ?></td>
+                        <td><?php echo date("d/m/y H:i", strtotime($tx['FechaTransaccion'])); ?></td>
+                        <td class="search-user"><?php echo htmlspecialchars($tx['PrimerNombre'] . ' ' . $tx['PrimerApellido']); ?></td>
+                        <td class="search-beneficiary"><?php echo htmlspecialchars($tx['BeneficiarioNombreCompleto']); ?></td>
+                        <td>
+                            <span class="badge <?php echo getStatusBadgeClass($tx['EstadoNombre'] ?? ''); ?>">
+                                <?php echo htmlspecialchars($tx['EstadoNombre'] ?? 'Desconocido'); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <?php  ?>
+                            <?php if (!empty($tx['ComprobanteURL'])): ?>
+                                <button class="btn btn-sm btn-info view-comprobante-btn-admin"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewComprobanteModal"
+                                        data-tx-id="<?php echo $tx['TransaccionID']; ?>"
+                                        data-comprobante-url="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']); ?>"
+                                        data-envio-url="<?php echo !empty($tx['ComprobanteEnvioURL']) ? BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']) : ''; ?>"
+                                        data-start-type="user">
+                                    Ver
+                                </button>
+                            <?php else: ?>
+                                <span class="text-muted">N/A</span>
+                            <?php endif; ?>
+                             <?php  ?>
+                        </td>
+                        <td>
+                            <?php  ?>
+                            <?php if (!empty($tx['ComprobanteEnvioURL'])): ?>
+                                <button class="btn btn-sm btn-success view-comprobante-btn-admin"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewComprobanteModal"
+                                        data-tx-id="<?php echo $tx['TransaccionID']; ?>"
+                                        data-comprobante-url="<?php echo !empty($tx['ComprobanteURL']) ? BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']) : ''; ?>"
+                                        data-envio-url="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']); ?>"
+                                        data-start-type="admin">
+                                    Ver
+                                </button>
+                            <?php else: ?>
+                                <span class="text-muted">N/A</span>
+                            <?php endif; ?>
+                            <?php ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
             </tbody>
         </table>
     </div>
