@@ -9,12 +9,15 @@ $pageTitle = 'Verificaciones Pendientes';
 $pageScript = 'admin.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
-$usuariosPendientes = $conexion->query("
-    SELECT UserID, PrimerNombre, PrimerApellido, Email, NumeroDocumento, DocumentoImagenURL_Frente, DocumentoImagenURL_Reverso
-    FROM usuarios
-    WHERE VerificacionEstado = 'Pendiente'
-    ORDER BY FechaRegistro ASC
-")->fetch_all(MYSQLI_ASSOC);
+$sql = "
+    SELECT u.UserID, u.PrimerNombre, u.PrimerApellido, u.Email, u.NumeroDocumento, 
+           u.DocumentoImagenURL_Frente, u.DocumentoImagenURL_Reverso
+    FROM usuarios u
+    JOIN estados_verificacion ev ON u.VerificacionEstadoID = ev.EstadoID
+    WHERE ev.NombreEstado = 'Pendiente'
+    ORDER BY u.FechaRegistro ASC
+";
+$usuariosPendientes = $conexion->query($sql)->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <div class="container mt-4">
@@ -25,7 +28,7 @@ $usuariosPendientes = $conexion->query("
         <table class="table table-bordered table-hover" id="tabla-verificaciones">
             <thead class="table-light">
                 <tr>
-                    <th>ID Usuario</th>
+                    <th>ID Usuario</th> 
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Documento</th>
@@ -73,11 +76,13 @@ $usuariosPendientes = $conexion->query("
         <div class="row">
             <div class="col-md-6 text-center">
                 <p><strong>Frente del Documento</strong></p>
-                <img id="modalImgFrente" src="" class="img-fluid border rounded" alt="Frente del documento">
+                <img id="modalImgFrente" src="" class="img-fluid border rounded" alt="Frente del documento" 
+                     data-base-url="<?php echo BASE_URL; ?>/admin/view_secure_file.php?file=">
             </div>
             <div class="col-md-6 text-center">
                 <p><strong>Reverso del Documento</strong></p>
-                <img id="modalImgReverso" src="" class="img-fluid border rounded" alt="Reverso del documento">
+                <img id="modalImgReverso" src="" class="img-fluid border rounded" alt="Reverso del documento"
+                     data-base-url="<?php echo BASE_URL; ?>/admin/view_secure_file.php?file=">
             </div>
         </div>
       </div>

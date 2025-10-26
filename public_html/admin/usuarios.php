@@ -9,8 +9,32 @@ $pageTitle = 'Gestionar Usuarios';
 $pageScript = 'admin.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
-$adminID = $_SESSION['user_id'];
-$usuarios = $conexion->query("SELECT UserID, PrimerNombre, PrimerApellido, Email, VerificacionEstado, LockoutUntil FROM usuarios WHERE UserID != $adminID ORDER BY FechaRegistro DESC")->fetch_all(MYSQLI_ASSOC);
+$adminID = (int)$_SESSION['user_id'];
+$usuarios = [];
+
+$sql = "
+    SELECT 
+        u.UserID, u.PrimerNombre, u.PrimerApellido, u.Email, u.LockoutUntil, u.NumeroDocumento,
+        ev.NombreEstado AS VerificacionEstado,
+        r.NombreRol AS Rol,
+        td.NombreDocumento AS TipoDocumento
+    FROM usuarios u
+    LEFT JOIN estados_verificacion ev ON u.VerificacionEstadoID = ev.EstadoID
+    LEFT JOIN roles r ON u.RolID = r.RolID
+    LEFT JOIN tipos_documento td ON u.TipoDocumentoID = td.TipoDocumentoID
+    WHERE u.UserID != ? 
+    ORDER BY u.FechaRegistro DESC
+";
+$stmt = $conexion->prepare($sql);
+if ($stmt) {
+    $stmt->bind_param("i", $adminID);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+    $usuarios = ($resultado) ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+} else {
+    error_log("Error al preparar la consulta de usuarios: " . $conexion->error);
+}
 ?>
 
 <div class="container mt-4">
@@ -24,28 +48,36 @@ $usuarios = $conexion->query("SELECT UserID, PrimerNombre, PrimerApellido, Email
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Email</th>
+                    <th>Rol</th>
+                    <th>Documento</th>
                     <th>Estado Verificación</th>
                     <th>Acción (Bloqueo)</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($usuarios as $usuario):
-                    $isBlocked = ($usuario['LockoutUntil'] && strtotime($usuario['LockoutUntil']) > time() + (365*24*60*60));
-                ?>
-                    <tr>
-                        <td><?php echo $usuario['UserID']; ?></td>
-                        <td><?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?></td>
-                        <td><?php echo htmlspecialchars($usuario['Email']); ?></td>
-                        <td><?php echo htmlspecialchars($usuario['VerificacionEstado']); ?></td>
-                        <td>
-                            <button class="btn btn-sm block-user-btn <?php echo $isBlocked ? 'btn-success' : 'btn-danger'; ?>" 
-                                    data-user-id="<?php echo $usuario['UserID']; ?>"
-                                    data-current-status="<?php echo $isBlocked ? 'blocked' : 'active'; ?>">
-                                <?php echo $isBlocked ? 'Desbloquear' : 'Bloquear'; ?>
-                            </button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
+                <?php if (empty($usuarios)): ?>
+                    <tr><td colspan="7" class="text-center">No se encontraron usuarios (aparte de usted).</td></tr>
+                <?php else: ?>
+                    <?php foreach ($usuarios as $usuario):
+                        $isBlocked = ($usuario['LockoutUntil'] && strtotime($usuario['LockoutUntil']) > time());
+                    ?>
+                        <tr>
+                            <td><?php echo $usuario['UserID']; ?></td>
+                            <td><?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?></td>
+                            <td><?php echo htmlspecialchars($usuario['Email']); ?></td>
+                            <td><?php echo htmlspecialchars($usuario['Rol'] ?? 'N/A'); ?></td>
+                            <td><?php echo htmlspecialchars(($usuario['TipoDocumento'] ?? 'N/A') . ': ' . ($usuario['NumeroDocumento'] ?? 'N/A')); ?></td>
+                            <td><?php echo htmlspecialchars($usuario['VerificacionEstado'] ?? 'N/A'); ?></td>
+                            <td>
+                                <button class="btn btn-sm block-user-btn <?php echo $isBlocked ? 'btn-success' : 'btn-danger'; ?>" 
+                                        data-user-id="<?php echo $usuario['UserID']; ?>"
+                                        data-current-status="<?php echo $isBlocked ? 'blocked' : 'active'; ?>">
+                                    <?php echo $isBlocked ? 'Desbloquear' : 'Bloquear'; ?>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>

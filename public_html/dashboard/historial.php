@@ -11,6 +11,7 @@ function getStatusBadgeClass($status) {
         case 'En Proceso': return 'bg-primary';
         case 'En Verificación': return 'bg-info text-dark';
         case 'Cancelado': return 'bg-danger';
+        case 'Pendiente de Pago':
         default: return 'bg-warning text-dark';
     }
 }
@@ -20,22 +21,48 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $userID = $_SESSION['user_id'];
 $transacciones = [];
-$sql = "SELECT T.*, C.Alias AS BeneficiarioAlias, P.NombrePais AS PaisDestino FROM transacciones AS T JOIN cuentasbeneficiarias AS C ON T.CuentaBeneficiariaID = C.CuentaID JOIN paises AS P ON C.PaisID = P.PaisID WHERE T.UserID = ? ORDER BY T.FechaTransaccion DESC";
+
+$sql = "SELECT 
+            T.TransaccionID, T.FechaTransaccion, T.MontoOrigen, T.MonedaOrigen, 
+            T.MontoDestino, T.MonedaDestino, T.ComprobanteURL, T.ComprobanteEnvioURL,
+            C.Alias AS BeneficiarioAlias, 
+            P.NombrePais AS PaisDestino,
+            ET.NombreEstado AS Estado
+        FROM transacciones AS T 
+        JOIN cuentas_beneficiarias AS C ON T.CuentaBeneficiariaID = C.CuentaID
+        JOIN paises AS P ON C.PaisID = P.PaisID 
+        JOIN estados_transaccion AS ET ON T.EstadoID = ET.EstadoID
+        WHERE T.UserID = ? 
+        ORDER BY T.FechaTransaccion DESC";
+
 $stmt = $conexion->prepare($sql);
-$stmt->bind_param("i", $userID);
-$stmt->execute();
-$resultado = $stmt->get_result();
-if ($resultado) {
-    $transacciones = $resultado->fetch_all(MYSQLI_ASSOC);
+
+if ($stmt === false) {
+     error_log("Error al preparar la consulta de historial: " . $conexion->error);
+     $transacciones = []; 
+     $error_sql = true; 
+} else {
+    $stmt->bind_param("i", $userID);
+    if (!$stmt->execute()) {
+         error_log("Error al ejecutar la consulta de historial: " . $stmt->error);
+         $error_sql = true;
+    } else {
+        $resultado = $stmt->get_result();
+        if ($resultado) {
+            $transacciones = $resultado->fetch_all(MYSQLI_ASSOC);
+        }
+    }
+    $stmt->close();
 }
-$stmt->close();
 ?>
 
 <div class="container mt-4">
     <div class="card p-4 p-md-5 shadow-sm">
         <h1 class="mb-4">Mi Historial de Transacciones</h1>
         
-        <?php if (empty($transacciones)): ?>
+        <?php if (isset($error_sql) && $error_sql): ?>
+             <div class="alert alert-danger">Ocurrió un error al cargar tu historial. Por favor, intenta más tarde.</div>
+        <?php elseif (empty($transacciones)): ?>
             <div class="alert alert-info">Aún no has realizado ninguna transacción. <a href="<?php echo BASE_URL; ?>/dashboard/">Haz tu primer envío aquí.</a></div>
         <?php else: ?>
             <div class="table-responsive">
@@ -55,10 +82,10 @@ $stmt->close();
                         <?php foreach ($transacciones as $tx): ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($tx['TransaccionID']); ?></td>
-                                <td><?php echo date("d/m/Y H:i", strtotime($tx['FechaTransaccion'])); ?></td>
+                                <td><?php echo htmlspecialchars(date("d/m/Y H:i", strtotime($tx['FechaTransaccion']))); ?></td>
                                 <td><?php echo htmlspecialchars($tx['BeneficiarioAlias']); ?></td>
-                                <td><?php echo htmlspecialchars(number_format($tx['MontoOrigen'], 2)) . ' ' . htmlspecialchars($tx['MonedaOrigen']); ?></td>
-                                <td><?php echo htmlspecialchars(number_format($tx['MontoDestino'], 2)) . ' ' . htmlspecialchars($tx['MonedaDestino']); ?></td>
+                                <td><?php echo htmlspecialchars(number_format($tx['MontoOrigen'], 2, ',', '.')) . ' ' . htmlspecialchars($tx['MonedaOrigen']); ?></td>
+                                <td><?php echo htmlspecialchars(number_format($tx['MontoDestino'], 2, ',', '.')) . ' ' . htmlspecialchars($tx['MonedaDestino']); ?></td>
                                 <td>
                                     <span class="badge <?php echo getStatusBadgeClass($tx['Estado']); ?>">
                                         <?php echo htmlspecialchars($tx['Estado']); ?>
@@ -74,14 +101,17 @@ $stmt->close();
                                             <button class="btn btn-sm btn-warning upload-btn" data-bs-toggle="modal" data-bs-target="#uploadReceiptModal" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Subir</button>
                                         <?php endif; ?>
                                     <?php else: ?>
-                                        <a href="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']); ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver Pago</a>
-                                        <button class="btn btn-sm btn-secondary upload-btn" data-bs-toggle="modal" data-bs-target="#uploadReceiptModal" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Modificar</button>
+                                        <a href="<?php echo BASE_URL . '/dashboard/ver-comprobante.php?id=' . $tx['TransaccionID'] . '&type=user'; ?>" target="_blank" class="btn btn-sm btn-outline-secondary">Ver Pago</a>
+                                        
+                                        <?php if ($tx['Estado'] == 'Pendiente de Pago'): ?>
+                                            <button class="btn btn-sm btn-secondary upload-btn" data-bs-toggle="modal" data-bs-target="#uploadReceiptModal" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Modificar</button>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                     
                                     <a href="<?php echo BASE_URL; ?>/generar-factura.php?id=<?php echo $tx['TransaccionID']; ?>" target="_blank" class="btn btn-sm btn-info">Orden</a>
 
                                     <?php if (!empty($tx['ComprobanteEnvioURL'])): ?>
-                                        <a href="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']); ?>" target="_blank" class="btn btn-sm btn-success fw-bold">Ver Comp. de Envío</a>
+                                        <a href="<?php echo BASE_URL . '/dashboard/ver-comprobante.php?id=' . $tx['TransaccionID'] . '&type=admin'; ?>" target="_blank" class="btn btn-sm btn-success fw-bold">Ver Comp. de Envío</a>
                                     <?php endif; ?>
                                 </td>
                             </tr>
