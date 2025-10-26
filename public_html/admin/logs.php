@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
-if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') {
     die("Acceso denegado.");
 }
 
@@ -120,7 +120,7 @@ $stmtLogs->close();
                 </table>
             </div>
 
-            <nav aria-label="Paginaci¨®n de logs">
+            <nav aria-label="Paginaciï¿½ï¿½n de logs">
                 <ul class="pagination justify-content-center">
                     <?php if ($paginaActual > 1): ?>
                         <li class="page-item"><a class="page-link" href="?page=<?php echo $paginaActual - 1; ?>&<?php echo http_build_query(['fecha_inicio' => $fechaInicio, 'fecha_fin' => $fechaFin, 'email_usuario' => $emailUsuario]); ?>">Anterior</a></li>

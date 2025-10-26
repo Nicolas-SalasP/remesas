@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
-if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') { die("Acceso denegado."); }
+if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') { die("Acceso denegado."); }
 
 function getStatusBadgeClass($status) {
     switch ($status) {

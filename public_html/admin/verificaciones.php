@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
-if (!isset($_SESSION['user_rol']) || $_SESSION['user_rol'] !== 'Admin') {
+if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') {
     die("Acceso denegado.");
 }
 
