@@ -32,8 +32,9 @@ class DashboardService
 
     private function getEstadoId(string $nombreEstado): int
     {
-        $id = $this->estadoTxRepo->findIdByName($nombreEstado);
+        $id = $this.estadoTxRepo->findIdByName($nombreEstado);
         if ($id === null) {
+            error_log("Configuración interna: Estado de transacción '{$nombreEstado}' no encontrado.");
             throw new Exception("Configuración interna: Estado de transacción '{$nombreEstado}' no encontrado.", 500);
         }
         return $id;
@@ -41,22 +42,27 @@ class DashboardService
 
     public function getAdminDashboardStats(): array
     {
-        $totalUsers = $this->userRepository->countAll();
+        try {
+            $totalUsers = $this.userRepository->countAll();
 
-        $estadoVerificacionID = $this->getEstadoId(self::ESTADO_EN_VERIFICACION);
-        $estadoEnProcesoID = $this->getEstadoId(self::ESTADO_EN_PROCESO);
-        $pendingTransactions = $this->transactionRepository->countByStatus([$estadoVerificacionID, $estadoEnProcesoID]);
+            $estadoVerificacionID = $this.getEstadoId(self::ESTADO_EN_VERIFICACION);
+            $estadoEnProcesoID = $this.getEstadoId(self::ESTADO_EN_PROCESO);
+            $pendingTransactions = $this.transactionRepository->countByStatus([$estadoVerificacionID, $estadoEnProcesoID]);
 
-        $estadoPagadoID = $this->getEstadoId(self::ESTADO_PAGADO);
-        $completedToday = $this->transactionRepository->countCompletedToday($estadoPagadoID);
-        $totalVolume = $this->transactionRepository->getTotalVolume($estadoPagadoID);
+            $estadoPagadoID = $this.getEstadoId(self::ESTADO_PAGADO);
+            $completedToday = $this.transactionRepository->countCompletedToday($estadoPagadoID);
+            $totalVolume = $this.transactionRepository->getTotalVolume($estadoPagadoID);
 
-        return [
-            'totalUsers' => $totalUsers,
-            'pendingTransactions' => $pendingTransactions,
-            'completedToday' => $completedToday,
-            'totalVolume' => number_format($totalVolume, 2, ',', '.') . ' CLP'
-        ];
+            return [
+                'totalUsers' => $totalUsers,
+                'pendingTransactions' => $pendingTransactions,
+                'completedToday' => $completedToday,
+                'totalVolume' => number_format($totalVolume, 2, ',', '.') . ' CLP'
+            ];
+        } catch (Exception $e) {
+            error_log("Error en getAdminDashboardStats: " . $e.getMessage());
+            throw new Exception("Error al obtener estadísticas del dashboard.", 500, $e);
+        }
     }
 
     public function getDolarBcvData(): array
@@ -75,15 +81,17 @@ class DashboardService
 
         $cacheFile = $cacheDir . 'dolar_bcv_history.json';
         $cacheTime = 3600;
+        $decodedData = null;
 
         if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
             $cachedData = @file_get_contents($cacheFile);
              if ($cachedData) {
                  $decodedData = json_decode($cachedData, true);
-                 if (json_last_error() === JSON_ERROR_NONE) {
+                 if (json_last_error() === JSON_ERROR_NONE && isset($decodedData['success']) && $decodedData['success']) {
                      return $decodedData;
                  } else {
-                     error_log("Error al decodificar caché de DolarBCV: " . json_last_error_msg());
+                     error_log("Error al decodificar caché de DolarBCV o caché inválida: " . json_last_error_msg());
+                     $decodedData = null;
                  }
              } else {
                  error_log("Error al leer archivo de caché de DolarBCV: {$cacheFile}");
@@ -98,7 +106,7 @@ class DashboardService
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'JCEnviosApp/1.0');
+        curl_setopt($ch, CURLOPT_USERAGENT, 'JCEnviosApp/1.0'); 
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -106,13 +114,22 @@ class DashboardService
         curl_close($ch);
 
         if ($curlError || $httpCode !== 200 || $response === false) {
-             error_log("Error al conectar con API Frankfurter: HTTP {$httpCode} - Error: {$curlError} - URL: {$apiUrl}");
+             $errorMsg = "Error al conectar con API Frankfurter: HTTP {$httpCode} - Error: {$curlError} - URL: {$apiUrl}";
+             error_log($errorMsg);
+             if ($decodedData && file_exists($cacheFile)) {
+                  error_log("Devolviendo datos cacheados antiguos debido a error de API.");
+                  return $decodedData;
+             }
             throw new Exception("No se pudo obtener la tasa de cambio externa en este momento.", 503);
         }
 
         $data = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE || empty($data['rates'])) {
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($data['rates']) || !is_array($data['rates'])) {
             error_log("Respuesta inválida de API Frankfurter: " . json_last_error_msg() . " - Respuesta: " . substr($response, 0, 500));
+            if ($decodedData && file_exists($cacheFile)) {
+                error_log("Devolviendo datos cacheados antiguos debido a respuesta inválida de API.");
+                return $decodedData;
+            }
             throw new Exception("La API externa devolvió datos inválidos.", 502);
         }
 
@@ -120,15 +137,19 @@ class DashboardService
         $labels = [];
         $dataPoints = [];
         foreach ($data['rates'] as $date => $rates) {
-            if (isset($rates['VES'])) {
+            if (isset($rates['VES']) && is_numeric($rates['VES'])) {
                 $labels[] = date("d/m", strtotime($date));
-                $dataPoints[] = $rates['VES'];
+                $dataPoints[] = floatval($rates['VES']);
             }
         }
 
-         if (empty($dataPoints)) {
-             error_log("No se encontraron datos para VES en la respuesta de Frankfurter.");
-            throw new Exception("No se encontraron datos de tasa para el período solicitado.", 500);
+        if (empty($dataPoints)) {
+             error_log("No se encontraron datos para VES en la respuesta de Frankfurter para el rango {$startDate} a hoy.");
+             if ($decodedData && file_exists($cacheFile)) {
+                  error_log("Devolviendo datos cacheados antiguos porque no se encontró VES en la respuesta nueva.");
+                  return $decodedData;
+             }
+            throw new Exception("No se encontraron datos de tasa para el período solicitado.", 404);
         }
 
         $output = [
@@ -142,6 +163,6 @@ class DashboardService
              error_log("Error al escribir en el archivo de caché de DolarBCV: {$cacheFile}");
         }
 
-        return $output;
+        return $output; 
     }
 }

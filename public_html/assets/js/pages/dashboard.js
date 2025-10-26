@@ -39,6 +39,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return value.replace(/\./g, '').replace(',', '.');
     };
 
+    const countryPhoneCodes = [
+        { code: '+54', name: 'Argentina', flag: '🇦🇷', paisId: 7 },
+        { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
+        { code: '+55', name: 'Brasil', flag: '🇧🇷' },
+        { code: '+56', name: 'Chile', flag: '🇨🇱', paisId: 1 },
+        { code: '+57', name: 'Colombia', flag: '🇨🇴', paisId: 2 },
+        { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
+        { code: '+53', name: 'Cuba', flag: '🇨🇺' },
+        { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
+        { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
+        { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
+        { code: '+504', name: 'Honduras', flag: '🇭🇳' },
+        { code: '+52', name: 'México', flag: '🇲🇽' },
+        { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+        { code: '+507', name: 'Panamá', flag: '🇵🇦' },
+        { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
+        { code: '+51', name: 'Perú', flag: '🇵🇪', paisId: 4 },
+        { code: '+1', name: 'Puerto Rico', flag: '🇵🇷' },
+        { code: '+1', name: 'Rep. Dominicana', flag: '🇩🇴' },
+        { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
+        { code: '+58', name: 'Venezuela', flag: '🇻🇪', paisId: 3 },
+        { code: '+1', name: 'EE.UU.', flag: '🇺🇸', paisId: 5 }
+    ];
+    countryPhoneCodes.sort((a, b) => a.name.localeCompare(b.name));
+
     const updateView = () => {
         formSteps.forEach((step, index) => {
             step.classList.toggle('active', (index + 1) === currentStep);
@@ -90,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error loadBeneficiaries:', error);
             beneficiaryListDiv.innerHTML = '<p class="text-danger">Error al cargar los beneficiarios.</p>';
+            throw error; // Relanzar el error para que el 'catch' en nextBtn lo maneje
         }
     };
 
@@ -162,11 +188,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!origenID || !destinoID) {
             tasaDisplayInput.value = 'Selecciona origen y destino';
-             updateCalculation(); return;
+             updateCalculation();
+             return;
         }
         if (origenID === destinoID) {
              tasaDisplayInput.value = 'Origen y destino deben ser diferentes';
-             updateCalculation(); return;
+             updateCalculation();
+             return;
         }
 
         try {
@@ -178,6 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
                      tasaDisplayInput.value = 'Error al obtener tasa (Servidor).';
                      console.error("Error del servidor al obtener tasa:", response.statusText);
                 }
+                 currentRate = 0;
+                 selectedTasaIdInput.value = '';
             } else {
                 const tasaInfo = await response.json();
                 if (tasaInfo && typeof tasaInfo.ValorTasa !== 'undefined' && tasaInfo.TasaID) {
@@ -188,12 +218,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedTasaIdInput.value = tasaInfo.TasaID;
                 } else {
                     tasaDisplayInput.value = 'Tasa no disponible (Datos inválidos).';
+                    currentRate = 0;
+                    selectedTasaIdInput.value = '';
                 }
             }
             updateCalculation();
         } catch (e) {
             console.error("Error en fetchRate:", e);
             tasaDisplayInput.value = 'Error de red al obtener tasa.';
+            currentRate = 0;
+            selectedTasaIdInput.value = '';
             updateCalculation();
         }
     };
@@ -204,11 +238,14 @@ document.addEventListener('DOMContentLoaded', () => {
              if (activeInput === 'origen') montoDestinoInput.value = ''; else montoOrigenInput.value = '';
              return;
         }
+
         isCalculating = true;
         let sourceInput = activeInput === 'origen' ? montoOrigenInput : montoDestinoInput;
         let targetInput = activeInput === 'origen' ? montoDestinoInput : montoOrigenInput;
+
         const sourceValue = parseFloat(cleanNumber(sourceInput.value)) || 0;
         let targetValue = 0;
+
         if (sourceValue > 0) {
             if (activeInput === 'origen') {
                 targetValue = sourceValue * currentRate;
@@ -219,6 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             targetInput.value = '';
         }
+
         setTimeout(() => { isCalculating = false; }, 50);
     };
 
@@ -248,6 +286,21 @@ document.addEventListener('DOMContentLoaded', () => {
          if (!submitBtn) return;
          submitBtn.disabled = true;
          submitBtn.textContent = 'Procesando...';
+
+        const selectedDestinoOption = paisDestinoSelect.options[paisDestinoSelect.selectedIndex];
+        const monedaDestinoValue = selectedDestinoOption ? selectedDestinoOption.getAttribute('data-currency') : null;
+
+        if (!monedaDestinoValue) {
+            if (window.showInfoModal) {
+                window.showInfoModal('Error de Datos', 'No se pudo determinar la moneda de destino. Recarga la página e intenta de nuevo.', false);
+            } else {
+                alert('Error: No se pudo determinar la moneda de destino.');
+            }
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirmar y Generar Orden';
+            return;
+        }
+
         const transactionData = {
             userID: LOGGED_IN_USER_ID,
             cuentaID: selectedCuentaIdInput.value,
@@ -255,21 +308,58 @@ document.addEventListener('DOMContentLoaded', () => {
             montoOrigen: cleanNumber(montoOrigenInput.value),
             monedaOrigen: 'CLP',
             montoDestino: cleanNumber(montoDestinoInput.value),
+            monedaDestino: monedaDestinoValue,
             formaDePago: formaDePagoSelect.value
         };
+
+        if (isNaN(parseFloat(transactionData.montoOrigen)) || parseFloat(transactionData.montoOrigen) <= 0 ||
+            isNaN(parseFloat(transactionData.montoDestino)) || parseFloat(transactionData.montoDestino) <= 0 ||
+            !transactionData.cuentaID || !transactionData.tasaID || !transactionData.formaDePago) {
+             if (window.showInfoModal) {
+                 window.showInfoModal('Datos Incompletos', 'Asegúrate de haber completado todos los pasos anteriores correctamente (selección de beneficiario, montos, forma de pago y tasa válida).', false);
+             } else {
+                 alert('Error: Datos incompletos o inválidos para crear la transacción.');
+             }
+             submitBtn.disabled = false;
+             submitBtn.textContent = 'Confirmar y Generar Orden';
+             return;
+        }
+
         try {
             const response = await fetch('../api/?accion=createTransaccion', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' , 'Accept': 'application/json' },
                 body: JSON.stringify(transactionData)
             });
-             const result = await response.json();
-            if (response.ok && result.success) {
+
+             let result;
+             const contentType = response.headers.get("content-type");
+
+             if (contentType && contentType.indexOf("application/json") !== -1) {
+                 result = await response.json();
+             } else {
+                 result = { success: false, error: await response.text() };
+                 console.error("Respuesta no JSON del servidor:", result.error);
+             }
+
+            if (!response.ok) {
+                 const errorMsg = result?.error || `Error del servidor (${response.status}). Intenta de nuevo.`;
+                 if (window.showInfoModal) {
+                    window.showInfoModal('Error al Crear Orden', errorMsg, false);
+                 } else {
+                     alert('Error: ' + errorMsg);
+                 }
+                 submitBtn.disabled = false;
+                 submitBtn.textContent = 'Confirmar y Generar Orden';
+                 return;
+            }
+
+            if (result.success) {
                 transaccionIdFinal.textContent = result.transaccionID;
                 currentStep++;
                 updateView();
             } else {
-                 const errorMsg = result.error || 'No se pudo crear la transacción.';
+                 const errorMsg = result.error || 'No se pudo crear la transacción (respuesta inesperada).';
                  if (window.showInfoModal) {
                     window.showInfoModal('Error al Crear Orden', errorMsg, false);
                  } else {
@@ -279,9 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
                  submitBtn.textContent = 'Confirmar y Generar Orden';
             }
         } catch (e) {
-            console.error('Error en submitTransaction:', e);
+            console.error('Error en submitTransaction (catch):', e);
              if (window.showInfoModal) {
-                 window.showInfoModal('Error de Red', 'No se pudo conectar con el servidor para crear la orden.', false);
+                 window.showInfoModal('Error de Red', 'No se pudo conectar con el servidor para crear la orden. Verifica tu conexión.', false);
              } else {
                 alert('No se pudo conectar con el servidor.');
              }
@@ -293,10 +383,19 @@ document.addEventListener('DOMContentLoaded', () => {
     nextBtn?.addEventListener('click', async () => {
         let isValid = false;
         let alertMessage = '';
+
         if (currentStep === 1) {
             if (paisOrigenSelect.value && paisDestinoSelect.value && paisOrigenSelect.value !== paisDestinoSelect.value) {
-                await loadBeneficiaries(paisDestinoSelect.value);
-                isValid = true;
+                // ****** INICIO CORRECCIÓN TRY-CATCH ******
+                try {
+                    await loadBeneficiaries(paisDestinoSelect.value);
+                    isValid = true; // Solo marcar como válido si loadBeneficiaries tuvo éxito
+                } catch (error) {
+                    // Si falla la carga de beneficiarios, mostrar error y no avanzar
+                    alertMessage = "Error al cargar los beneficiarios para el país destino. Intenta de nuevo o contacta soporte.";
+                    isValid = false;
+                }
+                // ****** FIN CORRECCIÓN TRY-CATCH ******
             } else if (paisOrigenSelect.value === paisDestinoSelect.value) {
                 alertMessage = 'El país de origen y destino no pueden ser iguales.';
             } else {
@@ -312,17 +411,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (currentStep === 3) {
             const monto = parseFloat(cleanNumber(montoOrigenInput.value)) || 0;
-            if (monto > 0 && formaDePagoSelect.value && currentRate > 0) {
+            if (monto > 0 && formaDePagoSelect.value && currentRate > 0 && selectedTasaIdInput.value) {
                 createSummary();
                 isValid = true;
-            } else if (currentRate <= 0) {
-                 alertMessage = 'La tasa de cambio no está disponible para esta ruta. No se puede continuar.';
+            } else if (currentRate <= 0 || !selectedTasaIdInput.value) {
+                 alertMessage = 'La tasa de cambio no está disponible o no se pudo cargar. No se puede continuar.';
             } else if (monto <= 0) {
                 alertMessage = 'Debes ingresar un monto a enviar válido.';
             } else {
                  alertMessage = 'Debes seleccionar una forma de pago.';
             }
         }
+
         if (isValid && currentStep < 4) {
             currentStep++;
             updateView();
@@ -332,13 +432,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    prevBtn?.addEventListener('click', () => { if (currentStep > 1 && currentStep < 5) { currentStep--; updateView(); } });
+    prevBtn?.addEventListener('click', () => {
+        if (currentStep > 1 && currentStep < 5) {
+            currentStep--;
+            updateView();
+        }
+    });
 
     paisOrigenSelect?.addEventListener('change', () => {
         paisDestinoSelect.value = '';
         currencyLabelDestino.textContent = 'N/A';
         tasaDisplayInput.value = '';
         currentRate = 0;
+        selectedTasaIdInput.value = '';
         beneficiaryListDiv.innerHTML = '';
          loadPaises('Destino', paisDestinoSelect);
          updateCalculation();
@@ -387,10 +493,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     submitBtn?.addEventListener('click', submitTransaction);
 
-    const validationRules = { /* ... */ };
     let addAccountModalInstance = null;
     if (addAccountModalElement) {
          addAccountModalInstance = new bootstrap.Modal(addAccountModalElement);
+
         addAccountBtn?.addEventListener('click', () => {
             const paisDestinoID = paisDestinoSelect.value;
             if (!paisDestinoID) {
@@ -399,38 +505,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             benefPaisIdInput.value = paisDestinoID;
-            const rules = validationRules[paisDestinoID];
-            if (rules && rules.code) {
-                phoneCodeSelect.innerHTML = `<option value="${rules.code}">${rules.code}</option>`;
-                phoneNumberInput.maxLength = rules.phoneLength;
-                phoneNumberInput.placeholder = `${rules.phoneLength} dígitos`;
-            } else {
-                 phoneCodeSelect.innerHTML = `<option value="">Código?</option>`;
-                phoneNumberInput.maxLength = 15;
-                phoneNumberInput.placeholder = 'Número completo';
-            }
+
+            phoneCodeSelect.innerHTML = '<option value="">Código...</option>';
+            let selectedCodeFound = false;
+            const paisDestinoData = countryPhoneCodes.find(c => c.paisId && c.paisId.toString() === paisDestinoID);
+
+            countryPhoneCodes.forEach(country => {
+                const isSelected = paisDestinoData && country.code === paisDestinoData.code && country.paisId === paisDestinoData.paisId;
+                phoneCodeSelect.innerHTML += `<option value="${country.code}" ${isSelected ? 'selected' : ''}>${country.flag} ${country.code}</option>`;
+                if (isSelected) selectedCodeFound = true;
+            });
+             if (!selectedCodeFound) {
+                 phoneCodeSelect.value = "";
+             }
+
             benefDocNumberInput.maxLength = 20;
             benefDocNumberInput.pattern = null;
-            benefDocNumberInput.placeholder = '';
+            benefDocNumberInput.placeholder = 'Número de Documento';
             benefDocTypeSelect.value = '';
+            phoneNumberInput.maxLength = 15;
+            phoneNumberInput.placeholder = 'Número sin código de país';
+
+
             addBeneficiaryForm.reset();
+            if (selectedCodeFound && paisDestinoData) {
+                phoneCodeSelect.value = paisDestinoData.code;
+            } else {
+                 phoneCodeSelect.value = "";
+            }
+
             addAccountModalInstance.show();
         });
 
         benefDocTypeSelect?.addEventListener('change', () => {
-            const paisDestinoID = benefPaisIdInput.value;
-            const docType = benefDocTypeSelect.value;
-            const rules = validationRules[paisDestinoID]?.doc[docType];
-            if (rules) {
-                benefDocNumberInput.maxLength = rules.length;
-                benefDocNumberInput.placeholder = `${rules.length} dígitos`;
-                benefDocNumberInput.pattern = rules.numeric ? "[0-9]*" : null;
-            } else {
-                benefDocNumberInput.maxLength = 20;
-                benefDocNumberInput.placeholder = '';
-                benefDocNumberInput.pattern = null;
-            }
-             benefDocNumberInput.value = '';
+            benefDocNumberInput.maxLength = 20;
+            benefDocNumberInput.placeholder = 'Número de Documento';
+            benefDocNumberInput.pattern = null;
+            benefDocNumberInput.value = '';
         });
 
         addBeneficiaryForm?.addEventListener('submit', async (e) => {
@@ -438,21 +549,44 @@ document.addEventListener('DOMContentLoaded', () => {
             const submitModalButton = addBeneficiaryForm.closest('.modal-content').querySelector('button[type="submit"]');
             submitModalButton.disabled = true;
             submitModalButton.textContent = 'Guardando...';
+
             const formData = new FormData(addBeneficiaryForm);
             const data = Object.fromEntries(formData.entries());
-            const phoneCode = data.phoneCode || '';
-            data.numeroTelefono = phoneCode + data.phoneNumber;
+
+            if (data.phoneCode && data.phoneNumber) {
+                 data.numeroTelefono = data.phoneCode + data.phoneNumber.replace(/\s+/g, '');
+            } else if (data.phoneNumber) {
+                data.numeroTelefono = data.phoneNumber.replace(/\s+/g, '');
+            } else {
+                data.numeroTelefono = null;
+            }
             delete data.phoneCode;
             delete data.phoneNumber;
+
             data.tipoBeneficiario = benefTipoSelect.value;
             data.tipoDocumento = benefDocTypeSelect.value;
+
+
             try {
                 const response = await fetch('../api/?accion=addCuenta', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                     },
                     body: JSON.stringify(data)
                 });
-                const result = await response.json();
+
+                let result;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    result = await response.json();
+                } else {
+                    const errorText = await response.text();
+                    result = { success: false, error: `Error ${response.status}: ${errorText || 'Respuesta inesperada del servidor.'}` };
+                    console.error("Respuesta no JSON al agregar cuenta:", errorText);
+                }
+
                 if (response.ok && result.success) {
                     addAccountModalInstance.hide();
                     addBeneficiaryForm.reset();
@@ -463,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     loadBeneficiaries(paisDestinoSelect.value);
                 } else {
-                    const errorMsg = result.error || 'No se pudo guardar la cuenta.';
+                    const errorMsg = result.error || 'No se pudo guardar la cuenta (error desconocido).';
                      if (window.showInfoModal) {
                         window.showInfoModal('Error al Guardar', errorMsg, false);
                     } else {
@@ -471,11 +605,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (error) {
-                console.error('Error al guardar la cuenta:', error);
+                console.error('Error al guardar la cuenta (catch):', error);
+                 let errorMsg = 'No se pudo conectar con el servidor para guardar la cuenta.';
+                 if (error instanceof SyntaxError && error.message.includes('JSON')) {
+                     errorMsg = 'Error al procesar la respuesta del servidor. Intenta de nuevo o contacta soporte.';
+                 }
                  if (window.showInfoModal) {
-                    window.showInfoModal('Error de Red', 'No se pudo conectar con el servidor para guardar la cuenta.', false);
+                    window.showInfoModal('Error de Red o Datos', errorMsg, false);
                  } else {
-                    alert('No se pudo conectar con el servidor.');
+                    alert(errorMsg);
                  }
             } finally {
                 submitModalButton.disabled = false;
