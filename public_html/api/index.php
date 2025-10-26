@@ -1,6 +1,4 @@
 <?php
-// public_html/api/index.php
-
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
 use App\Database\Database;
@@ -25,7 +23,7 @@ use App\Services\{
     UserService,
     PricingService,
     TransactionService,
-    BeneficiaryService,
+    CuentasBeneficiariasService,
     DashboardService
 };
 use App\Controllers\{
@@ -86,7 +84,7 @@ class Container {
                 $this->get(CountryRepository::class),
                 $this->get(NotificationService::class)
             ),
-            BeneficiaryService::class => new BeneficiaryService(
+            BeneficiaryService::class => new CuentasBeneficiariasService(
                 $this->get(CuentasBeneficiariasRepository::class),
                 $this->get(NotificationService::class),
                 $this->get(TipoBeneficiarioRepository::class),

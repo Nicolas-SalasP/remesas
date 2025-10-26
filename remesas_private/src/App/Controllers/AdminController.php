@@ -5,7 +5,6 @@ use App\Services\TransactionService;
 use App\Services\PricingService;
 use App\Services\DashboardService;
 use App\Services\UserService;
-use App\Services\FileHandlerService; 
 use Exception;
 
 class AdminController extends BaseController
@@ -14,21 +13,17 @@ class AdminController extends BaseController
     private PricingService $pricingService;
     private UserService $userService;
     private DashboardService $dashboardService;
-    private FileHandlerService $fileHandler; 
 
     public function __construct(
         TransactionService $txService,
         PricingService $pricingService,
         UserService $userService,
-        DashboardService $dashboardService,
-        FileHandlerService $fileHandler 
+        DashboardService $dashboardService
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
         $this->userService = $userService;
         $this->dashboardService = $dashboardService;
-        $this->fileHandler = $fileHandler; 
-
         $this->ensureAdmin();
     }
 
@@ -122,20 +117,19 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $transactionId = (int)($_POST['transactionId'] ?? 0);
+        $fileData = $_FILES['receiptFile'] ?? null;
 
-        if ($transactionId <= 0 || !isset($_FILES['receiptFile'])) {
-            throw new Exception('ID de transacción inválido o archivo no subido.', 400);
+        if ($transactionId <= 0 || $fileData === null) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'ID de transacción inválido o archivo no recibido.'], 400);
+            return;
         }
 
         try {
-             $directory = 'proof_of_sending';
-             $filenamePrefix = 'tx_envio_' . $transactionId;
-             $dbPath = $this->fileHandler->handleGenericUpload($_FILES['receiptFile'], $directory, $filenamePrefix); // Usar método genérico
-             $this->txService->adminUploadProof($adminId, $transactionId, $dbPath);
-             $this->sendJsonResponse(['success' => true]);
-         } catch (Exception $e) {
-             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() ?: 500);
-         }
+            $this->txService->handleAdminProofUpload($adminId, $transactionId, $fileData);
+            $this->sendJsonResponse(['success' => true]);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() >= 400 ? $e->getCode() : 500);
+        }
     }
 
     public function getDashboardStats(): void

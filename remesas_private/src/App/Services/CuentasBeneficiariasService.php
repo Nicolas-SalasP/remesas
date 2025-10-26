@@ -1,15 +1,15 @@
 <?php
 namespace App\Services;
 
-use App\Repositories\CuentasBeneficiariasRepository;
+use App\Repositories\CuentasBeneficiariasRepository; 
 use App\Repositories\TipoBeneficiarioRepository;
 use App\Repositories\TipoDocumentoRepository;
 use App\Services\NotificationService;
 use Exception;
 
-class CuentasBeneficiariasService
+class CuentasBeneficiariasService 
 {
-    private CuentasBeneficiariasRepository $cuentasBeneficiariasRepository;
+    private CuentasBeneficiariasRepository $cuentasBeneficiariasRepository; 
     private NotificationService $notificationService;
     private TipoBeneficiarioRepository $tipoBeneficiarioRepo;
     private TipoDocumentoRepository $tipoDocumentoRepo;
@@ -20,7 +20,7 @@ class CuentasBeneficiariasService
         TipoBeneficiarioRepository $tipoBeneficiarioRepo,
         TipoDocumentoRepository $tipoDocumentoRepo
     ) {
-        $this->cuentasBeneficiariasRepository = $cuentasBeneficiariasRepository;
+        $this->cuentasBeneficiariasRepository = $cuentasBeneficiariasRepository; 
         $this->notificationService = $notificationService;
         $this->tipoBeneficiarioRepo = $tipoBeneficiarioRepo;
         $this->tipoDocumentoRepo = $tipoDocumentoRepo;

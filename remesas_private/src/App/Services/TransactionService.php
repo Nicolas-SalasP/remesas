@@ -96,22 +96,33 @@ class TransactionService
         }
     }
 
-    public function uploadUserReceipt(int $txId, int $userId, string $path): bool
+    public function handleUserReceiptUpload(int $txId, int $userId, array $fileData): bool
     {
-        if (empty($path)) throw new Exception("Ruta de archivo inválida.", 500);
+        if (empty($fileData) || $fileData['error'] === UPLOAD_ERR_NO_FILE) {
+             throw new Exception("No se recibió ningún archivo.", 400);
+        }
+
+        $relativePath = "";
+        try {
+            $relativePath = $this->fileHandler->saveReceiptFile($fileData, $txId);
+        } catch (Exception $e) {
+            throw new Exception("Error al guardar el comprobante: " . $e->getMessage(), $e->getCode() ?: 500);
+        }
+
         $estadoEnVerificacionID = $this->getEstadoId(self::ESTADO_EN_VERIFICACION);
         $estadoPendienteID = $this->getEstadoId(self::ESTADO_PENDIENTE_PAGO);
 
-        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $path, $estadoEnVerificacionID);
+        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $relativePath, $estadoEnVerificacionID);
 
         if ($affectedRows === 0) {
+            @unlink($this->fileHandler->getAbsolutePath($relativePath));
             $txExists = $this->txRepository->getFullTransactionDetails($txId);
             if (!$txExists || $txExists['UserID'] != $userId) throw new Exception("La transacción no existe o no te pertenece.", 404);
             if ($txExists['EstadoID'] !== $estadoPendienteID) throw new Exception("No se puede subir comprobante. El estado actual es '{$txExists['Estado']}'.", 409);
-            throw new Exception("No se pudo actualizar la transacción.", 500);
+            throw new Exception("No se pudo actualizar la transacción en la base de datos.", 500);
         }
 
-        $this->notificationService->logAdminAction($userId, 'Subida de Comprobante', "TX ID: $txId. Estado cambiado a En Verificación.");
+        $this->notificationService->logAdminAction($userId, 'Subida de Comprobante', "TX ID: $txId. Archivo: $relativePath. Estado cambiado a En Verificación.");
         return true;
     }
 
@@ -166,18 +177,29 @@ class TransactionService
         return true;
     }
 
-    public function adminUploadProof(int $adminId, int $txId, string $proofPath): bool
+    public function handleAdminProofUpload(int $adminId, int $txId, array $fileData): bool
     {
-        if (empty($proofPath)) throw new Exception("Ruta de comprobante inválida.", 500);
+         if (empty($fileData) || $fileData['error'] === UPLOAD_ERR_NO_FILE) {
+             throw new Exception("No se recibió ningún archivo.", 400);
+        }
+
+        $relativePath = "";
+        try {
+            $relativePath = $this->fileHandler->saveAdminProofFile($fileData, $txId);
+        } catch (Exception $e) {
+            throw new Exception("Error al guardar el comprobante de envío: " . $e->getMessage(), $e->getCode() ?: 500);
+        }
+
         $estadoPagadoID = $this->getEstadoId(self::ESTADO_PAGADO);
         $estadoEnProcesoID = $this->getEstadoId(self::ESTADO_EN_PROCESO);
-        $affectedRows = $this->txRepository->uploadAdminProof($txId, $proofPath, $estadoPagadoID, $estadoEnProcesoID);
+        $affectedRows = $this->txRepository->uploadAdminProof($txId, $relativePath, $estadoPagadoID, $estadoEnProcesoID);
 
         if ($affectedRows === 0) {
+            @unlink($this->fileHandler->getAbsolutePath($relativePath));
             $txExists = $this->txRepository->getFullTransactionDetails($txId);
             if (!$txExists) throw new Exception("La transacción no existe.", 404);
             if ($txExists['EstadoID'] !== $estadoEnProcesoID) throw new Exception("El estado de la transacción es '{$txExists['Estado']}', no 'En Proceso'.", 409);
-            throw new Exception("No se pudo subir el comprobante de envío.", 500);
+            throw new Exception("No se pudo actualizar la transacción como pagada.", 500);
         }
 
         $txData = $this->txRepository->getFullTransactionDetails($txId);
@@ -187,7 +209,7 @@ class TransactionService
              $this->notificationService->logAdminAction($adminId, 'Advertencia Notificación', "TX ID $txId: No se pudo notificar al cliente sobre el pago (faltan datos).");
         }
 
-        $this->notificationService->logAdminAction($adminId, 'Admin completó transacción', "TX ID: $txId. Comprobante subido. Estado: 'Pagado'.");
+        $this->notificationService->logAdminAction($adminId, 'Admin completó transacción', "TX ID: $txId. Comprobante envío: $relativePath. Estado: 'Pagado'.");
         return true;
     }
 }
