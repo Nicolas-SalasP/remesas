@@ -112,17 +112,23 @@ class TransactionService
         $estadoEnVerificacionID = $this->getEstadoId(self::ESTADO_EN_VERIFICACION);
         $estadoPendienteID = $this->getEstadoId(self::ESTADO_PENDIENTE_PAGO);
 
-        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $relativePath, $estadoEnVerificacionID);
+        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $relativePath, $estadoEnVerificacionID, $estadoPendienteID);
 
         if ($affectedRows === 0) {
-            @unlink($this->fileHandler->getAbsolutePath($relativePath));
+            @unlink($this->fileHandler->getAbsolutePath($relativePath)); 
+            
             $txExists = $this->txRepository->getFullTransactionDetails($txId);
             if (!$txExists || $txExists['UserID'] != $userId) throw new Exception("La transacción no existe o no te pertenece.", 404);
-            if ($txExists['EstadoID'] !== $estadoPendienteID) throw new Exception("No se puede subir comprobante. El estado actual es '{$txExists['Estado']}'.", 409);
+
+            $allowedStates = [$estadoPendienteID, $estadoEnVerificacionID];
+            if (!in_array($txExists['EstadoID'], $allowedStates)) {
+                throw new Exception("No se puede subir o modificar el comprobante. El estado actual es '{$txExists['Estado']}'.", 409);
+            }
+
             throw new Exception("No se pudo actualizar la transacción en la base de datos.", 500);
         }
 
-        $this->notificationService->logAdminAction($userId, 'Subida de Comprobante', "TX ID: $txId. Archivo: $relativePath. Estado cambiado a En Verificación.");
+        $this->notificationService->logAdminAction($userId, 'Subida/Modificación de Comprobante', "TX ID: $txId. Archivo: $relativePath. Estado cambiado a En Verificación.");
         return true;
     }
 

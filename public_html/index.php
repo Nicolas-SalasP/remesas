@@ -17,12 +17,17 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
     </section>
 
     <section class="card shadow-sm mb-5">
-        <div class="card-body p-4">
-            <h3 class="card-title text-center mb-3">Valor del Dólar BCV en tiempo real</h3>
-            <canvas id="dolar-chart" style="max-height: 300px;"></canvas>
+        <div class="card-body p-4" id="bcv-container"> <?php ?>
+            <h3 class="card-title text-center mb-3">Valor del Dólar BCV</h3>
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="text-muted mt-2">Cargando tasa oficial...</p>
+            </div>
+            <?php ?>
         </div>
     </section>
-
     <section class="row text-center">
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">

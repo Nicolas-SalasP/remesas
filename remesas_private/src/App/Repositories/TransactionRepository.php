@@ -21,18 +21,18 @@ class TransactionRepository
 
         $stmt = $this->db->prepare($sql);
 
-        $estadoInicialID = $data['estadoID'] ?? 1; 
+        $estadoInicialID = $data['estadoID'] ?? 1;
 
-        $stmt->bind_param("iiidssdis", 
+        $stmt->bind_param("iiidssdis",
             $data['userID'],
-            $data['cuentaID'], 
+            $data['cuentaID'],
             $data['tasaID'],
             $data['montoOrigen'],
             $data['monedaOrigen'],
             $data['montoDestino'],
             $data['monedaDestino'],
-            $estadoInicialID, 
-            $data['formaPagoID'] 
+            $estadoInicialID,
+            $data['formaPagoID']
         );
 
         if (!$stmt->execute()) {
@@ -51,27 +51,27 @@ class TransactionRepository
             T.MontoOrigen, T.MonedaOrigen, T.MontoDestino, T.MonedaDestino,
             T.FechaTransaccion, T.ComprobanteURL, T.ComprobanteEnvioURL,
             U.PrimerNombre, U.PrimerApellido, U.Email, U.NumeroDocumento, U.Telefono,
-            TD_U.NombreDocumento AS UsuarioTipoDocumentoNombre, 
-            R.NombreRol AS UsuarioRolNombre, 
-            EV.NombreEstado AS UsuarioVerificacionEstadoNombre, 
+            TD_U.NombreDocumento AS UsuarioTipoDocumentoNombre,
+            R.NombreRol AS UsuarioRolNombre,
+            EV.NombreEstado AS UsuarioVerificacionEstadoNombre,
             CB.Alias AS BeneficiarioAlias, CB.TitularPrimerNombre, CB.TitularPrimerApellido,
             CB.TitularNumeroDocumento, CB.NombreBanco, CB.NumeroCuenta, CB.NumeroTelefono AS BeneficiarioTelefono,
-            TD_B.NombreDocumento AS BeneficiarioTipoDocumentoNombre, 
+            TD_B.NombreDocumento AS BeneficiarioTipoDocumentoNombre,
             TB.Nombre AS BeneficiarioTipoNombre,
             TS.ValorTasa,
-            ET.EstadoID, ET.NombreEstado AS Estado, 
-            FP.FormaPagoID, FP.Nombre AS FormaDePago 
+            ET.EstadoID, ET.NombreEstado AS Estado,
+            FP.FormaPagoID, FP.Nombre AS FormaDePago
         FROM transacciones AS T
         JOIN usuarios AS U ON T.UserID = U.UserID
-        JOIN cuentas_beneficiarias AS CB ON T.CuentaBeneficiariaID = CB.CuentaID 
+        JOIN cuentas_beneficiarias AS CB ON T.CuentaBeneficiariaID = CB.CuentaID
         JOIN tasas AS TS ON T.TasaID_Al_Momento = TS.TasaID
-        LEFT JOIN estados_transaccion AS ET ON T.EstadoID = ET.EstadoID 
-        LEFT JOIN formas_pago AS FP ON T.FormaPagoID = FP.FormaPagoID 
-        LEFT JOIN tipos_documento AS TD_U ON U.TipoDocumentoID = TD_U.TipoDocumentoID 
-        LEFT JOIN roles AS R ON U.RolID = R.RolID 
-        LEFT JOIN estados_verificacion AS EV ON U.VerificacionEstadoID = EV.EstadoID 
-        LEFT JOIN tipos_documento AS TD_B ON CB.TitularTipoDocumentoID = TD_B.TipoDocumentoID 
-        LEFT JOIN tipos_beneficiario AS TB ON CB.TipoBeneficiarioID = TB.TipoBeneficiarioID 
+        LEFT JOIN estados_transaccion AS ET ON T.EstadoID = ET.EstadoID
+        LEFT JOIN formas_pago AS FP ON T.FormaPagoID = FP.FormaPagoID
+        LEFT JOIN tipos_documento AS TD_U ON U.TipoDocumentoID = TD_U.TipoDocumentoID
+        LEFT JOIN roles AS R ON U.RolID = R.RolID
+        LEFT JOIN estados_verificacion AS EV ON U.VerificacionEstadoID = EV.EstadoID
+        LEFT JOIN tipos_documento AS TD_B ON CB.TitularTipoDocumentoID = TD_B.TipoDocumentoID
+        LEFT JOIN tipos_beneficiario AS TB ON CB.TipoBeneficiarioID = TB.TipoBeneficiarioID
         WHERE T.TransaccionID = ?";
 
         $stmt = $this->db->prepare($sql);
@@ -82,13 +82,22 @@ class TransactionRepository
         return $result;
     }
 
-    public function uploadUserReceipt(int $transactionId, int $userId, string $dbPath, int $estadoEnVerificacionID): int
+    public function uploadUserReceipt(int $transactionId, int $userId, string $dbPath, int $estadoEnVerificacionID, int $estadoPendienteID): int
     {
-        $estadoPendienteID = 1;
         $sql = "UPDATE transacciones SET ComprobanteURL = ?, EstadoID = ?
-                WHERE TransaccionID = ? AND UserID = ? AND EstadoID = ?";
+                WHERE TransaccionID = ? AND UserID = ? AND EstadoID IN (?, ?)";
+        
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("siiii", $dbPath, $estadoEnVerificacionID, $transactionId, $userId, $estadoPendienteID);
+        
+        $stmt->bind_param("siiiii", 
+            $dbPath, 
+            $estadoEnVerificacionID,
+            $transactionId,
+            $userId,
+            $estadoPendienteID,
+            $estadoEnVerificacionID
+        );
+
         $stmt->execute();
         $affectedRows = $stmt->affected_rows;
         $stmt->close();
@@ -141,13 +150,13 @@ class TransactionRepository
 
      // --- MÉTODOS PARA ESTADÍSTICAS  ---
 
-    public function countByStatus(array $statusIDs): int 
+    public function countByStatus(array $statusIDs): int
     {
         if (empty($statusIDs)) return 0;
         $placeholders = implode(',', array_fill(0, count($statusIDs), '?'));
         $sql = "SELECT COUNT(TransaccionID) as total FROM transacciones WHERE EstadoID IN ($placeholders)";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param(str_repeat('i', count($statusIDs)), ...$statusIDs); 
+        $stmt->bind_param(str_repeat('i', count($statusIDs)), ...$statusIDs);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
