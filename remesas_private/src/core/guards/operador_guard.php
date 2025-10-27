@@ -20,13 +20,14 @@ if ($_SESSION['user_rol_name'] === 'Operador') {
     $current_script = basename($_SERVER['SCRIPT_NAME']);
     
     $allowed_scripts = [
-        'pendientes.php',   
-        'ver-comprobante.php',  
-        'admin.js',            
-        'logout.php'            
+        'pendientes.php',
+        'index.php',
+        'ver-comprobante.php',
+        'generar-factura.php',
+        'logout.php'
     ];
-    
-    if (!in_array($current_script, $allowed_scripts)) {
+
+    if (!in_array($current_script, $allowed_scripts) && strpos($_SERVER['REQUEST_URI'], '/api/') === false) {
         header('Location: ' . BASE_URL . '/operador/pendientes.php');
         exit();
     }
