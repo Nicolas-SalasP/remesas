@@ -23,4 +23,13 @@ class RolRepository
         return $result['RolID'] ?? null;
     }
 
+    public function findAll(): array
+    {
+        $sql = "SELECT RolID, NombreRol FROM roles ORDER BY NombreRol ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
 }

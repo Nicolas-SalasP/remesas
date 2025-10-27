@@ -168,8 +168,8 @@ class UserService
         if ($this->userRepository->updateVerificationDocuments($userId, $pathFrente, $pathReverso, $estadoPendienteID)) {
             $this->notificationService->logAdminAction($userId, 'Subida Documentos Verificación', "Usuario ID: $userId. Estado cambiado a Pendiente.");
         } else {
-            @unlink(__DIR__ . '/../../../' . $pathFrente);
-            @unlink(__DIR__ . '/../../../' . $pathReverso);
+            @unlink($this->fileHandler->getAbsolutePath($pathFrente));
+            @unlink($this->fileHandler->getAbsolutePath($pathReverso));
             throw new Exception("No se pudieron actualizar los datos de verificación en la base de datos.", 500);
         }
     }
@@ -206,6 +206,13 @@ class UserService
 
     public function toggleUserBlock(int $adminId, int $userId, string $newStatus): void
     {
+        if ($userId === $adminId) {
+            throw new Exception("No puedes bloquearte a ti mismo.", 400);
+        }
+        if ($userId === 1) {
+            throw new Exception("No se puede bloquear al administrador principal (ID 1).", 403);
+        }
+
         if (!in_array($newStatus, ['blocked', 'active'])) {
              throw new Exception("Acción de bloqueo no válida: '{$newStatus}'.", 400);
         }
@@ -219,6 +226,45 @@ class UserService
             $this->notificationService->logAdminAction($adminId, "Admin cambió estado de usuario", "Usuario ID: $userId, Nuevo Estado: $actionText");
         } else {
              throw new Exception("No se pudo actualizar el estado de bloqueo del usuario.", 500);
+        }
+    }
+
+    public function adminUpdateUserRole(int $adminId, int $targetUserId, int $newRoleId): void
+    {
+        if ($targetUserId === $adminId) {
+            throw new Exception("No puedes cambiar tu propio rol.", 400);
+        }
+        if ($targetUserId === 1) {
+            throw new Exception("No se puede cambiar el rol del administrador principal (ID 1).", 403);
+        }
+        
+        if ($this->userRepository->updateRole($targetUserId, $newRoleId)) {
+             $this->notificationService->logAdminAction($adminId, "Admin cambió rol de usuario", "Usuario ID: $targetUserId, Nuevo Rol ID: $newRoleId");
+        } else {
+            throw new Exception("No se pudo actualizar el rol del usuario.", 500);
+        }
+    }
+
+    public function adminDeleteUser(int $adminId, int $targetUserId): void
+    {
+        if ($targetUserId === $adminId) {
+            throw new Exception("No puedes eliminarte a ti mismo.", 400);
+        }
+        if ($targetUserId === 1) {
+            throw new Exception("No se puede eliminar al administrador principal (ID 1).", 403);
+        }
+        
+        $user = $this->userRepository->findUserById($targetUserId);
+        if (!$user) {
+             throw new Exception("Usuario no encontrado.", 404);
+        }
+
+        try {
+            $this->toggleUserBlock($adminId, $targetUserId, 'blocked');
+            $this->notificationService->logAdminAction($adminId, "Admin DESACTIVÓ (eliminó lógicamente) usuario", "Usuario ID: $targetUserId, Email: " . $user['Email']);
+        
+        } catch (Exception $e) {
+            throw new Exception("No se pudo desactivar al usuario: " . $e->getMessage(), 500);
         }
     }
 

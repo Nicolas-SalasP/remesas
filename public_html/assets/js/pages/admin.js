@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Lógica existente de 'verificationModal'
     const verificationModalElement = document.getElementById('verificationModal');
     if (verificationModalElement) {
         let verificationModalInstance = null;
@@ -6,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
             verificationModalInstance = bootstrap.Modal.getOrCreateInstance(verificationModalElement);
         } catch (e) {
             console.error("Error al inicializar el modal de verificación:", e);
-            return;
         }
 
         const modalUserName = document.getElementById('modalUserName');
@@ -47,9 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const result = await response.json();
                         verificationModalInstance.hide();
                         if (result.success) {
-                            window.showInfoModal('Éxito', `El usuario ha sido marcado como '${action}'.`, true);
-                            const rowToRemove = document.getElementById(`user-row-${currentUserId}`);
-                            if (rowToRemove) rowToRemove.remove();
+                            window.showInfoModal('Éxito', `El usuario ha sido marcado como '${action}'. La página se recargará.`, true, () => window.location.reload());
                         } else {
                             window.showInfoModal('Error', result.error || 'Ocurrió un problema.', false);
                         }
@@ -62,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Lógica existente de '.toggle-status-btn' (países)
     document.querySelectorAll('.toggle-status-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
             const triggerButton = e.currentTarget;
@@ -95,9 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Lógica existente de '.role-select' (países)
     document.querySelectorAll('.role-select').forEach(select => {
         let originalValue = select.value;
-        select.addEventListener('focus', () => { originalValue = select.value; });
+        select.addEventListener('focus', () => { originalValue = select.value; }); 
 
         select.addEventListener('change', async (e) => {
             const paisId = e.target.dataset.paisId;
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await response.json();
                 if (result.success) {
-                    originalValue = newRole;
+                    originalValue = newRole; 
                     window.showInfoModal('Éxito', '¡Rol actualizado con éxito!', true);
                 } else {
                     e.target.value = originalValue;
@@ -129,13 +129,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Lógica existente de '.block-user-btn'
     document.querySelectorAll('.block-user-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
             const triggerButton = e.currentTarget;
             const userId = triggerButton.dataset.userId;
             const currentStatus = triggerButton.dataset.currentStatus;
             const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
-            const actionText = newStatus === 'blocked' ? 'BLOQUEAR' : 'DESBLOQUEAR';
+            const actionText = newStatus === 'blocked' ? 'DESBLOQUEAR' : 'BLOQUEAR';
             const confirmed = await window.showConfirmModal('Confirmar Acción', `¿Estás seguro de que quieres ${actionText} a este usuario?`);
             if (!confirmed) return;
             try {
@@ -160,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Lógica existente de '.process-btn'
     document.querySelectorAll('.process-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
             const txId = e.currentTarget.dataset.txId;
@@ -183,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
+    
+    // Lógica existente de '.reject-btn'
     document.querySelectorAll('.reject-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
             const txId = e.currentTarget.dataset.txId;
@@ -208,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Lógica existente de 'adminUploadModal'
     const adminUploadModalElement = document.getElementById('adminUploadModal');
     if (adminUploadModalElement) {
         let adminUploadModalInstance = null;
@@ -260,10 +264,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // LÓGICA MODAL VISUALIZACIÓN ---
+    // --- Lógica Modal Visualización de Comprobantes ---
     const viewModalElement = document.getElementById('viewComprobanteModal');
     if (viewModalElement) {
-        const viewModalInstance = new bootstrap.Modal(viewModalElement);
         const modalContent = document.getElementById('comprobante-content');
         const modalPlaceholder = document.getElementById('comprobante-placeholder');
         const downloadButton = document.getElementById('download-comprobante');
@@ -389,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         viewModalElement.addEventListener('show.bs.modal', (event) => {
             const button = event.relatedTarget;
-            if (!button || !button.classList.contains('view-comprobante-btn-admin')) {
+            if (!button || !button.classList.contains('view-comprobante-btn-admin')) { 
                 return;
             }
 
@@ -469,7 +472,103 @@ document.addEventListener('DOMContentLoaded', () => {
          });
 
     } else {
-         console.warn("No se encontró el elemento para el modal de visualización.");
+         console.warn("No se encontró el elemento para el modal de visualización (#viewComprobanteModal).");
     }
 
+    document.querySelectorAll('.admin-role-select').forEach(select => {
+        let originalRoleId = select.value;
+        const userId = select.dataset.userId;
+
+        select.addEventListener('focus', () => {
+            originalRoleId = select.value;
+        });
+
+        select.addEventListener('change', async (e) => {
+            const newRoleId = e.target.value;
+            const newRoleName = e.target.options[e.target.selectedIndex].text;
+            
+            const confirmed = await window.showConfirmModal(
+                'Confirmar Cambio de Rol',
+                `¿Estás seguro de que quieres cambiar el rol del usuario #${userId} a "${newRoleName}"?`
+            );
+            
+            if (!confirmed) {
+                e.target.value = originalRoleId;
+                return;
+            }
+
+            try {
+                const response = await fetch('../api/?accion=updateUserRole', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId, newRoleId: newRoleId })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    originalRoleId = newRoleId;
+                    window.showInfoModal('Éxito', `Rol del usuario #${userId} actualizado a "${newRoleName}".`, true);
+                } else {
+                    e.target.value = originalRoleId;
+                    window.showInfoModal('Error', result.error || 'No se pudo actualizar el rol.', false);
+                }
+            } catch (error) {
+                console.error("Error en updateUserRole:", error);
+                e.target.value = originalRoleId;
+                window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
+            }
+        });
+    });
+
+    document.querySelectorAll('.admin-delete-user-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const triggerButton = e.currentTarget;
+            const userId = triggerButton.dataset.userId;
+            const userName = triggerButton.dataset.userName || `usuario #${userId}`;
+            const confirmed1 = await window.showConfirmModal(
+                'Confirmar Eliminación (Paso 1 de 2)',
+                `¿Estás seguro de que quieres eliminar permanentemente a <strong>${userName}</strong> (ID: ${userId})?<br><br>Esta acción es irreversible y borrará todos sus datos.`
+            );
+            
+            if (!confirmed1) return;
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const confirmed2 = await window.showConfirmModal(
+                '¡CONFIRMACIÓN FINAL! (Paso 2 de 2)',
+                `<strong class="text-danger">¡ACCIÓN IRREVERSIBLE!</strong><br>Estás a punto de eliminar a <strong>${userName}</strong>. No habrá forma de recuperar los datos.<br><br>¿Estás absolutamente seguro?`
+            );
+
+            if (!confirmed2) return;
+
+            triggerButton.disabled = true;
+            triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+            try {
+                const response = await fetch('../api/?accion=deleteUser', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    window.showInfoModal('Éxito', `El usuario ${userName} (ID: ${userId}) ha sido eliminado.`, true);
+                    const rowToRemove = document.getElementById(`user-row-${userId}`);
+                    if (rowToRemove) {
+                        rowToRemove.remove();
+                    }
+                } else {
+                    window.showInfoModal('Error', result.error || 'No se pudo eliminar el usuario.', false);
+                    triggerButton.disabled = false;
+                    triggerButton.innerHTML = '<i class="bi bi-trash-fill"></i>';
+                }
+            } catch (error) {
+                console.error("Error en deleteUser:", error);
+                window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
+                triggerButton.disabled = false;
+                triggerButton.innerHTML = '<i class="bi bi-trash-fill"></i>';
+            }
+        });
+    });
 });

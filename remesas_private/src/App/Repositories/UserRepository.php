@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Repositories;
 
 use App\Database\Database;
@@ -187,6 +186,27 @@ class UserRepository
         $stmt->close();
         return $success;
     }
+
+    public function updateRole(int $userId, int $rolId): bool
+    {
+        $sql = "UPDATE usuarios SET RolID = ? WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ii", $rolId, $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    public function delete(int $userId): bool
+    {
+        $sql = "DELETE FROM usuarios WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
 
     // --- MÉTODOS DE CONTEO Y UTILIDAD ---
     public function countAll(): int

@@ -5,6 +5,8 @@ use App\Services\TransactionService;
 use App\Services\PricingService;
 use App\Services\DashboardService;
 use App\Services\UserService;
+use App\Repositories\RolRepository;
+use App\Database\Database;
 use Exception;
 
 class AdminController extends BaseController
@@ -13,17 +15,20 @@ class AdminController extends BaseController
     private PricingService $pricingService;
     private UserService $userService;
     private DashboardService $dashboardService;
+    private RolRepository $rolRepo;
 
     public function __construct(
         TransactionService $txService,
         PricingService $pricingService,
         UserService $userService,
-        DashboardService $dashboardService
+        DashboardService $dashboardService,
+        RolRepository $rolRepo 
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
         $this->userService = $userService;
         $this->dashboardService = $dashboardService;
+        $this->rolRepo = $rolRepo;
         $this->ensureAdmin();
     }
 
@@ -136,5 +141,38 @@ class AdminController extends BaseController
     {
         $stats = $this->dashboardService->getAdminDashboardStats();
         $this->sendJsonResponse(['success' => true, 'stats' => $stats]);
+    }
+    
+    public function updateUserRole(): void
+    {
+        $adminId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        
+        $targetUserId = (int)($data['userId'] ?? 0);
+        $newRoleId = (int)($data['newRoleId'] ?? 0);
+
+        if ($targetUserId <= 0 || $newRoleId <= 0) {
+             $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o rol inválidos.'], 400);
+             return;
+        }
+        
+        $this->userService->adminUpdateUserRole($adminId, $targetUserId, $newRoleId);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Rol actualizado correctamente.']);
+    }
+
+    public function deleteUser(): void
+    {
+        $adminId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        
+        $targetUserId = (int)($data['userId'] ?? 0);
+        
+        if ($targetUserId <= 0) {
+             $this->sendJsonResponse(['success' => false, 'error' => 'ID de usuario inválido.'], 400);
+             return;
+        }
+        
+        $this->userService->adminDeleteUser($adminId, $targetUserId);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Usuario eliminado correctamente.']);
     }
 }
