@@ -5,9 +5,16 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/login.php');
     exit();
 }
+if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin') {
+    header('Location: ' . BASE_URL . '/admin/');
+    exit();
+}
+if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador') {
+    header('Location: ' . BASE_URL . '/operador/pendientes.php');
+    exit();
+}
 
 $estadosBloqueados = ['No Verificado', 'Rechazado'];
-
 if (!isset($_SESSION['verification_status']) || in_array($_SESSION['verification_status'], $estadosBloqueados)) {
     header('Location: ' . BASE_URL . '/dashboard/verificar.php'); 
     exit();
@@ -105,7 +112,7 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                 <div class="col-md-6 mb-3"><label for="benef-secondlastname" class="form-label">Segundo Apellido</label><input type="text" class="form-control" id="benef-secondlastname" name="segundoApellido"></div>
             </div>
             <div class="row">
-                <div class="col-md-6 mb-3"><label for="benef-doc-type" class="form-label">Tipo de Documento</label><select id="benef-doc-type" name="tipoDocumento" class="form-select" required><option value="">Selecciona...</option><option value="Cédula">Cédula de Identidad</option><option value="DNI">DNI</option><option value="Pasaporte">Pasaporte</option></select></div>
+                <div class="col-md-6 mb-3"><label for="benef-doc-type" class="form-label">Tipo de Documento</label><select id="benef-doc-type" name="tipoDocumento" class="form-select" required><option value="">Cargando...</option></select></div>
                 <div class="col-md-6 mb-3"><label for="benef-doc-number" class="form-label">Número de Documento</label><input type="text" class="form-control" id="benef-doc-number" name="numeroDocumento" required></div>
             </div>
             <div class="mb-3">

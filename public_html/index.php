@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/../remesas_private/src/core/init.php';
 
+if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador') {
+    header('Location: ' . BASE_URL . '/operador/pendientes.php');
+    exit();
+}
+
 
 $pageTitle = 'Inicio';
 $pageScript = 'home.js';
@@ -17,17 +22,18 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
     </section>
 
     <section class="card shadow-sm mb-5">
-        <div class="card-body p-4" id="bcv-container"> <?php ?>
-            <h3 class="card-title text-center mb-3">Valor del Dólar BCV</h3>
+        <div class="card-body p-4" id="bcv-container"> 
+            <h3 class="card-title text-center mb-3">Valor del Dólar (BCV)</h3>
             <div class="text-center p-4">
-                <div class="spinner-border text-primary" role="status">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                     <span class="visually-hidden">Cargando...</span>
                 </div>
-                <p class="text-muted mt-2">Cargando tasa oficial...</p>
+                <p class="text-muted mt-3 mb-0">Cargando tasa oficial...</p>
             </div>
-            <?php ?>
         </div>
     </section>
+
+
     <section class="row text-center">
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">

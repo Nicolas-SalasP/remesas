@@ -35,7 +35,14 @@ class AuthController extends BaseController
                  'redirect' => BASE_URL . '/verify-2fa.php'
              ]);
         } else {
-            $redirectUrl = ($result['Rol'] === 'Admin') ? BASE_URL . '/admin/' : BASE_URL . '/dashboard/';
+            $redirectUrl = BASE_URL . '/dashboard/';
+            
+            if ($result['Rol'] === 'Admin') {
+                $redirectUrl = BASE_URL . '/admin/';
+            } elseif ($result['Rol'] === 'Operador') {
+                $redirectUrl = BASE_URL . '/operador/pendientes.php';
+            }
+
              $this->sendJsonResponse([
                  'success' => true,
                  'twofa_required' => false,
@@ -114,7 +121,14 @@ class AuthController extends BaseController
              $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
              $_SESSION['ultima_actividad'] = time();
 
-             $redirectUrl = ($user['Rol'] === 'Admin') ? BASE_URL . '/admin/' : BASE_URL . '/dashboard/';
+            $redirectUrl = BASE_URL . '/dashboard/';
+            
+            if ($user['Rol'] === 'Admin') {
+                $redirectUrl = BASE_URL . '/admin/';
+            } elseif ($user['Rol'] === 'Operador') {
+                $redirectUrl = BASE_URL . '/operador/pendientes.php';
+            }
+
              $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl]);
          } else {
              $this->sendJsonResponse(['success' => false, 'error' => 'Código 2FA o de respaldo inválido.'], 401);
