@@ -139,4 +139,51 @@ class ClientController extends BaseController
         $this->userService->uploadVerificationDocs($userId, $_FILES);
         $this->sendJsonResponse(['success' => true, 'message' => 'Documentos subidos correctamente. Serán revisados.']);
     }
+
+    public function generate2FASecret(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $user = $this->userService->getUserProfile($userId);
+        $secretData = $this->userService->generateUser2FASecret($userId, $user['Email']);
+        
+        $this->sendJsonResponse([
+            'success' => true,
+            'secret' => $secretData['secret'],
+            'qrCodeUrl' => $secretData['qrCodeUrl']
+        ]);
+    }
+    
+    public function enable2FA(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        $code = $data['code'] ?? '';
+
+        if (empty($code)) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'El código de verificación es obligatorio.'], 400);
+            return;
+        }
+        
+        $isValid = $this->userService->verifyAndEnable2FA($userId, $code);
+        
+        if ($isValid) {
+            $backupCodes = $_SESSION['show_backup_codes'] ?? [];
+            unset($_SESSION['show_backup_codes']);
+            $this->sendJsonResponse(['success' => true, 'backup_codes' => $backupCodes]);
+        } else {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Código de verificación inválido.'], 400);
+        }
+    }
+
+    public function disable2FA(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $success = $this->userService->disable2FA($userId);
+        if ($success) {
+            $_SESSION['twofa_enabled'] = false;
+            $this->sendJsonResponse(['success' => true]);
+        } else {
+            $this->sendJsonResponse(['success' => false, 'error' => 'No se pudo desactivar 2FA.'], 500);
+        }
+    }
 }

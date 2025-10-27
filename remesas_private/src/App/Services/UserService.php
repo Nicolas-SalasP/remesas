@@ -1,5 +1,4 @@
 <?php
-// remesas_private/src/App/Services/UserService.php
 
 namespace App\Services;
 
@@ -21,7 +20,7 @@ class UserService
     private RolRepository $rolRepo;
     private TipoDocumentoRepository $tipoDocumentoRepo;
 
-    private const ENCRYPTION_KEY = 'tu_clave_secreta_aqui_muy_segura'; // ¡MOVER A config.php!
+    private string $encryptionKey;
     private const ENCRYPTION_CIPHER = 'aes-256-cbc';
 
     public function __construct(
@@ -38,6 +37,12 @@ class UserService
         $this->estadoVerificacionRepo = $estadoVerificacionRepo;
         $this->rolRepo = $rolRepo;
         $this->tipoDocumentoRepo = $tipoDocumentoRepo;
+
+        if (!defined('APP_ENCRYPTION_KEY') || strlen(APP_ENCRYPTION_KEY) !== 32) {
+            error_log("Error crítico: APP_ENCRYPTION_KEY no está definida o no tiene 32 caracteres en config.php");
+            throw new Exception("Error de configuración interna del servidor.", 500);
+        }
+        $this->encryptionKey = APP_ENCRYPTION_KEY;
     }
 
     public function loginUser(string $email, string $password): array
@@ -46,7 +51,6 @@ class UserService
 
         if (!$user || !password_verify($password, $user['PasswordHash'])) {
             if ($user) {
-                // Lógica de incremento de intentos y bloqueo
             }
             throw new Exception("Correo electrónico o contraseña no válidos.", 401);
         }
@@ -86,6 +90,11 @@ class UserService
         $rolPersonaNaturalID = $this->rolRepo->findIdByName('Persona Natural');
          if (!$rolPersonaNaturalID) throw new Exception("Rol 'Persona Natural' no encontrado en la base de datos.", 500);
         $data['rolID'] = $rolPersonaNaturalID;
+
+        $estadoNoVerificadoID = $this->estadoVerificacionRepo->findIdByName('No Verificado');
+        if(!$estadoNoVerificadoID) throw new Exception("Rol 'No Verificado' no encontrado.", 500);
+        $data['verificacionEstadoID'] = $estadoNoVerificadoID;
+
 
         try {
             $userId = $this->userRepository->create($data);
@@ -145,6 +154,8 @@ class UserService
         if (!$profile) {
             throw new Exception("Perfil de usuario no encontrado.", 404);
         }
+        unset($profile['twofa_secret']);
+        unset($profile['twofa_backup_codes']);
         return $profile;
     }
 
@@ -258,11 +269,10 @@ class UserService
         if (!$user) {
              throw new Exception("Usuario no encontrado.", 404);
         }
-
+        
         try {
             $this->toggleUserBlock($adminId, $targetUserId, 'blocked');
             $this->notificationService->logAdminAction($adminId, "Admin DESACTIVÓ (eliminó lógicamente) usuario", "Usuario ID: $targetUserId, Email: " . $user['Email']);
-        
         } catch (Exception $e) {
             throw new Exception("No se pudo desactivar al usuario: " . $e->getMessage(), 500);
         }
@@ -272,20 +282,26 @@ class UserService
         $ivLength = openssl_cipher_iv_length(self::ENCRYPTION_CIPHER);
         if ($ivLength === false) throw new Exception("Cipher inválido para encriptación.");
         $iv = openssl_random_pseudo_bytes($ivLength);
-        $encrypted = openssl_encrypt($data, self::ENCRYPTION_CIPHER, self::ENCRYPTION_KEY, 0, $iv);
+        
+        $encrypted = openssl_encrypt($data, self::ENCRYPTION_CIPHER, $this->encryptionKey, 0, $iv);
         if ($encrypted === false) throw new Exception("Fallo en encriptación.");
+        
         return base64_encode($iv . $encrypted);
     }
 
     private function decryptData(string $data): ?string {
         $decoded = base64_decode($data);
         if ($decoded === false) return null;
+        
         $ivLength = openssl_cipher_iv_length(self::ENCRYPTION_CIPHER);
         if ($ivLength === false) return null;
         if (strlen($decoded) < $ivLength) return null;
+        
         $iv = substr($decoded, 0, $ivLength);
         $encrypted = substr($decoded, $ivLength);
-        $decrypted = openssl_decrypt($encrypted, self::ENCRYPTION_CIPHER, self::ENCRYPTION_KEY, 0, $iv);
+        
+        $decrypted = openssl_decrypt($encrypted, self::ENCRYPTION_CIPHER, $this->encryptionKey, 0, $iv);
+        
         return $decrypted === false ? null : $decrypted;
     }
 
@@ -307,52 +323,77 @@ class UserService
         $google2fa = new Google2FA();
         $secretKey = $google2fa->generateSecretKey();
         $encryptedSecret = $this->encryptData($secretKey);
+        
         $this->userRepository->update2FASecret($userId, $encryptedSecret);
+        
         $qrCodeUrl = $google2fa->getQRCodeUrl($appName, $userEmail, $secretKey);
+        
         return ['secret' => $secretKey, 'qrCodeUrl' => $qrCodeUrl];
      }
 
      public function verifyAndEnable2FA(int $userId, string $userProvidedCode): bool {
         $encryptedSecret = $this->userRepository->get2FASecret($userId);
-        if (!$encryptedSecret) return false;
+        if (!$encryptedSecret) {
+             throw new Exception("No se encontró un secreto 2FA. Vuelve a generarlo.", 400);
+        }
+        
         $secretKey = $this->decryptData($encryptedSecret);
-        if (!$secretKey) return false;
+        if (!$secretKey) {
+            throw new Exception("Error interno al desencriptar secreto 2FA.", 500);
+        }
+        
         $google2fa = new Google2FA();
         $isValid = $google2fa->verifyKey($secretKey, $userProvidedCode);
+        
         if ($isValid) {
             $backupCodes = $this->generateBackupCodes();
             $encryptedBackupCodes = $this->encryptData(json_encode($backupCodes));
+            
             if ($this->userRepository->enable2FA($userId, $encryptedBackupCodes)) {
-                 $_SESSION['show_backup_codes'] = $backupCodes;
+                 $_SESSION['show_backup_codes'] = $backupCodes; // Guardar temporalmente para mostrar al usuario
+                 $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
                  return true;
             } else {
-                 return false;
+                 throw new Exception("No se pudo activar 2FA en la base de datos.", 500);
             }
         }
         return false;
      }
+     
+    public function disable2FA(int $userId): bool {
+        if ($this->userRepository->disable2FA($userId)) {
+             $this->notificationService->logAdminAction($userId, '2FA Desactivado', "El usuario desactivó 2FA.");
+             return true;
+        }
+        return false;
+    }
+
 
      public function verifyUser2FACode(int $userId, string $code): bool {
         $encryptedSecret = $this->userRepository->get2FASecret($userId);
         if (!$encryptedSecret) return false;
+        
         $secretKey = $this->decryptData($encryptedSecret);
         if (!$secretKey) return false;
+        
         $google2fa = new Google2FA();
-        return $google2fa->verifyKey($secretKey, $code);
+        return $google2fa->verifyKey($secretKey, $code, 0); 
      }
 
      public function verifyBackupCode(int $userId, string $code): bool {
         $encryptedBackupCodes = $this->userRepository->getBackupCodes($userId);
         if (!$encryptedBackupCodes) return false;
+        
         $backupCodesJson = $this->decryptData($encryptedBackupCodes);
         if (!$backupCodesJson) return false;
+        
         $backupCodes = json_decode($backupCodesJson, true);
-        if (!is_array($backupCodes)) return false;
+        if (!is_array($backupCodes) || empty($backupCodes)) return false;
 
         $key = array_search($code, $backupCodes);
         if ($key !== false) {
             unset($backupCodes[$key]);
-            $newEncryptedBackupCodes = $this->encryptData(json_encode(array_values($backupCodes))); // Re-indexar
+            $newEncryptedBackupCodes = $this->encryptData(json_encode(array_values($backupCodes)));
             $this->userRepository->updateBackupCodes($userId, $newEncryptedBackupCodes);
             $this->notificationService->logAdminAction($userId, 'Código Respaldo 2FA Usado', "Se utilizó un código de respaldo.");
             return true;

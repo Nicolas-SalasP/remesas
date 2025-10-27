@@ -55,18 +55,20 @@ class Container {
 
     private function createInstance(string $className) {
         return match ($className) {
+            // Repositories
             UserRepository::class => new UserRepository($this->getDb()),
             RateRepository::class => new RateRepository($this->getDb()),
             CountryRepository::class => new CountryRepository($this->getDb()),
             CuentasBeneficiariasRepository::class => new CuentasBeneficiariasRepository($this->getDb()),
             TransactionRepository::class => new TransactionRepository($this->getDb()),
-            RolRepository::class => new RolRepository($this->getDb()), // Ya existe
+            RolRepository::class => new RolRepository($this->getDb()), 
             EstadoVerificacionRepository::class => new EstadoVerificacionRepository($this->getDb()),
             TipoDocumentoRepository::class => new TipoDocumentoRepository($this->getDb()),
             EstadoTransaccionRepository::class => new EstadoTransaccionRepository($this->getDb()),
             FormaPagoRepository::class => new FormaPagoRepository($this->getDb()),
             TipoBeneficiarioRepository::class => new TipoBeneficiarioRepository($this->getDb()),
 
+            // Services
             LogService::class => new LogService($this->getDb()),
             NotificationService::class => new NotificationService($this->get(LogService::class)),
             PDFService::class => new PDFService(),
@@ -106,6 +108,7 @@ class Container {
                 $this->get(EstadoTransaccionRepository::class)
             ),
 
+            // Controllers
             AuthController::class => new AuthController($this->get(UserService::class)),
             ClientController::class => new ClientController(
                 $this->get(TransactionService::class),
@@ -116,7 +119,6 @@ class Container {
                 $this->get(TipoBeneficiarioRepository::class),
                 $this->get(TipoDocumentoRepository::class)
             ),
-
             AdminController::class => new AdminController(
                 $this->get(TransactionService::class),
                 $this->get(PricingService::class),
@@ -142,9 +144,9 @@ try {
         'registerUser'          => [AuthController::class, 'registerUser', 'POST'],
         'requestPasswordReset'  => [AuthController::class, 'requestPasswordReset', 'POST'],
         'performPasswordReset'  => [AuthController::class, 'performPasswordReset', 'POST'],
-        'verify2FACode'         => [AuthController::class, 'verify2FACode', 'POST'],
+        'verify2FACode'         => [AuthController::class, 'verify2FACode', 'POST'], 
 
-        // Client
+        // Client (Dashboard)
         'getTasa'               => [ClientController::class, 'getTasa', 'GET'],
         'getPaises'             => [ClientController::class, 'getPaises', 'GET'],
         'getDolarBcv'           => [DashboardController::class, 'getDolarBcvData', 'GET'],
@@ -158,6 +160,9 @@ try {
         'getFormasDePago'       => [ClientController::class, 'getFormasDePago', 'GET'],
         'getBeneficiaryTypes'   => [ClientController::class, 'getBeneficiaryTypes', 'GET'],
         'getDocumentTypes'      => [ClientController::class, 'getDocumentTypes', 'GET'],
+        'generate2FASecret'     => [ClientController::class, 'generate2FASecret', 'POST'],
+        'enable2FA'             => [ClientController::class, 'enable2FA', 'POST'],
+        'disable2FA'            => [ClientController::class, 'disable2FA', 'POST'],
 
         // Admin
         'updateRate'            => [AdminController::class, 'updateRate', 'POST'],

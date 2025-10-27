@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Repositories;
 
 use App\Database\Database;
@@ -186,7 +187,8 @@ class UserRepository
         $stmt->close();
         return $success;
     }
-
+    
+    // --- MÉTODOS DE GESTIÓN DE ADMIN ---
     public function updateRole(int $userId, int $rolId): bool
     {
         $sql = "UPDATE usuarios SET RolID = ? WHERE UserID = ?";
@@ -255,7 +257,7 @@ class UserRepository
 
      // --- MÉTODOS PARA 2FA ---
      public function get2FASecret(int $userId): ?string {
-         $sql = "SELECT twofa_secret FROM usuarios WHERE UserID = ? AND twofa_enabled = TRUE"; 
+         $sql = "SELECT twofa_secret FROM usuarios WHERE UserID = ?";
          $stmt = $this->db->prepare($sql);
          $stmt->bind_param("i", $userId);
          $stmt->execute();
@@ -282,6 +284,15 @@ class UserRepository
          $stmt->close();
          return $success && $stmt->affected_rows > 0; 
      }
+
+    public function disable2FA(int $userId): bool {
+        $sql = "UPDATE usuarios SET twofa_enabled = FALSE, twofa_secret = NULL, twofa_backup_codes = NULL WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
 
     public function getBackupCodes(int $userId): ?string
     {
