@@ -28,7 +28,7 @@ $transacciones = $conexion->query("
     <p><a href="<?php echo BASE_URL; ?>/admin/">Volver al panel principal</a></p>
 
     <div class="table-responsive">
-        <table class="table table-bordered table-hover">
+        <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
@@ -48,32 +48,38 @@ $transacciones = $conexion->query("
                             <td><?php echo htmlspecialchars($tx['PrimerNombre'] . ' ' . $tx['PrimerApellido']); ?></td>
                             <td><?php echo htmlspecialchars($tx['BeneficiarioNombreCompleto']); ?></td>
                             <td>
-                                <?php ?>
                                 <?php if (!empty($tx['ComprobanteURL'])): ?>
                                 <button class="btn btn-sm btn-info view-comprobante-btn-admin"
                                         data-bs-toggle="modal"
                                         data-bs-target="#viewComprobanteModal"
                                         data-tx-id="<?php echo $tx['TransaccionID']; ?>"
-                                        data-comprobante-url="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']); ?>"
-                                        data-envio-url="<?php echo !empty($tx['ComprobanteEnvioURL']) ? BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']) : ''; ?>"
-                                        data-start-type="user">
+                                        data-comprobante-url="<?php echo BASE_URL . htmlspecialchars($tx['ComprobanteURL']); ?>"
+                                        data-envio-url="<?php echo !empty($tx['ComprobanteEnvioURL']) ? BASE_URL . htmlspecialchars($tx['ComprobanteEnvioURL']) : ''; ?>"
+                                        data-start-type="user"
+                                        title="Ver Comprobante de Pago">
                                     Ver Comprobante
                                 </button>
                                 <?php else: ?>
                                     <span class="text-muted">No subido</span>
                                 <?php endif; ?>
-                                <?php ?>
                             </td>
-                            <td>
+                            <td class="d-flex flex-wrap gap-1">
+                                <?php // ?>
+                                <a href="<?php echo BASE_URL; ?>/generar-factura.php?id=<?php echo $tx['TransaccionID']; ?>" 
+                                   target="_blank" class="btn btn-sm btn-info" title="Ver Orden PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i> Orden
+                                </a>
+                                <?php // ?>
+
                                 <?php if ($tx['EstadoNombre'] == 'En Verificación'): ?>
-                                    <button class="btn btn-sm btn-success process-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Confirmar y Procesar</button>
-                                    <button class="btn btn-sm btn-danger reject-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Rechazar Pago</button>
+                                    <button class="btn btn-sm btn-success process-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Confirmar</button>
+                                    <button class="btn btn-sm btn-danger reject-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Rechazar</button>
                                 <?php elseif ($tx['EstadoNombre'] == 'En Proceso'): ?>
-                                    <button class="btn btn-sm btn-primary admin-upload-btn"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#adminUploadModal"
+                                    <button class="btn btn-sm btn-primary admin-upload-btn" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#adminUploadModal" 
                                             data-tx-id="<?php echo $tx['TransaccionID']; ?>">
-                                        Subir Comprobante de Envío
+                                        Subir Envío
                                     </button>
                                 <?php endif; ?>
                             </td>

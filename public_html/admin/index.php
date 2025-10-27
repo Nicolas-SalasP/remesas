@@ -39,7 +39,7 @@ $transacciones = $conexion->query("
     </div>
     
     <div class="table-responsive">
-        <table class="table table-bordered table-hover">
+        <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
@@ -47,6 +47,7 @@ $transacciones = $conexion->query("
                     <th>Usuario</th>
                     <th>Beneficiario</th>
                     <th>Estado</th>
+                    <th>Orden</th> <?php // ?>
                     <th>Comp. Usuario</th>
                     <th>Comp. Admin</th>
                 </tr>
@@ -63,39 +64,45 @@ $transacciones = $conexion->query("
                                 <?php echo htmlspecialchars($tx['EstadoNombre'] ?? 'Desconocido'); ?>
                             </span>
                         </td>
+                        <?php ?>
                         <td>
-                            <?php  ?>
+                            <a href="<?php echo BASE_URL; ?>/generar-factura.php?id=<?php echo $tx['TransaccionID']; ?>" 
+                               target="_blank" class="btn btn-sm btn-info" title="Ver Orden PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+                        </td>
+                        <?php ?>
+                        <td>
                             <?php if (!empty($tx['ComprobanteURL'])): ?>
                                 <button class="btn btn-sm btn-info view-comprobante-btn-admin"
                                         data-bs-toggle="modal"
                                         data-bs-target="#viewComprobanteModal"
                                         data-tx-id="<?php echo $tx['TransaccionID']; ?>"
-                                        data-comprobante-url="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']); ?>"
-                                        data-envio-url="<?php echo !empty($tx['ComprobanteEnvioURL']) ? BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']) : ''; ?>"
-                                        data-start-type="user">
-                                    Ver
+                                        data-comprobante-url="<?php echo BASE_URL . htmlspecialchars($tx['ComprobanteURL']); ?>"
+                                        data-envio-url="<?php echo !empty($tx['ComprobanteEnvioURL']) ? BASE_URL . htmlspecialchars($tx['ComprobanteEnvioURL']) : ''; ?>"
+                                        data-start-type="user"
+                                        title="Ver Comprobante de Pago">
+                                    <i class="bi bi-eye"></i>
                                 </button>
                             <?php else: ?>
                                 <span class="text-muted">N/A</span>
                             <?php endif; ?>
-                             <?php  ?>
                         </td>
                         <td>
-                            <?php  ?>
                             <?php if (!empty($tx['ComprobanteEnvioURL'])): ?>
                                 <button class="btn btn-sm btn-success view-comprobante-btn-admin"
                                         data-bs-toggle="modal"
                                         data-bs-target="#viewComprobanteModal"
                                         data-tx-id="<?php echo $tx['TransaccionID']; ?>"
-                                        data-comprobante-url="<?php echo !empty($tx['ComprobanteURL']) ? BASE_URL . '/' . htmlspecialchars($tx['ComprobanteURL']) : ''; ?>"
-                                        data-envio-url="<?php echo BASE_URL . '/' . htmlspecialchars($tx['ComprobanteEnvioURL']); ?>"
-                                        data-start-type="admin">
-                                    Ver
+                                        data-comprobante-url="<?php echo !empty($tx['ComprobanteURL']) ? BASE_URL . htmlspecialchars($tx['ComprobanteURL']) : ''; ?>"
+                                        data-envio-url="<?php echo BASE_URL . htmlspecialchars($tx['ComprobanteEnvioURL']); ?>"
+                                        data-start-type="admin"
+                                        title="Ver Comprobante de Envío">
+                                    <i class="bi bi-receipt"></i>
                                 </button>
                             <?php else: ?>
                                 <span class="text-muted">N/A</span>
                             <?php endif; ?>
-                            <?php ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
