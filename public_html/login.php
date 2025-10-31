@@ -3,9 +3,9 @@ require_once __DIR__ . '/../remesas_private/src/core/init.php';
 
 $pageTitle = 'Ingresar o Registrarse';
 $pageScripts = [
-    'components/rut-validator.js',
+    'components/rut-validator.js', 
     'login.js'
-];
+]; 
 require_once __DIR__ . '/../remesas_private/src/templates/header.php';
 ?>
 
@@ -17,7 +17,7 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
         </div>
 
         <div id="login-form" class="auth-form active">
-            <form id="form-login">
+            <form id="form-login" novalidate>
                 <div class="mb-3">
                     <label for="login-email" class="form-label">Correo Electrónico</label>
                     <input type="email" class="form-control" id="login-email" name="email" required autocomplete="username">
@@ -35,10 +35,10 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
         </div>
 
         <div id="register-form" class="auth-form">
-            <form id="form-registro">
+            <form id="form-registro" novalidate>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="reg-firstname" class="form-label">Primer Nombre</label>
+                        <label for="reg-firstname" class="form-label">Primer Nombre <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="reg-firstname" name="primerNombre" required autocomplete="given-name">
                     </div>
                     <div class="col-md-6 mb-3">
@@ -48,33 +48,44 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="reg-lastname1" class="form-label">Primer Apellido</label>
+                        <label for="reg-lastname1" class="form-label">Primer Apellido <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="reg-lastname1" name="primerApellido" required autocomplete="family-name">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="reg-lastname2" class="form-label">Segundo Apellido</label>
-                        <input type="text" class="form-control" id="reg-lastname2" name="segundoApellido" autocomplete="family-name">
+                        <input type="text" class="form-control" id="reg-lastname2" name="segundoApellido" autocomplete="additional-name">
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label for="reg-email" class="form-label">Correo Electrónico</label>
+                    <label for="reg-email" class="form-label">Correo Electrónico <span class="text-danger">*</span></label>
                     <input type="email" class="form-control" id="reg-email" name="email" required autocomplete="email">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="reg-phone-number" class="form-label">Número de Teléfono <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <select class="input-group-text" id="reg-phone-code" name="phoneCode" style="max-width: 130px;" required>
+                             <option value="">Cargando...</option>
+                        </select>
+                        <input type="tel" class="form-control" id="reg-phone-number" name="phoneNumber" required autocomplete="tel-national" placeholder="Ej: 912345678">
+                    </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="reg-doc-type" class="form-label">Tipo de Documento</label>
+                        <label for="reg-doc-type" class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
                         <select id="reg-doc-type" name="tipoDocumento" class="form-select" required>
-                            <option value="">Cargando...</option> {/* JS llenará esto */}
+                            <option value="">Cargando...</option>
+                            <?php ?>
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="reg-doc-number" class="form-label">Número de Documento</label>
-                        <input type="text" class="form-control" id="reg-doc-number" name="numeroDocumento" required>
+                        <label for="reg-doc-number" class="form-label">Número de Documento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="reg-doc-number" name="numeroDocumento" required placeholder="Sin puntos ni guiones" autocomplete="off">
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label for="reg-password" class="form-label">Crear Contraseña</label>
-                    <input type="password" class="form-control" id="reg-password" name="password" required autocomplete="new-password">
+                    <label for="reg-password" class="form-label">Crear Contraseña <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control" id="reg-password" name="password" required autocomplete="new-password" placeholder="Mínimo 6 caracteres">
                 </div>
                 <button type="submit" class="btn btn-primary w-100 py-2">Crear Cuenta</button>
             </form>

@@ -18,13 +18,6 @@ class AuthController extends BaseController
         $data = $this->getJsonInput();
         $result = $this->userService->loginUser($data['email'] ?? '', $data['password'] ?? '');
 
-        $_SESSION['user_id'] = $result['UserID'];
-        $_SESSION['user_name'] = $result['PrimerNombre'];
-        $_SESSION['user_rol_name'] = $result['Rol'];
-        $_SESSION['verification_status'] = $result['VerificacionEstado'];
-        $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
-        $_SESSION['ultima_actividad'] = time();
-
         if ($result['twofa_enabled']) {
              $_SESSION['2fa_user_id'] = $result['UserID'];
              unset($_SESSION['user_id']);
@@ -34,29 +27,38 @@ class AuthController extends BaseController
                  'twofa_required' => true,
                  'redirect' => BASE_URL . '/verify-2fa.php'
              ]);
-        } else {
-            $redirectUrl = BASE_URL . '/dashboard/';
-            
-            if ($result['Rol'] === 'Admin') {
-                $redirectUrl = BASE_URL . '/admin/';
-            } elseif ($result['Rol'] === 'Operador') {
-                $redirectUrl = BASE_URL . '/operador/pendientes.php';
-            }
-
-             $this->sendJsonResponse([
-                 'success' => true,
-                 'twofa_required' => false,
-                 'redirect' => $redirectUrl,
-                 'verificationStatus' => $result['VerificacionEstado']
-             ]);
+             return;
         }
+        
+        $_SESSION['user_id'] = $result['UserID'];
+        $_SESSION['user_name'] = $result['PrimerNombre'];
+        $_SESSION['user_rol_name'] = $result['Rol'];
+        $_SESSION['verification_status'] = $result['VerificacionEstado'];
+        $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
+        $_SESSION['ultima_actividad'] = time();
+        
+        $redirectUrl = BASE_URL . '/dashboard/';
+        if ($result['Rol'] === 'Admin') {
+            $redirectUrl = BASE_URL . '/admin/';
+        } elseif ($result['Rol'] === 'Operador') {
+            $redirectUrl = BASE_URL . '/operador/pendientes.php';
+        }
+
+        $this->sendJsonResponse([
+            'success' => true,
+            'twofa_required' => false,
+            'redirect' => $redirectUrl,
+            'verificationStatus' => $result['VerificacionEstado']
+        ]);
     }
 
     public function registerUser(): void
     {
         $data = $_POST;
 
-        if (empty($data['primerNombre']) || empty($data['primerApellido']) || empty($data['email']) || empty($data['password']) || empty($data['tipoDocumento']) || empty($data['numeroDocumento'])) {
+        if (empty($data['primerNombre']) || empty($data['primerApellido']) || empty($data['email']) || 
+            empty($data['password']) || empty($data['tipoDocumento']) || empty($data['numeroDocumento']) || 
+            empty($data['telefono'])) { 
              $this->sendJsonResponse(['success' => false, 'error' => 'Faltan campos obligatorios.'], 400);
              return;
         }
@@ -96,7 +98,9 @@ class AuthController extends BaseController
      {
          if (!isset($_SESSION['2fa_user_id'])) {
              $this->sendJsonResponse(['success' => false, 'error' => 'No hay una autenticación pendiente.'], 400);
+             return;
          }
+         
          $userId = $_SESSION['2fa_user_id'];
          $data = $this->getJsonInput();
          $code = $data['code'] ?? '';
@@ -112,7 +116,8 @@ class AuthController extends BaseController
          if ($isValid) {
              unset($_SESSION['2fa_user_id']);
              session_regenerate_id(true);
-             $user = $this->userService->getUserProfile($userId);
+             
+             $user = $this->userService->getUserProfile($userId); 
 
              $_SESSION['user_id'] = $user['UserID'];
              $_SESSION['user_name'] = $user['PrimerNombre'];
@@ -121,13 +126,12 @@ class AuthController extends BaseController
              $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
              $_SESSION['ultima_actividad'] = time();
 
-            $redirectUrl = BASE_URL . '/dashboard/';
-            
-            if ($user['Rol'] === 'Admin') {
-                $redirectUrl = BASE_URL . '/admin/';
-            } elseif ($user['Rol'] === 'Operador') {
-                $redirectUrl = BASE_URL . '/operador/pendientes.php';
-            }
+             $redirectUrl = BASE_URL . '/dashboard/';
+             if ($user['Rol'] === 'Admin') {
+                 $redirectUrl = BASE_URL . '/admin/';
+             } elseif ($user['Rol'] === 'Operador') {
+                 $redirectUrl = BASE_URL . '/operador/pendientes.php';
+             }
 
              $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl]);
          } else {

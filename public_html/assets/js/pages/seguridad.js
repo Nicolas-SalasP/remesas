@@ -11,9 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const backupCodesModal = backupCodesModalEl ? new bootstrap.Modal(backupCodesModalEl) : null;
     const backupCodesList = document.getElementById('backup-codes-list');
 
+    if (typeof QRCode === 'undefined') {
+        console.error('Librería QRCode.js no está cargada. 2FA no funcionará.');
+        if (statusContainer) {
+            statusContainer.innerHTML = '<p class="text-danger">Error al cargar el componente 2FA. Contacte a soporte.</p>';
+        }
+        return;
+    }
+
     let is2FAEnabled = false;
 
     const update2FAStatus = () => {
+        if (!statusContainer || !setupSection || !disableSection) return;
+        
         if (is2FAEnabled) {
             statusContainer.innerHTML = '<p class="lead text-success fw-bold"><i class="bi bi-shield-check"></i> Doble Factor (2FA) está ACTIVADO.</p>';
             setupSection.classList.add('d-none');
@@ -37,19 +47,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {
             console.error(e);
-            statusContainer.innerHTML = `<p class="text-danger">Error al cargar estado 2FA: ${e.message}</p>`;
+            if (statusContainer) {
+                statusContainer.innerHTML = `<p class="text-danger">Error al cargar estado 2FA: ${e.message}</p>`;
+            }
         }
         update2FAStatus();
     };
 
     const generate2FASecret = async () => {
+        if (!qrContainer || !secretKeyDisplay) return;
+        
         qrContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>';
         secretKeyDisplay.textContent = 'Cargando...';
         try {
             const response = await fetch('../api/?accion=generate2FASecret', { method: 'POST' });
             const result = await response.json();
-            if (!result.success) throw new Error(result.error);
-            const qrCode = new QRCode(qrContainer, {
+            if (!result.success) throw new Error(result.error || "Error desconocido al generar secreto");
+
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
                 text: result.qrCodeUrl,
                 width: 200,
                 height: 200,
@@ -66,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    verifyForm.addEventListener('submit', async (e) => {
+    verifyForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const code = document.getElementById('2fa-code').value;
         const submitButton = verifyForm.querySelector('button[type="submit"]');
@@ -110,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    disableBtn.addEventListener('click', async () => {
+    disableBtn?.addEventListener('click', async () => {
         const confirmed = await window.showConfirmModal(
             'Confirmar Desactivación',
             '¿Estás seguro de que quieres desactivar 2FA? Tu cuenta será menos segura.'
@@ -122,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('../api/?accion=disable2FA', { method: 'POST' });
             const result = await response.json();
-            if (!result.success) throw new Error(result.error);
+            if (!result.success) throw new Error(result.error || "Error desconocido");
             
             is2FAEnabled = false;
             update2FAStatus();

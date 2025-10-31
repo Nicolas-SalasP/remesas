@@ -9,15 +9,14 @@ $pageTitle = 'Verificaciones Pendientes';
 $pageScript = 'admin.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
-$sql = "
-    SELECT u.UserID, u.PrimerNombre, u.PrimerApellido, u.Email, u.NumeroDocumento, 
-           u.DocumentoImagenURL_Frente, u.DocumentoImagenURL_Reverso
-    FROM usuarios u
-    JOIN estados_verificacion ev ON u.VerificacionEstadoID = ev.EstadoID
-    WHERE ev.NombreEstado = 'Pendiente'
-    ORDER BY u.FechaRegistro ASC
-";
-$usuariosPendientes = $conexion->query($sql)->fetch_all(MYSQLI_ASSOC);
+$usuariosPendientes = $conexion->query("
+    SELECT U.UserID, U.PrimerNombre, U.PrimerApellido, U.Email, U.NumeroDocumento, 
+           U.DocumentoImagenURL_Frente, U.DocumentoImagenURL_Reverso
+    FROM usuarios U
+    LEFT JOIN estados_verificacion EV ON U.VerificacionEstadoID = EV.EstadoID
+    WHERE EV.NombreEstado = 'Pendiente'
+    ORDER BY U.FechaRegistro ASC
+")->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <div class="container mt-4">
@@ -28,7 +27,7 @@ $usuariosPendientes = $conexion->query($sql)->fetch_all(MYSQLI_ASSOC);
         <table class="table table-bordered table-hover" id="tabla-verificaciones">
             <thead class="table-light">
                 <tr>
-                    <th>ID Usuario</th> 
+                    <th>ID Usuario</th>
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Documento</th>
@@ -46,15 +45,17 @@ $usuariosPendientes = $conexion->query($sql)->fetch_all(MYSQLI_ASSOC);
                             <td><?php echo htmlspecialchars($usuario['Email']); ?></td>
                             <td><?php echo htmlspecialchars($usuario['NumeroDocumento']); ?></td>
                             <td>
+                                <?php  ?>
                                 <button class="btn btn-sm btn-primary review-btn" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#verificationModal"
                                         data-user-id="<?php echo $usuario['UserID']; ?>"
                                         data-user-name="<?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?>"
-                                        data-img-frente="<?php echo urlencode($usuario['DocumentoImagenURL_Frente']); ?>"
-                                        data-img-reverso="<?php echo urlencode($usuario['DocumentoImagenURL_Reverso']); ?>">
+                                        data-img-frente="<?php echo htmlspecialchars($usuario['DocumentoImagenURL_Frente']); ?>"
+                                        data-img-reverso="<?php echo htmlspecialchars($usuario['DocumentoImagenURL_Reverso']); ?>">
                                     Revisar
                                 </button>
+                                <?php ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -76,13 +77,11 @@ $usuariosPendientes = $conexion->query($sql)->fetch_all(MYSQLI_ASSOC);
         <div class="row">
             <div class="col-md-6 text-center">
                 <p><strong>Frente del Documento</strong></p>
-                <img id="modalImgFrente" src="" class="img-fluid border rounded" alt="Frente del documento" 
-                     data-base-url="<?php echo BASE_URL; ?>/admin/view_secure_file.php?file=">
+                <img id="modalImgFrente" src="" class="img-fluid border rounded" alt="Frente del documento">
             </div>
             <div class="col-md-6 text-center">
                 <p><strong>Reverso del Documento</strong></p>
-                <img id="modalImgReverso" src="" class="img-fluid border rounded" alt="Reverso del documento"
-                     data-base-url="<?php echo BASE_URL; ?>/admin/view_secure_file.php?file=">
+                <img id="modalImgReverso" src="" class="img-fluid border rounded" alt="Reverso del documento">
             </div>
         </div>
       </div>

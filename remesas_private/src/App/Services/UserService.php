@@ -1,4 +1,5 @@
 <?php
+// remesas_private/src/App/Services/UserService.php
 
 namespace App\Services;
 
@@ -66,7 +67,7 @@ class UserService
 
     public function registerUser(array $data): array
     {
-        $requiredFields = ['primerNombre', 'primerApellido', 'email', 'password', 'tipoDocumento', 'numeroDocumento'];
+        $requiredFields = ['primerNombre', 'primerApellido', 'email', 'password', 'tipoDocumento', 'numeroDocumento', 'telefono'];
         foreach($requiredFields as $field) {
             if (empty($data[$field])) {
                  throw new Exception("El campo '$field' es obligatorio.", 400);
@@ -272,11 +273,14 @@ class UserService
         
         try {
             $this->toggleUserBlock($adminId, $targetUserId, 'blocked');
+            
             $this->notificationService->logAdminAction($adminId, "Admin DESACTIVÓ (eliminó lógicamente) usuario", "Usuario ID: $targetUserId, Email: " . $user['Email']);
         } catch (Exception $e) {
             throw new Exception("No se pudo desactivar al usuario: " . $e->getMessage(), 500);
         }
     }
+
+    // --- MÉTODOS 2FA ---
 
     private function encryptData(string $data): string {
         $ivLength = openssl_cipher_iv_length(self::ENCRYPTION_CIPHER);
@@ -350,7 +354,7 @@ class UserService
             $encryptedBackupCodes = $this->encryptData(json_encode($backupCodes));
             
             if ($this->userRepository->enable2FA($userId, $encryptedBackupCodes)) {
-                 $_SESSION['show_backup_codes'] = $backupCodes; // Guardar temporalmente para mostrar al usuario
+                 $_SESSION['show_backup_codes'] = $backupCodes;
                  $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
                  return true;
             } else {
@@ -362,6 +366,7 @@ class UserService
      
     public function disable2FA(int $userId): bool {
         if ($this->userRepository->disable2FA($userId)) {
+             $_SESSION['twofa_enabled'] = false;
              $this->notificationService->logAdminAction($userId, '2FA Desactivado', "El usuario desactivó 2FA.");
              return true;
         }
@@ -393,7 +398,7 @@ class UserService
         $key = array_search($code, $backupCodes);
         if ($key !== false) {
             unset($backupCodes[$key]);
-            $newEncryptedBackupCodes = $this->encryptData(json_encode(array_values($backupCodes)));
+            $newEncryptedBackupCodes = $this->encryptData(json_encode(array_values($backupCodes))); // Re-indexar
             $this->userRepository->updateBackupCodes($userId, $newEncryptedBackupCodes);
             $this->notificationService->logAdminAction($userId, 'Código Respaldo 2FA Usado', "Se utilizó un código de respaldo.");
             return true;

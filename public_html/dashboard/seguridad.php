@@ -1,9 +1,22 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
-if (!isset($_SESSION['user_id'])) { header('Location: ' . BASE_URL . '/login.php'); exit(); }
+
+if (!isset($_SESSION['user_id'])) { 
+    header('Location: ' . BASE_URL . '/login.php'); 
+    exit(); 
+}
+if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] !== 'Persona Natural') {
+    if ($_SESSION['user_rol_name'] === 'Admin') {
+        header('Location: ' . BASE_URL . '/admin/');
+    } else {
+        header('Location: ' . BASE_URL . '/operador/pendientes.php');
+    }
+    exit();
+}
+
 
 $pageTitle = 'Seguridad de la Cuenta';
-$pageScript = 'seguridad.js';
+$pageScript = 'seguridad.js'; 
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 ?>
 
@@ -14,7 +27,12 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                 <h1 class="mb-4">Seguridad de la Cuenta</h1>
                 
                 <div id="2fa-status-container">
-                    <p>Cargando estado 2FA...</p>
+                    <div class="d-flex align-items-center">
+                        <strong>Estado 2FA:</strong>
+                        <div class="spinner-border spinner-border-sm ms-2" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <hr>
@@ -23,14 +41,14 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                     <h3 class="h4">Configurar Doble Factor (2FA)</h3>
                     <p>Escanea el siguiente código QR con tu aplicación de autenticación (como Google Authenticator, Authy, etc.).</p>
                     
-                    <div class="text-center my-3">
-                        <div id="qr-code-container">
+                    <div class="text-center my-3" style="min-height: 200px;">
+                        <div id="qr-code-container" class="d-inline-block border p-2">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Cargando QR...</span>
                             </div>
                         </div>
                         <p class="mt-2">O ingresa manualmente esta clave:</p>
-                        <code id="secret-key-display" class="fs-5">Cargando...</code>
+                        <code id="secret-key-display" class="fs-5 user-select-all bg-light p-2 rounded">Cargando...</code>
                     </div>
                     
                     <form id="verify-2fa-form">
@@ -62,10 +80,10 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
       <div class="modal-body">
         <p class="lead">Guarda estos códigos en un lugar seguro (como un gestor de contraseñas). Te permitirán acceder a tu cuenta si pierdes tu dispositivo.</p>
         <div class="bg-light p-3 rounded">
-            <ul id="backup-codes-list" class="list-unstyled mb-0" style="font-family: monospace; font-size: 1.1rem;">
+            <ul id="backup-codes-list" class="list-unstyled mb-0" style="font-family: monospace; font-size: 1.1rem; column-count: 2;">
                 </ul>
         </div>
-        <p class="mt-3 text-danger fw-bold">No volverás a ver estos códigos.</p>
+        <p class="mt-3 text-danger fw-bold">No volverás a ver estos códigos. Cópialos antes de cerrar.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido, los he guardado</button>

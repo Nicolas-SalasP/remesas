@@ -136,7 +136,7 @@ class Container {
 try {
     $container = new Container();
     $accion = $_GET['accion'] ?? '';
-    $requestMethod = $_SERVER['REQUEST_METHOD'];
+    $requestMethod = $_SERVER['REQUEST_METHOD']; 
 
     $routes = [
         // Auth

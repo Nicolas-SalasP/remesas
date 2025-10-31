@@ -45,17 +45,26 @@ class UserRepository
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($sql);
+        $primerNombre = $data['primerNombre'];
+        $segundoNombre = $data['segundoNombre'] ?? null;
+        $primerApellido = $data['primerApellido'];
+        $segundoApellido = $data['segundoApellido'] ?? null;
+        $email = $data['email'];
+        $passwordHash = $data['passwordHash'];
+        $telefono = $data['telefono'] ?? null;
+        $tipoDocumentoID = $data['tipoDocumentoID'];
+        $numeroDocumento = $data['numeroDocumento'];
 
         $stmt->bind_param("sssssssiisi", 
-            $data['primerNombre'],
-            $data['segundoNombre'] ?? null, 
-            $data['primerApellido'],
-            $data['segundoApellido'] ?? null, 
-            $data['email'],
-            $data['passwordHash'],
-            $data['telefono'] ?? null,
-            $data['tipoDocumentoID'], 
-            $data['numeroDocumento'],
+            $primerNombre,
+            $segundoNombre,
+            $primerApellido,
+            $segundoApellido,
+            $email,
+            $passwordHash,
+            $telefono,
+            $tipoDocumentoID, 
+            $numeroDocumento,
             $estadoVerificacionInicialID,
             $rolUsuarioID 
         );
@@ -257,7 +266,7 @@ class UserRepository
 
      // --- MÉTODOS PARA 2FA ---
      public function get2FASecret(int $userId): ?string {
-         $sql = "SELECT twofa_secret FROM usuarios WHERE UserID = ?";
+         $sql = "SELECT twofa_secret FROM usuarios WHERE UserID = ?"; 
          $stmt = $this->db->prepare($sql);
          $stmt->bind_param("i", $userId);
          $stmt->execute();
