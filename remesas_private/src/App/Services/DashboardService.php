@@ -39,7 +39,7 @@ class DashboardService
     {
         $id = $this->estadoTxRepo->findIdByName($nombreEstado);
         if ($id === null) {
-            throw new Exception("Configuración interna: Estado de transacción '{$nombreEstado}' no encontrado.", 500);
+            throw new Exception("Configuraci車n interna: Estado de transacci車n '{$nombreEstado}' no encontrado.", 500);
         }
         return $id;
     }
