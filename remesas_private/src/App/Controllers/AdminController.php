@@ -55,6 +55,19 @@ class AdminController extends BaseController
         $this->sendJsonResponse(['success' => true], 201);
     }
 
+    public function updatePais(): void
+    {
+        $adminId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        $this->pricingService->adminUpdateCountry(
+            $adminId,
+            (int)($data['paisId'] ?? 0),
+            $data['nombrePais'] ?? '',
+            $data['codigoMoneda'] ?? ''
+        );
+        $this->sendJsonResponse(['success' => true]);
+    }
+    
     public function updatePaisRol(): void
     {
         $adminId = $this->ensureLoggedIn();

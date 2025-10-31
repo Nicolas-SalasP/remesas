@@ -167,6 +167,7 @@ try {
         'updateRate'            => [AdminController::class, 'upsertRate', 'POST'],
         'addPais'               => [AdminController::class, 'addPais', 'POST'],
         'updatePaisRol'         => [AdminController::class, 'updatePaisRol', 'POST'],
+        'updatePais'            => [AdminController::class, 'updatePais', 'POST'],
         'togglePaisStatus'      => [AdminController::class, 'togglePaisStatus', 'POST'],
         'processTransaction'    => [AdminController::class, 'processTransaction', 'POST'],
         'rejectTransaction'     => [AdminController::class, 'rejectTransaction', 'POST'],

@@ -54,6 +54,20 @@ class CountryRepository
         return $newId;
     }
 
+    public function update(int $paisId, string $nombrePais, string $codigoMoneda): bool
+    {
+        $sql = "UPDATE paises SET NombrePais = ?, CodigoMoneda = ? WHERE PaisID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ssi", $nombrePais, $codigoMoneda, $paisId);
+        
+        if (!$stmt->execute()) {
+             throw new Exception("Error al actualizar el país. Podría ser un nombre duplicado: " . $stmt->error);
+        }
+        $success = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $success;
+    }
+
     public function updateRole(int $paisId, string $newRole): bool
     {
         $sql = "UPDATE paises SET Rol = ? WHERE PaisID = ?";

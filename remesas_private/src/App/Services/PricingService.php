@@ -62,6 +62,23 @@ class PricingService
         }
     }
     
+    public function adminUpdateCountry(int $adminId, int $paisId, string $nombrePais, string $codigoMoneda): bool
+    {
+        if (empty($paisId) || empty($nombrePais) || strlen($codigoMoneda) !== 3) {
+            throw new Exception("Datos de país incompletos o código de moneda inválido (3 letras).", 400);
+        }
+
+        try {
+            $success = $this->countryRepository->update($paisId, $nombrePais, strtoupper($codigoMoneda));
+            if ($success) {
+                $this->notificationService->logAdminAction($adminId, 'Admin actualizó país', "País ID: $paisId, Nuevo Nombre: $nombrePais, Nueva Moneda: $codigoMoneda");
+            }
+            return $success;
+        } catch (Exception $e) {
+            throw new Exception('Error al actualizar el país. Asegúrese de que el nombre no esté duplicado.', 500);
+        }
+    }
+
     public function adminUpdateCountryRole(int $adminId, int $paisId, string $newRole): bool
     {
         $rolesValidos = ['Origen', 'Destino', 'Ambos'];

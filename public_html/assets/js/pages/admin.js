@@ -641,4 +641,121 @@ document.addEventListener('DOMContentLoaded', () => {
             docReversoContainer.innerHTML = '';
         });
     }
+
+    const addPaisForm = document.getElementById('add-pais-form');
+    if (addPaisForm) {
+        addPaisForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitButton = addPaisForm.querySelector('button[type="submit"]');
+            const formData = new FormData(addPaisForm);
+            const data = Object.fromEntries(formData.entries());
+
+            if (!data.nombrePais || !data.codigoMoneda || !data.rol) {
+                window.showInfoModal('Error', 'Todos los campos son obligatorios.', false);
+                return;
+            }
+            if (data.codigoMoneda.length !== 3) {
+                window.showInfoModal('Error', 'El código de moneda debe tener exactamente 3 letras.', false);
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Añadiendo...';
+
+            try {
+                const response = await fetch('../api/?accion=addPais', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    window.showInfoModal('¡Éxito!', 'País añadido correctamente. La página se recargará.', true, () => {
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(result.error || 'No se pudo añadir el país.');
+                }
+
+            } catch (error) {
+                console.error("Error al añadir país:", error);
+                window.showInfoModal('Error', `No se pudo añadir el país: ${error.message}`, false);
+                submitButton.disabled = false;
+                submitButton.textContent = 'Añadir País';
+            }
+        });
+    }
+
+    const editPaisModalElement = document.getElementById('editPaisModal');
+    if (editPaisModalElement) {
+        const editPaisModal = new bootstrap.Modal(editPaisModalElement);
+        const editPaisForm = document.getElementById('edit-pais-form');
+        const editPaisIdInput = document.getElementById('edit-pais-id');
+        const editNombreInput = document.getElementById('edit-nombrePais');
+        const editMonedaInput = document.getElementById('edit-codigoMoneda');
+
+        document.querySelectorAll('.edit-pais-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const btn = e.currentTarget;
+                const paisId = btn.dataset.paisId;
+                const nombre = btn.dataset.nombre;
+                const moneda = btn.dataset.moneda;
+                editPaisIdInput.value = paisId;
+                editNombreInput.value = nombre;
+                editMonedaInput.value = moneda;
+            });
+        });
+
+        editPaisForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitButton = editPaisForm.querySelector('button[type="submit"]');
+            
+            const data = {
+                paisId: editPaisIdInput.value,
+                nombrePais: editNombreInput.value,
+                codigoMoneda: editMonedaInput.value
+            };
+
+            if (!data.nombrePais || !data.codigoMoneda) {
+                window.showInfoModal('Error', 'El nombre y el código de moneda no pueden estar vacíos.', false);
+                return;
+            }
+            if (data.codigoMoneda.length !== 3) {
+                window.showInfoModal('Error', 'El código de moneda debe tener exactamente 3 letras.', false);
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Guardando...';
+
+            try {
+                const response = await fetch('../api/?accion=updatePais', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    editPaisModal.hide();
+                    window.showInfoModal('¡Éxito!', 'País actualizado correctamente. La página se recargará.', true, () => {
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(result.error || 'No se pudo actualizar el país.');
+                }
+
+            } catch (error) {
+                console.error("Error al actualizar país:", error);
+                window.showInfoModal('Error', `No se pudo actualizar el país: ${error.message}`, false);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Guardar Cambios';
+            }
+        });
+    }
 });

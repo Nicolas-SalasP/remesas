@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../remesas_private/src/core/init.php';
 
+if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin') {
+    header('Location: ' . BASE_URL . '/admin/');
+    exit();
+}
 if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador') {
     header('Location: ' . BASE_URL . '/operador/pendientes.php');
     exit();

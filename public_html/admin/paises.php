@@ -58,13 +58,14 @@ $rolesPosibles = ['Origen', 'Destino', 'Ambos'];
                             <th>Moneda</th>
                             <th>Rol</th>
                             <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($paises as $pais): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($pais['NombrePais']); ?></td>
-                                <td><?php echo htmlspecialchars($pais['CodigoMoneda']); ?></td>
+                                <td class="pais-nombre"><?php echo htmlspecialchars($pais['NombrePais']); ?></td>
+                                <td class="pais-moneda"><?php echo htmlspecialchars($pais['CodigoMoneda']); ?></td>
                                 <td>
                                     <select class="form-select form-select-sm role-select" data-pais-id="<?php echo $pais['PaisID']; ?>">
                                         <?php foreach ($rolesPosibles as $rol): ?>
@@ -79,6 +80,17 @@ $rolesPosibles = ['Origen', 'Destino', 'Ambos'];
                                             data-pais-id="<?php echo $pais['PaisID']; ?>"
                                             data-current-status="<?php echo $pais['Activo']; ?>">
                                         <?php echo $pais['Activo'] ? 'Activo' : 'Inactivo'; ?>
+                                    </button>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary edit-pais-btn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editPaisModal"
+                                            data-pais-id="<?php echo $pais['PaisID']; ?>"
+                                            data-nombre="<?php echo htmlspecialchars($pais['NombrePais']); ?>"
+                                            data-moneda="<?php echo htmlspecialchars($pais['CodigoMoneda']); ?>"
+                                            title="Editar País">
+                                        <i class="bi bi-pencil-fill"></i>
                                     </button>
                                 </td>
                             </tr>

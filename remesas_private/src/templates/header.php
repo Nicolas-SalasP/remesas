@@ -36,7 +36,6 @@
                             
                             <?php ?>
                             <?php if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin'): ?>
-                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
                                 <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/usuarios.php">Gestionar Usuarios</a></li>
                                 <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Ver Ordenes</a></li>
                                 <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Gestionar Tasas</a></li>

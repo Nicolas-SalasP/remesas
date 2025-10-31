@@ -6,7 +6,7 @@
         <div class="row">
             <div class="col-md-3 col-lg-4 col-xl-3 mx-auto mb-4">
                 <img src="<?php echo BASE_URL; ?>/assets/img/LogoBlancoSinFondo.png" alt="Logo JC Envios Blanco" height="80">
-                <p class="mt-2 small"> <?php ?>
+                <p class="mt-2 small">
                     La forma más rápida, segura y confiable de enviar dinero a tus seres queridos.
                 </p>
             </div>
@@ -98,7 +98,6 @@
   </div> 
 </div>
 
-<?php // MODAL DE FICHA DE USUARIO (DE LA TAREA ANTERIOR) ?>
 <div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
@@ -153,6 +152,37 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editPaisModal" tabindex="-1" aria-labelledby="editPaisModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editPaisModalLabel">Editar País</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form id="edit-pais-form">
+          <div class="modal-body">
+            <input type="hidden" id="edit-pais-id" name="paisId">
+            
+            <div class="mb-3">
+                <label for="edit-nombrePais" class="form-label">Nombre del País</label>
+                <input type="text" class="form-control" id="edit-nombrePais" name="nombrePais" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="edit-codigoMoneda" class="form-label">Código de Moneda (3 letras)</label>
+                <input type="text" class="form-control" id="edit-codigoMoneda" name="codigoMoneda" required maxlength="3" style="text-transform:uppercase">
+            </div>
+              
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+          </div>
+      </form>
     </div>
   </div>
 </div>
