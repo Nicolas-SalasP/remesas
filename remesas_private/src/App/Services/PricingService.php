@@ -22,8 +22,6 @@ class PricingService
         $this->notificationService = $notificationService;
     }
 
-    // LÓGICA DE LECTURA (Frontend y App Móvil)
-
     public function getCountriesByRole(string $role): array
     {
         $rolesValidos = ['Origen', 'Destino', 'Ambos'];
@@ -47,8 +45,6 @@ class PricingService
         
         return $tasaInfo;
     }
-
-    // LÓGICA DE ADMINISTRACIÓN 
 
     public function adminAddCountry(int $adminId, string $nombrePais, string $codigoMoneda, string $rol): bool
     {
@@ -96,18 +92,36 @@ class PricingService
         return $success;
     }
 
-    public function adminUpdateRate(int $adminId, int $tasaId, float $nuevoValor): bool
+
+    public function adminUpsertRate(int $adminId, array $data): array
     {
-        if ($nuevoValor <= 0 || !is_numeric($nuevoValor)) {
+        $tasaId = $data['tasaId'] ?? 'new';
+        $nuevoValor = (float)($data['nuevoValor'] ?? 0);
+        $origenId = (int)($data['origenId'] ?? 0);
+        $destinoId = (int)($data['destinoId'] ?? 0);
+
+        if ($nuevoValor <= 0) {
             throw new Exception("El valor de la tasa debe ser un número positivo.", 400);
         }
-
-        $success = $this->rateRepository->updateRateValue($tasaId, $nuevoValor);
-
-        if ($success) {
-            $this->notificationService->logAdminAction($adminId, 'Admin actualizó tasa', "Tasa ID: $tasaId, Nuevo Valor: $nuevoValor");
+        if ($origenId <= 0 || $destinoId <= 0) {
+             throw new Exception("IDs de país de origen o destino inválidos.", 400);
         }
-        return $success;
+
+        $origenNombre = $this->countryRepository->findNameById($origenId) ?? "ID $origenId";
+        $destinoNombre = $this->countryRepository->findNameById($destinoId) ?? "ID $destinoId";
+        $rutaLog = "[$origenNombre -> $destinoNombre]";
+
+        if ($tasaId === 'new') {
+            $newTasaId = $this->rateRepository->createRate($origenId, $destinoId, $nuevoValor);
+            $this->notificationService->logAdminAction($adminId, 'Admin creó tasa', "Ruta: $rutaLog, Valor: $nuevoValor, Nuevo TasaID: $newTasaId");
+            return ['TasaID' => $newTasaId];
+        } else {
+            $tasaIdInt = (int)$tasaId;
+            $success = $this->rateRepository->updateRateValue($tasaIdInt, $nuevoValor);
+            if ($success) {
+                $this->notificationService->logAdminAction($adminId, 'Admin actualizó tasa', "Ruta: $rutaLog , Nuevo Valor: $nuevoValor");
+            }
+            return ['TasaID' => $tasaIdInt];
+        }
     }
 }
-

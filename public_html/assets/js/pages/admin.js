@@ -571,4 +571,74 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    const userDetailsModalElement = document.getElementById('userDetailsModal');
+    if (userDetailsModalElement) {
+        const modalTitle = document.getElementById('userDetailsModalLabel');
+        const nombreCompletoEl = document.getElementById('modalUserNombreCompleto');
+        const emailEl = document.getElementById('modalUserEmail');
+        const telefonoEl = document.getElementById('modalUserTelefono');
+        const fechaRegistroEl = document.getElementById('modalUserFechaRegistro');
+        const verificacionEl = document.getElementById('modalUserVerificacion');
+        const twoFaEl = document.getElementById('modalUser2FA');
+        const docFrenteContainer = document.getElementById('modalUserDocFrenteContainer');
+        const docReversoContainer = document.getElementById('modalUserDocReversoContainer');
+
+        const getBadgeClass = (status) => {
+            switch (status) {
+                case 'Verificado': return 'bg-success';
+                case 'Pendiente': return 'bg-warning text-dark';
+                case 'Rechazado': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        };
+
+        const createDocImage = (url) => {
+            if (!url) {
+                return '<span class="text-muted small d-block pt-3">No subido</span>';
+            }
+            const secureUrl = `../admin/view_secure_file.php?file=${encodeURIComponent(url)}`;
+            return `<a href="${secureUrl}" target="_blank"><img src="${secureUrl}" class="img-fluid rounded" alt="Documento de verificación" style="max-height: 150px;"></a>`;
+        };
+
+        userDetailsModalElement.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button || !button.classList.contains('view-user-details-btn')) return;
+
+            const userId = button.dataset.userId;
+            const nombreCompleto = button.dataset.nombreCompleto || 'N/A';
+            const email = button.dataset.email || 'N/A';
+            const telefono = button.dataset.telefono || 'N/A';
+            const fechaRegistro = button.dataset.fechaRegistro || 'N/A';
+            const twoFaStatus = button.dataset.twoFaStatus;
+            const verificacionStatus = button.dataset.verificacionStatus || 'N/A';
+            const docFrenteUrl = button.dataset.docFrente || '';
+            const docReversoUrl = button.dataset.docReverso || '';
+
+            modalTitle.textContent = `Ficha del Usuario: #${userId}`;
+            nombreCompletoEl.textContent = nombreCompleto;
+            emailEl.textContent = email;
+            telefonoEl.textContent = telefono;
+            fechaRegistroEl.textContent = fechaRegistro;
+
+            verificacionEl.textContent = verificacionStatus;
+            verificacionEl.className = 'badge ' + getBadgeClass(verificacionStatus);
+
+            if (twoFaStatus === '1') {
+                twoFaEl.textContent = 'Activado';
+                twoFaEl.className = 'badge bg-success';
+            } else {
+                twoFaEl.textContent = 'Inactivo';
+                twoFaEl.className = 'badge bg-secondary';
+            }
+
+            docFrenteContainer.innerHTML = createDocImage(docFrenteUrl);
+            docReversoContainer.innerHTML = createDocImage(docReversoUrl);
+        });
+
+        userDetailsModalElement.addEventListener('hidden.bs.modal', function () {
+            docFrenteContainer.innerHTML = '';
+            docReversoContainer.innerHTML = '';
+        });
+    }
 });

@@ -1,33 +1,33 @@
-<?php // Asegurarse que el archivo NO comience con nada antes de esta etiqueta ?>
-</main> <?php // Cierre de la etiqueta main abierta en header.php ?>
+<?php ?>
+</main> <?php ?>
 
-<footer class="main-footer bg-dark text-white pt-4 pb-2 mt-auto">
+<footer class="main-footer bg-dark text-white pt-3 pb-1 mt-auto">
     <div class="container text-center text-md-start">
         <div class="row">
             <div class="col-md-3 col-lg-4 col-xl-3 mx-auto mb-4">
-                <img src="<?php echo BASE_URL; ?>/assets/img/LogoBlancoSinFondo.png" alt="Logo JC Envios Blanco" height="140">
-                <p class="mt-2">
+                <img src="<?php echo BASE_URL; ?>/assets/img/LogoBlancoSinFondo.png" alt="Logo JC Envios Blanco" height="80">
+                <p class="mt-2 small"> <?php ?>
                     La forma más rápida, segura y confiable de enviar dinero a tus seres queridos.
                 </p>
             </div>
 
             <div class="col-md-3 col-lg-2 col-xl-2 mx-auto mb-4">
-                <h6 class="text-uppercase fw-bold mb-4">Enlaces Rápidos</h6>
-                <p><a href="<?php echo BASE_URL; ?>/quienes-somos.php" class="text-reset">Quiénes Somos</a></p>
-                <p><a href="<?php echo BASE_URL; ?>/contacto.php" class="text-reset">Contacto</a></p>
-                <p><a href="#!" class="text-reset">Preguntas Frecuentes</a></p>
+                <h6 class="text-uppercase fw-bold mb-3">Enlaces Rápidos</h6>
+                <p class="mb-2"><a href="<?php echo BASE_URL; ?>/quienes-somos.php" class="text-reset">Quiénes Somos</a></p>
+                <p class="mb-2"><a href="<?php echo BASE_URL; ?>/contacto.php" class="text-reset">Contacto</a></p>
+                <p class="mb-2"><a href="#!" class="text-reset">Preguntas Frecuentes</a></p>
             </div>
 
             <div class="col-md-4 col-lg-3 col-xl-3 mx-auto mb-md-0 mb-4">
-                <h6 class="text-uppercase fw-bold mb-4">Contacto</h6>
-                <p><i class="bi bi-geo-alt-fill me-2"></i>Agustinas 681, Santiago, Chile</p>
-                <p><i class="bi bi-envelope-fill me-2"></i>multiserviciosjcspachile@gmail.com</p>
-                <p><i class="bi bi-telephone-fill me-2"></i>+56 9 2382 6018</p>
+                <h6 class="text-uppercase fw-bold mb-3">Contacto</h6>
+                <p class="mb-2"><i class="bi bi-geo-alt-fill me-2"></i>Agustinas 681, Santiago, Chile</p>
+                <p class="mb-2"><i class="bi bi-envelope-fill me-2"></i>multiserviciosjcspachile@gmail.com</p>
+                <p class="mb-2"><i class="bi bi-telephone-fill me-2"></i>+56 9 2382 6018</p>
              </div>
         </div>
     </div>
 
-    <div class="text-center p-3 border-top border-secondary mt-3">
+    <div class="text-center p-2 border-top border-secondary mt-2">
         <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center">
             <span class="text-muted mb-2 mb-sm-0">&copy; <?php echo date('Y'); ?> JC Envios. Todos los derechos reservados.</span>
             <div>
@@ -97,6 +97,66 @@
     </div> 
   </div> 
 </div>
+
+<?php // MODAL DE FICHA DE USUARIO (DE LA TAREA ANTERIOR) ?>
+<div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="userDetailsModalLabel">Ficha del Usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h4 id="modalUserNombreCompleto">Cargando...</h4>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                        <strong class="me-2">Email:</strong>
+                        <span id="modalUserEmail" class="text-muted text-truncate">...</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>Teléfono:</strong>
+                        <span id="modalUserTelefono" class="text-muted">...</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>Miembro desde:</strong>
+                        <span id="modalUserFechaRegistro" class="text-muted">...</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>Estado Verificación:</strong>
+                        <span id="modalUserVerificacion" class="badge">...</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <strong>Seguridad 2FA:</strong>
+                        <span id="modalUser2FA" class="badge">...</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h5>Documentos de Verificación</h5>
+                <div class="row">
+                    <div class="col-6 text-center">
+                        <strong>Frente:</strong>
+                        <div id="modalUserDocFrenteContainer" class="mt-2 border rounded p-2" style="min-height: 100px;">
+                            </div>
+                    </div>
+                    <div class="col-6 text-center">
+                        <strong>Reverso:</strong>
+                        <div id="modalUserDocReversoContainer" class="mt-2 border rounded p-2" style="min-height: 100px;">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="<?php echo BASE_URL; ?>/assets/js/utils/modalUtils.js?v=<?php echo time(); ?>"></script>

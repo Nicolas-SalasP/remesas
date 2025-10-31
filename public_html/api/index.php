@@ -139,13 +139,12 @@ try {
     $requestMethod = $_SERVER['REQUEST_METHOD']; 
 
     $routes = [
-        // Auth
         'loginUser'             => [AuthController::class, 'loginUser', 'POST'],
         'registerUser'          => [AuthController::class, 'registerUser', 'POST'],
         'requestPasswordReset'  => [AuthController::class, 'requestPasswordReset', 'POST'],
         'performPasswordReset'  => [AuthController::class, 'performPasswordReset', 'POST'],
         'verify2FACode'         => [AuthController::class, 'verify2FACode', 'POST'], 
-
+        
         // Client (Dashboard)
         'getTasa'               => [ClientController::class, 'getTasa', 'GET'],
         'getPaises'             => [ClientController::class, 'getPaises', 'GET'],
@@ -165,7 +164,7 @@ try {
         'disable2FA'            => [ClientController::class, 'disable2FA', 'POST'],
 
         // Admin
-        'updateRate'            => [AdminController::class, 'updateRate', 'POST'],
+        'updateRate'            => [AdminController::class, 'upsertRate', 'POST'],
         'addPais'               => [AdminController::class, 'addPais', 'POST'],
         'updatePaisRol'         => [AdminController::class, 'updatePaisRol', 'POST'],
         'togglePaisStatus'      => [AdminController::class, 'togglePaisStatus', 'POST'],

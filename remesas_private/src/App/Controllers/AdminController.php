@@ -32,16 +32,14 @@ class AdminController extends BaseController
         $this->ensureAdmin();
     }
 
-    public function updateRate(): void
+    public function upsertRate(): void
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $this->pricingService->adminUpdateRate(
-            $adminId,
-            (int)($data['tasaId'] ?? 0),
-            (float)($data['nuevoValor'] ?? 0)
-        );
-        $this->sendJsonResponse(['success' => true]);
+        
+        $resultData = $this->pricingService->adminUpsertRate($adminId, $data);
+        
+        $this->sendJsonResponse(['success' => true, 'newTasaId' => $resultData['TasaID']]);
     }
 
     public function addPais(): void

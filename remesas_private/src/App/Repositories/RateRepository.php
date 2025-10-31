@@ -33,12 +33,27 @@ class RateRepository
 
     public function updateRateValue(int $tasaId, float $nuevoValor): bool
     {
-        $sql = "UPDATE tasas SET ValorTasa = ? WHERE TasaID = ?"; 
+        $sql = "UPDATE tasas SET ValorTasa = ?, FechaEfectiva = NOW() WHERE TasaID = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("di", $nuevoValor, $tasaId);
         $stmt->execute();
         $success = $stmt->affected_rows > 0;
         $stmt->close();
         return $success;
+    }
+
+    public function createRate(int $origenId, int $destinoId, float $valor): int
+    {
+        $sql = "INSERT INTO tasas (PaisOrigenID, PaisDestinoID, ValorTasa, FechaEfectiva) 
+                VALUES (?, ?, ?, NOW())";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iid", $origenId, $destinoId, $valor);
+        
+        if (!$stmt->execute()) {
+             throw new Exception("Error al crear la nueva tasa: " . $stmt->error);
+        }
+        $newId = $stmt->insert_id;
+        $stmt->close();
+        return $newId;
     }
 }

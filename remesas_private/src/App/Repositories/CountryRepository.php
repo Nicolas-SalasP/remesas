@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Repositories;
 
 use App\Database\Database;
@@ -12,6 +11,17 @@ class CountryRepository
     public function __construct(Database $db)
     {
         $this->db = $db;
+    }
+
+    public function findNameById(int $paisId): ?string
+    {
+        $sql = "SELECT NombrePais FROM paises WHERE PaisID = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $paisId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result['NombrePais'] ?? null;
     }
 
     public function findByRoleAndStatus(string $rol, bool $activo = true): array

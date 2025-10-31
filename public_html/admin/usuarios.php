@@ -11,23 +11,20 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $adminID = $_SESSION['user_id'];
 
-// Obtener todos los roles disponibles para el dropdown
 $rolesDisponibles = $conexion->query("SELECT RolID, NombreRol FROM roles ORDER BY NombreRol")->fetch_all(MYSQLI_ASSOC);
 
-// ***** INICIO DE MODIFICACIÓN: FILTRAR USUARIOS *****
 $mostrarInactivos = isset($_GET['mostrar_inactivos']) && $_GET['mostrar_inactivos'] == '1';
 
 $sqlWhere = "WHERE U.UserID != $adminID";
 if (!$mostrarInactivos) {
-    // Por defecto, mostrar solo usuarios activos (no bloqueados permanentemente)
     $sqlWhere .= " AND (U.LockoutUntil IS NULL OR U.LockoutUntil <= NOW())";
 }
-// ***** FIN DE MODIFICACIÓN *****
 
-// Obtener todos los usuarios (excepto el admin actual) con su info de rol y verificación
 $usuarios = $conexion->query("
     SELECT
-        U.UserID, U.PrimerNombre, U.PrimerApellido, U.Email, U.LockoutUntil, U.RolID,
+        U.UserID, U.PrimerNombre, U.SegundoNombre, U.PrimerApellido, U.SegundoApellido, 
+        U.Email, U.Telefono, U.LockoutUntil, U.RolID, U.FechaRegistro, U.twofa_enabled,
+        U.DocumentoImagenURL_Frente, U.DocumentoImagenURL_Reverso,
         EV.NombreEstado AS VerificacionEstadoNombre,
         R.NombreRol
     FROM usuarios U
@@ -41,7 +38,6 @@ $usuarios = $conexion->query("
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="mb-0">Gestionar Usuarios</h1>
-        <a href="<?php echo BASE_URL; ?>/admin/">Volver al panel principal</a>
     </div>
 
     <div class="form-check mb-3">
@@ -60,9 +56,9 @@ $usuarios = $conexion->query("
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Email</th>
-                    <th>Estado Verificación</th>
+                    <th>Estado Verificacion</th>
                     <th>Rol</th>
-                    <th style="min-width: 180px;">Acciones</th>
+                    <th style="min-width: 220px;">Acciones</th> <?php ?>
                 </tr>
             </thead>
             <tbody>
@@ -72,10 +68,11 @@ $usuarios = $conexion->query("
                     <?php foreach ($usuarios as $usuario):
                         $isBlocked = ($usuario['LockoutUntil'] && strtotime($usuario['LockoutUntil']) > time());
                         $isPrincipalAdmin = ($usuario['UserID'] == 1); 
+                        $nombreCompleto = trim(htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['SegundoNombre'] . ' ' . $usuario['PrimerApellido'] . ' ' . $usuario['SegundoApellido']));
                     ?>
                         <tr id="user-row-<?php echo $usuario['UserID']; ?>">
                             <td><?php echo $usuario['UserID']; ?></td>
-                            <td><?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?></td>
+                            <td><?php echo $nombreCompleto; ?></td>
                             <td><?php echo htmlspecialchars($usuario['Email']); ?></td>
                             <td>
                                 <span class="badge <?php echo $usuario['VerificacionEstadoNombre'] == 'Verificado' ? 'bg-success' : ($usuario['VerificacionEstadoNombre'] == 'Pendiente' ? 'bg-warning text-dark' : ($usuario['VerificacionEstadoNombre'] == 'Rechazado' ? 'bg-danger' : 'bg-secondary')); ?>">
@@ -100,6 +97,21 @@ $usuarios = $conexion->query("
                             </td>
                             
                             <td>
+                                <button class="btn btn-sm btn-info view-user-details-btn"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#userDetailsModal"
+                                        data-user-id="<?php echo $usuario['UserID']; ?>"
+                                        data-nombre-completo="<?php echo $nombreCompleto; ?>"
+                                        data-email="<?php echo htmlspecialchars($usuario['Email']); ?>"
+                                        data-telefono="<?php echo htmlspecialchars($usuario['Telefono'] ?? 'No registrado'); ?>"
+                                        data-fecha-registro="<?php echo htmlspecialchars(date("d/m/Y H:i", strtotime($usuario['FechaRegistro']))); ?>"
+                                        data-two-fa-status="<?php echo $usuario['twofa_enabled'] ? '1' : '0'; ?>"
+                                        data-verificacion-status="<?php echo htmlspecialchars($usuario['VerificacionEstadoNombre'] ?? 'N/A'); ?>"
+                                        data-doc-frente="<?php echo htmlspecialchars($usuario['DocumentoImagenURL_Frente'] ?? ''); ?>"
+                                        data-doc-reverso="<?php echo htmlspecialchars($usuario['DocumentoImagenURL_Reverso'] ?? ''); ?>"
+                                        title="Ver Ficha de Usuario">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
                                 <button class="btn btn-sm block-user-btn <?php echo $isBlocked ? 'btn-success' : 'btn-warning'; ?>" 
                                         data-user-id="<?php echo $usuario['UserID']; ?>"
                                         data-current-status="<?php echo $isBlocked ? 'blocked' : 'active'; ?>"
@@ -112,7 +124,7 @@ $usuarios = $conexion->query("
                                 <?php if (!$isBlocked): ?>
                                     <button class="btn btn-sm btn-danger admin-delete-user-btn ms-1"
                                             data-user-id="<?php echo $usuario['UserID']; ?>"
-                                            data-user-name="<?php echo htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['PrimerApellido']); ?>"
+                                            data-user-name="<?php echo $nombreCompleto; ?>"
                                             title="Desactivar usuario (eliminación lógica)"
                                             <?php echo $isPrincipalAdmin ? 'disabled' : ''; ?>>
                                         <i class="bi bi-trash-fill"></i>
