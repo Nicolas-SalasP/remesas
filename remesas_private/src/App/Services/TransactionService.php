@@ -218,4 +218,30 @@ class TransactionService
         $this->notificationService->logAdminAction($adminId, 'Admin completó transacción', "TX ID: $txId. Comprobante envío: $relativePath. Estado: 'Pagado'.");
         return true;
     }
+    
+    public function getRateHistoryByDate(int $origenId, int $destinoId, int $days = 30): array
+    {
+        $sql = "SELECT
+                    DATE(T.FechaTransaccion) AS Fecha,
+                    AVG(TS.ValorTasa) AS TasaPromedio
+                FROM transacciones T
+                JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
+                WHERE
+                    TS.PaisOrigenID = ?
+                    AND TS.PaisDestinoID = ?
+                    AND T.FechaTransaccion >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                GROUP BY
+                    Fecha
+                ORDER BY
+                    Fecha ASC
+                LIMIT ?";
+        
+        $limit = $days + 5;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iiii", $origenId, $destinoId, $days, $limit);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
 }

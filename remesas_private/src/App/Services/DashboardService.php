@@ -5,6 +5,7 @@ use App\Repositories\TransactionRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\RateRepository;
 use App\Repositories\EstadoTransaccionRepository;
+use App\Repositories\CountryRepository;
 use Exception;
 
 class DashboardService
@@ -13,6 +14,7 @@ class DashboardService
     private UserRepository $userRepository;
     private RateRepository $rateRepository;
     private EstadoTransaccionRepository $estadoTxRepo;
+    private CountryRepository $countryRepository;
 
     private const ESTADO_EN_VERIFICACION = 'En Verificación';
     private const ESTADO_EN_PROCESO = 'En Proceso';
@@ -23,12 +25,14 @@ class DashboardService
         TransactionRepository $transactionRepository,
         UserRepository $userRepository,
         RateRepository $rateRepository,
-        EstadoTransaccionRepository $estadoTxRepo
+        EstadoTransaccionRepository $estadoTxRepo,
+        CountryRepository $countryRepository
     ) {
         $this->transactionRepository = $transactionRepository;
         $this->userRepository = $userRepository;
         $this->rateRepository = $rateRepository;
         $this->estadoTxRepo = $estadoTxRepo;
+        $this->countryRepository = $countryRepository;
     }
 
     private function getEstadoId(string $nombreEstado): int
@@ -53,7 +57,6 @@ class DashboardService
             $estadoEnProcesoID,
             $estadoPendienteID
         ]);
-
 
         $topDestino = $this->transactionRepository->getTopCountries('Destino', 5);
         $topOrigen = $this->transactionRepository->getTopCountries('Origen', 5);
@@ -84,82 +87,45 @@ class DashboardService
         ];
     }
 
-    public function getDolarBcvData(): array
+    public function getDolarBcvData(int $days = 30): array
     {
-         $cacheDir = __DIR__ . '/../../cache/';
-        if (!is_dir($cacheDir)) {
-            if (!@mkdir($cacheDir, 0755, true)) {
-                 error_log("Error de permisos: No se pudo crear el directorio de caché: {$cacheDir}");
-                 throw new Exception("Error interno al preparar la caché.", 500);
+        $origenID = $this->countryRepository->findIdByName('Chile');
+        $destinoID = $this->countryRepository->findIdByName('Venezuela');
+
+        if (!$origenID || !$destinoID) {
+            error_log("Error getDolarBcvData: No se encontraron los países 'Chile' o 'Venezuela' en la BD.");
+            throw new Exception("Ruta principal no configurada.", 500);
+        }
+
+        $history = $this->transactionRepository->getRateHistoryByDate($origenID, $destinoID, $days);
+        $currentRateInfo = $this->rateRepository->findCurrentRate($origenID, $destinoID);
+        $valorActual = (float)($currentRateInfo['ValorTasa'] ?? 0);
+
+        $labels = [];
+        $dataPoints = [];
+
+        if (empty($history)) {
+            $labels[] = date("d/m");
+            $dataPoints[] = $valorActual;
+        } else {
+            foreach ($history as $row) {
+                $labels[] = date("d/m", strtotime($row['Fecha']));
+                $dataPoints[] = (float)$row['TasaPromedio'];
             }
         }
-         if (!is_writable($cacheDir)) {
-             error_log("Error de permisos: El directorio de caché no tiene permisos de escritura: {$cacheDir}");
-             throw new Exception("Error interno de permisos de caché.", 500);
-         }
 
-        $cacheFile = $cacheDir . 'bcv_current_rate.json';
-        $cacheTime = 3600; 
-
-        $decodedData = null;
-
-        if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
-            $cachedData = @file_get_contents($cacheFile);
-             if ($cachedData) {
-                 $decodedData = json_decode($cachedData, true);
-                 if (json_last_error() === JSON_ERROR_NONE && isset($decodedData['success']) && $decodedData['success']) {
-                     return $decodedData; 
-                 }
-             }
+        if (end($dataPoints) !== $valorActual && $valorActual > 0) {
+             $labels[] = date("d/m");
+             $dataPoints[] = $valorActual;
         }
-
-        $apiUrl = "https://api.monitordolarvenezuela.com/last_update_bcv";
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'JCEnviosApp/1.0 (Compatible; PHP cURL)');
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($curlError || $httpCode !== 200 || $response === false) {
-             error_log("Error al conectar con API BCV (monitordolar): HTTP {$httpCode} - Error: {$curlError} - URL: {$apiUrl}");
-             if ($decodedData) {
-                 error_log("Devolviendo datos cacheados antiguos de BCV debido a error de API.");
-                 return $decodedData;
-             }
-            throw new Exception("No se pudo obtener la tasa de cambio externa (BCV) en este momento.", 503);
-        }
-
-        $data = json_decode($response, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE || empty($data['status']) || $data['status'] !== 'success' || empty($data['bcv']['price'])) {
-            error_log("Respuesta inválida de API BCV (monitordolar): " . json_last_error_msg() . " - Respuesta: " . substr($response, 0, 500));
-            if ($decodedData) {
-                 error_log("Devolviendo datos cacheados antiguos de BCV debido a respuesta inválida.");
-                 return $decodedData;
-            }
-            throw new Exception("La API externa (BCV) devolvió datos inválidos.", 502);
-        }
-
-        $valorActual = $data['bcv']['price'];
 
         $output = [
             'success' => true,
-            'valorActual' => (float)$valorActual,
-            'lastUpdate' => $data['bcv']['last_update'] ?? date('Y-m-d H:i:s')
+            'valorActual' => $valorActual,
+            'lastUpdate' => date('Y-m-d H:i:s'),
+            'labels' => $labels,
+            'data' => $dataPoints
         ];
-        
-        if (!@file_put_contents($cacheFile, json_encode($output))) {
-             error_log("Error al escribir en el archivo de caché de BCV: {$cacheFile}");
-        }
 
         return $output;
     }

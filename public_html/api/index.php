@@ -105,7 +105,8 @@ class Container {
                 $this->get(TransactionRepository::class),
                 $this->get(UserRepository::class),
                 $this->get(RateRepository::class),
-                $this->get(EstadoTransaccionRepository::class)
+                $this->get(EstadoTransaccionRepository::class),
+                $this->get(CountryRepository::class)
             ),
 
             // Controllers
@@ -139,12 +140,13 @@ try {
     $requestMethod = $_SERVER['REQUEST_METHOD']; 
 
     $routes = [
+        // Auth
         'loginUser'             => [AuthController::class, 'loginUser', 'POST'],
         'registerUser'          => [AuthController::class, 'registerUser', 'POST'],
         'requestPasswordReset'  => [AuthController::class, 'requestPasswordReset', 'POST'],
         'performPasswordReset'  => [AuthController::class, 'performPasswordReset', 'POST'],
         'verify2FACode'         => [AuthController::class, 'verify2FACode', 'POST'], 
-        
+
         // Client (Dashboard)
         'getTasa'               => [ClientController::class, 'getTasa', 'GET'],
         'getPaises'             => [ClientController::class, 'getPaises', 'GET'],
@@ -166,8 +168,8 @@ try {
         // Admin
         'updateRate'            => [AdminController::class, 'upsertRate', 'POST'],
         'addPais'               => [AdminController::class, 'addPais', 'POST'],
-        'updatePaisRol'         => [AdminController::class, 'updatePaisRol', 'POST'],
         'updatePais'            => [AdminController::class, 'updatePais', 'POST'],
+        'updatePaisRol'         => [AdminController::class, 'updatePaisRol', 'POST'],
         'togglePaisStatus'      => [AdminController::class, 'togglePaisStatus', 'POST'],
         'processTransaction'    => [AdminController::class, 'processTransaction', 'POST'],
         'rejectTransaction'     => [AdminController::class, 'rejectTransaction', 'POST'],

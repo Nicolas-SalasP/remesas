@@ -101,7 +101,7 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                                         <th>Nombre</th>
                                         <th>Email</th>
                                         <th>Total Trans.</th>
-                                        </tr>
+                                    </tr>
                                 </thead>
                                 <tbody id="table-top-users">
                                     </tbody>

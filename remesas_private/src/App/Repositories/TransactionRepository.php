@@ -195,10 +195,14 @@ class TransactionRepository
          $stmt->close();
          return $result['EstadoID'] ?? null;
     }
+
+    // ***** INICIO DE NUEVOS MÉTODOS PARA DASHBOARD *****
+
     public function getTopCountries(string $direction = 'Destino', int $limit = 5): array
     {
         $sql = "";
         if ($direction === 'Destino') {
+            // Top Países de Destino (basado en la cuenta beneficiaria)
             $sql = "SELECT P.NombrePais, COUNT(T.TransaccionID) AS Total
                     FROM transacciones T
                     JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
@@ -207,6 +211,7 @@ class TransactionRepository
                     ORDER BY Total DESC
                     LIMIT ?";
         } else {
+            // Top Países de Origen (basado en la tasa usada)
             $sql = "SELECT P.NombrePais, COUNT(T.TransaccionID) AS Total
                     FROM transacciones T
                     JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
@@ -226,6 +231,7 @@ class TransactionRepository
 
     public function getTransactionStats(): array
     {
+        // Esta consulta calcula el promedio diario y el mes más concurrido
         $sql = "SELECT
                     (COUNT(TransaccionID) / (DATEDIFF(MAX(DATE(FechaTransaccion)), MIN(DATE(FechaTransaccion))) + 1)) AS PromedioDiario,
                     DATE_FORMAT(FechaTransaccion, '%Y-%m') AS Mes,
@@ -266,6 +272,32 @@ class TransactionRepository
         
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function getRateHistoryByDate(int $origenId, int $destinoId, int $days = 30): array
+    {
+        $sql = "SELECT
+                    DATE(T.FechaTransaccion) AS Fecha,
+                    AVG(TS.ValorTasa) AS TasaPromedio
+                FROM transacciones T
+                JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
+                WHERE
+                    TS.PaisOrigenID = ?
+                    AND TS.PaisDestinoID = ?
+                    AND T.FechaTransaccion >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                GROUP BY
+                    Fecha
+                ORDER BY
+                    Fecha ASC
+                LIMIT ?";
+        
+        $limit = $days + 5;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iiii", $origenId, $destinoId, $days, $limit);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
         $stmt->close();

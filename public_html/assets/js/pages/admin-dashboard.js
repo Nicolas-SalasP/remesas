@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctxDestino = document.getElementById('chart-top-destino');
     const ctxOrigen = document.getElementById('chart-top-origen');
     const tableTopUsers = document.getElementById('table-top-users');
-    
+
     let chartDestinoInstance = null;
     let chartOrigenInstance = null;
 
@@ -27,11 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     label: chartLabel,
                     data: chartData.data,
                     backgroundColor: [
-                        'rgba(0, 86, 179, 0.7)', 
-                        'rgba(0, 123, 255, 0.7)', 
-                        'rgba(23, 162, 184, 0.7)', 
-                        'rgba(40, 167, 69, 0.7)',  
-                        'rgba(255, 193, 7, 0.7)' 
+                        'rgba(0, 86, 179, 0.7)',
+                        'rgba(0, 123, 255, 0.7)',
+                        'rgba(23, 162, 184, 0.7)',
+                        'rgba(40, 167, 69, 0.7)',
+                        'rgba(255, 193, 7, 0.7)'
                     ],
                     borderColor: [
                         'rgba(0, 86, 179, 1)',
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`../api/?accion=getDashboardStats`);
             if (!response.ok) {
-                throw new Error(`Error del servidor: ${response.statusText}`);
+                throw new Error(`Error del servidor.`);
             }
             
             const result = await response.json();

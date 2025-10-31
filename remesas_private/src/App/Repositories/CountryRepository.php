@@ -24,6 +24,17 @@ class CountryRepository
         return $result['NombrePais'] ?? null;
     }
 
+    public function findIdByName(string $nombrePais): ?int
+    {
+        $sql = "SELECT PaisID FROM paises WHERE NombrePais = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("s", $nombrePais);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result['PaisID'] ?? null;
+    }
+
     public function findByRoleAndStatus(string $rol, bool $activo = true): array
     {
         $sql = "SELECT PaisID, NombrePais, CodigoMoneda FROM paises 

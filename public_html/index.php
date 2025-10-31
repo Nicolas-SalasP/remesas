@@ -26,18 +26,25 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
     </section>
 
     <section class="card shadow-sm mb-5">
-        <div class="card-body p-4" id="bcv-container"> 
-            <h3 class="card-title text-center mb-3">Valor del Dólar (BCV)</h3>
-            <div class="text-center p-4">
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p class="text-muted mt-3 mb-0">Cargando tasa oficial...</p>
+        <div class="card-body p-4" id="rate-container"> 
+            <h3 class="card-title text-center mb-3">Tasa de Referencia (CLP a VES)</h3>
+            
+            <div class="text-center p-3">
+                <h1 id="rate-valor-actual" class="display-4 fw-bold text-primary">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </h1>
+                <p id="rate-description" class="lead text-muted mb-0">Cargando tasa...</p>
+                <small id="rate-ultima-actualizacion" class="text-muted"></small>
             </div>
+            
+            <div class="mt-3" style="max-height: 250px;">
+                <canvas id="rate-history-chart"></canvas>
+            </div>
+            
         </div>
     </section>
-
-
     <section class="row text-center">
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">
