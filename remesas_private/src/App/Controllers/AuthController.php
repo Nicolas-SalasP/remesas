@@ -37,17 +37,10 @@ class AuthController extends BaseController
         $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
         $_SESSION['ultima_actividad'] = time();
         
-        $redirectUrl = BASE_URL . '/dashboard/';
-        if ($result['Rol'] === 'Admin') {
-            $redirectUrl = BASE_URL . '/admin/';
-        } elseif ($result['Rol'] === 'Operador') {
-            $redirectUrl = BASE_URL . '/operador/pendientes.php';
-        }
-
         $this->sendJsonResponse([
             'success' => true,
             'twofa_required' => false,
-            'redirect' => $redirectUrl,
+            'redirect' => BASE_URL . '/dashboard/seguridad.php',
             'verificationStatus' => $result['VerificacionEstado']
         ]);
     }
@@ -56,9 +49,7 @@ class AuthController extends BaseController
     {
         $data = $_POST;
 
-        if (empty($data['primerNombre']) || empty($data['primerApellido']) || empty($data['email']) || 
-            empty($data['password']) || empty($data['tipoDocumento']) || empty($data['numeroDocumento']) || 
-            empty($data['telefono'])) { 
+        if (empty($data['primerNombre']) || empty($data['primerApellido']) || empty($data['email']) || empty($data['password']) || empty($data['tipoDocumento']) || empty($data['numeroDocumento']) || empty($data['telefono'])) {
              $this->sendJsonResponse(['success' => false, 'error' => 'Faltan campos obligatorios.'], 400);
              return;
         }
@@ -72,10 +63,7 @@ class AuthController extends BaseController
         $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
         $_SESSION['ultima_actividad'] = time();
 
-        $redirectUrl = BASE_URL . '/dashboard/';
-        if ($result['VerificacionEstado'] === 'No Verificado') {
-            $redirectUrl = BASE_URL . '/dashboard/verificar.php';
-        }
+        $redirectUrl = BASE_URL . '/dashboard/verificar.php';
 
         $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl], 201);
     }
@@ -123,14 +111,16 @@ class AuthController extends BaseController
              $_SESSION['user_name'] = $user['PrimerNombre'];
              $_SESSION['user_rol_name'] = $user['Rol'];
              $_SESSION['verification_status'] = $user['VerificacionEstado'];
-             $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
+             $_SESSION['twofa_enabled'] = $user['twofa_enabled']; // Será true
              $_SESSION['ultima_actividad'] = time();
-
-             $redirectUrl = BASE_URL . '/dashboard/';
+             $redirectUrl = BASE_URL . '/dashboard/'; 
+             
              if ($user['Rol'] === 'Admin') {
                  $redirectUrl = BASE_URL . '/admin/';
              } elseif ($user['Rol'] === 'Operador') {
                  $redirectUrl = BASE_URL . '/operador/pendientes.php';
+             } elseif ($user['VerificacionEstado'] !== 'Verificado') {
+                 $redirectUrl = BASE_URL . '/dashboard/verificar.php';
              }
 
              $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl]);

@@ -5,6 +5,7 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/login.php');
     exit();
 }
+
 if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin') {
     header('Location: ' . BASE_URL . '/admin/');
     exit();
@@ -14,16 +15,23 @@ if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operado
     exit();
 }
 
+if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
+    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
+    exit();
+}
+
 $estadosBloqueados = ['No Verificado', 'Rechazado'];
 if (!isset($_SESSION['verification_status']) || in_array($_SESSION['verification_status'], $estadosBloqueados)) {
     header('Location: ' . BASE_URL . '/dashboard/verificar.php'); 
     exit();
 }
+
 $pageTitle = 'Realizar Transacción';
 $pageScript = 'dashboard.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 ?>
 
+<?php ?>
 <div class="container">
     <div class="row">
         <div class="col-lg-10 offset-lg-1 col-xl-8 offset-xl-2">
@@ -136,6 +144,7 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
     </div>
   </div>
 </div>
+<?php ?>
 
 <?php
 require_once __DIR__ . '/../../remesas_private/src/templates/footer.php';

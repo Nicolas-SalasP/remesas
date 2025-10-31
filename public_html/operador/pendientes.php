@@ -2,8 +2,14 @@
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 require_once __DIR__ . '/../../remesas_private/src/core/guards/operador_guard.php';
 
+if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
+    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
+    exit();
+}
+
+
 $pageTitle = 'Transacciones Pendientes (Operador)';
-$pageScript = 'admin.js';
+$pageScript = 'admin.js'; 
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $transacciones = $conexion->query("
@@ -49,7 +55,7 @@ $transacciones = $conexion->query("
                             <td><?php echo htmlspecialchars($tx['BeneficiarioNombreCompleto']); ?></td>
                             <td>
                                 <?php if (!empty($tx['ComprobanteURL'])): ?>
-                                <button class="btn btn-sm btn-info view-comprobante-btn-admin" <?php ?>
+                                <button class="btn btn-sm btn-info view-comprobante-btn-admin" 
                                         data-bs-toggle="modal"
                                         data-bs-target="#viewComprobanteModal"
                                         data-tx-id="<?php echo $tx['TransaccionID']; ?>"
@@ -64,12 +70,10 @@ $transacciones = $conexion->query("
                                 <?php endif; ?>
                             </td>
                             <td class="d-flex flex-wrap gap-1">
-                                <?php // ?>
                                 <a href="<?php echo BASE_URL; ?>/generar-factura.php?id=<?php echo $tx['TransaccionID']; ?>" 
                                    target="_blank" class="btn btn-sm btn-info" title="Ver Orden PDF">
                                     <i class="bi bi-file-earmark-pdf"></i> Orden
                                 </a>
-                                <?php // ?>
                             
                                 <?php if ($tx['EstadoNombre'] == 'En Verificación'): ?>
                                     <button class="btn btn-sm btn-success process-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>">Confirmar</button>

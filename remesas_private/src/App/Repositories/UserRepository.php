@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Repositories;
 
 use App\Database\Database;
@@ -45,6 +44,7 @@ class UserRepository
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($sql);
+
         $primerNombre = $data['primerNombre'];
         $segundoNombre = $data['segundoNombre'] ?? null;
         $primerApellido = $data['primerApellido'];
@@ -274,7 +274,6 @@ class UserRepository
          $stmt->close();
          return $result['twofa_secret'] ?? null;
      }
-
 
      public function update2FASecret(int $userId, string $encryptedSecret): bool {
          $sql = "UPDATE usuarios SET twofa_secret = ?, twofa_enabled = FALSE WHERE UserID = ?";

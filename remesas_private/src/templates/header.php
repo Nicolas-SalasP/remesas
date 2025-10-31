@@ -11,11 +11,9 @@
     <link rel="icon" href="<?php echo BASE_URL; ?>/assets/img/SoloLogoNegroSinFondo.png">
     
     <?php ?>
-    <?php ?>
     <?php if (isset($pageScript) && $pageScript === 'seguridad.js'): ?>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <?php endif; ?>
-    <?php ?>
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
 
@@ -33,27 +31,38 @@
                     
                     <?php if (isset($_SESSION['user_id'])): ?>
                         
-                        <?php if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin'): ?>
-                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/usuarios.php">Gestionar Usuarios</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Ver Ordenes</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Gestionar Tasas</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/paises.php">Gestionar Países</a></li> 
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/verificaciones.php">Verificaciones</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/dashboard.php">Dashboard</a></li>
+                        <?php  ?>
+                        <?php if (isset($_SESSION['twofa_enabled']) && $_SESSION['twofa_enabled'] == 1): ?>
+                            
+                            <?php ?>
+                            <?php if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin'): ?>
+                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/usuarios.php">Gestionar Usuarios</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Ver Ordenes</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Gestionar Tasas</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/paises.php">Gestionar Países</a></li> 
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/verificaciones.php">Verificaciones</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/dashboard.php">Dashboard</a></li>
 
-                        <?php elseif (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador'): ?>
-                            <li class="nav-item"><a class="nav-link fw-bold text-primary" href="<?php echo BASE_URL; ?>/operador/pendientes.php">Transacciones Pendientes</a></li>
-                            <li class="nav-item"><a class="nav-link fw-bold text-primary" href="<?php echo BASE_URL; ?>/operador/index.php">Todas las Transacciones</a></li>
-                        
+                            <?php elseif (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador'): ?>
+                                <li class="nav-item"><a class="nav-link fw-bold text-primary" href="<?php echo BASE_URL; ?>/operador/pendientes.php">Transacciones Pendientes</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-primary" href="<?php echo BASE_URL; ?>/operador/index.php">Todas las Transacciones</a></li>
+                            
+                            <?php else: ?>
+                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
+                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
+                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>
+                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/perfil.php">Mi Perfil</a></li>
+                                <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Seguridad</a></li>
+                            <?php endif; ?>
+                            <?php ?>
+
                         <?php else: ?>
-                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
-                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/">Realizar Transacción</a></li>
-                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/historial.php">Mi Historial</a></li>
-                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/perfil.php">Mi Perfil</a></li>
-                            <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Seguridad</a></li>
+                            <?php ?>
+                            <li class="nav-item"><a class="nav-link active fw-bold text-danger" href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Configurar Seguridad (2FA)</a></li>
                         <?php endif; ?>
+                        <?php ?>
 
                     <?php else: ?>
                         <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>

@@ -1,6 +1,4 @@
 <?php
-// remesas_private/src/App/Services/UserService.php
-
 namespace App\Services;
 
 use App\Repositories\UserRepository;
@@ -91,7 +89,7 @@ class UserService
         $rolPersonaNaturalID = $this->rolRepo->findIdByName('Persona Natural');
          if (!$rolPersonaNaturalID) throw new Exception("Rol 'Persona Natural' no encontrado en la base de datos.", 500);
         $data['rolID'] = $rolPersonaNaturalID;
-
+        
         $estadoNoVerificadoID = $this->estadoVerificacionRepo->findIdByName('No Verificado');
         if(!$estadoNoVerificadoID) throw new Exception("Rol 'No Verificado' no encontrado.", 500);
         $data['verificacionEstadoID'] = $estadoNoVerificadoID;
@@ -355,6 +353,8 @@ class UserService
             
             if ($this->userRepository->enable2FA($userId, $encryptedBackupCodes)) {
                  $_SESSION['show_backup_codes'] = $backupCodes;
+                 $_SESSION['twofa_enabled'] = 1;
+                 
                  $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
                  return true;
             } else {
@@ -366,7 +366,7 @@ class UserService
      
     public function disable2FA(int $userId): bool {
         if ($this->userRepository->disable2FA($userId)) {
-             $_SESSION['twofa_enabled'] = false;
+             $_SESSION['twofa_enabled'] = 0;
              $this->notificationService->logAdminAction($userId, '2FA Desactivado', "El usuario desactivó 2FA.");
              return true;
         }

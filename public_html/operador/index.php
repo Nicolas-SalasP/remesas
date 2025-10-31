@@ -2,11 +2,16 @@
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 require_once __DIR__ . '/../../remesas_private/src/core/guards/operador_guard.php';
 
+if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
+    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
+    exit();
+}
+
 function getStatusBadgeClass($statusName) {
     switch ($statusName) {
         case 'Pagado': return 'bg-success';
         case 'En Proceso': return 'bg-primary';
-        case 'En Verificaci贸n': return 'bg-info text-dark';
+        case 'En Verificación': return 'bg-info text-dark';
         case 'Cancelado': return 'bg-danger';
         case 'Pendiente de Pago': return 'bg-warning text-dark';
         default: return 'bg-secondary';
@@ -14,7 +19,7 @@ function getStatusBadgeClass($statusName) {
 }
 
 $pageTitle = 'Todas las Transacciones';
-$pageScript = 'admin.js';
+$pageScript = 'admin.js'; 
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $transacciones = $conexion->query("
@@ -31,9 +36,9 @@ $transacciones = $conexion->query("
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Todas las Transacciones</h1>
+        <h1>Todas las Transacciones (Solo Vista)</h1>
         <div>
-            <a href="<?php echo BASE_URL; ?>/operador/pendientes.php" class="btn btn-primary">Ver Ordenes Pendientes</a>
+            <a href="<?php echo BASE_URL; ?>/operador/pendientes.php" class="btn btn-primary">Ver Pendientes de Acción</a>
         </div>
     </div>
     
@@ -94,7 +99,7 @@ $transacciones = $conexion->query("
                                         data-comprobante-url="<?php echo !empty($tx['ComprobanteURL']) ? BASE_URL . htmlspecialchars($tx['ComprobanteURL']) : ''; ?>"
                                         data-envio-url="<?php echo BASE_URL . htmlspecialchars($tx['ComprobanteEnvioURL']); ?>"
                                         data-start-type="admin"
-                                        title="Ver Comprobante de Env铆o">
+                                        title="Ver Comprobante de Envío">
                                     <i class="bi bi-receipt"></i>
                                 </button>
                             <?php else: ?>

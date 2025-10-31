@@ -1,6 +1,15 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
-if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') { die("Acceso denegado."); }
+
+if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') { 
+    die("Acceso denegado."); 
+}
+
+if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
+    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
+    exit();
+}
+
 
 function getStatusBadgeClass($statusName) {
     switch ($statusName) {
@@ -47,7 +56,7 @@ $transacciones = $conexion->query("
                     <th>Usuario</th>
                     <th>Beneficiario</th>
                     <th>Estado</th>
-                    <th>Orden</th> <?php // ?>
+                    <th>Orden</th>
                     <th>Comp. Usuario</th>
                     <th>Comp. Admin</th>
                 </tr>
@@ -64,14 +73,12 @@ $transacciones = $conexion->query("
                                 <?php echo htmlspecialchars($tx['EstadoNombre'] ?? 'Desconocido'); ?>
                             </span>
                         </td>
-                        <?php ?>
                         <td>
                             <a href="<?php echo BASE_URL; ?>/generar-factura.php?id=<?php echo $tx['TransaccionID']; ?>" 
                                target="_blank" class="btn btn-sm btn-info" title="Ver Orden PDF">
                                 <i class="bi bi-file-earmark-pdf"></i>
                             </a>
                         </td>
-                        <?php ?>
                         <td>
                             <?php if (!empty($tx['ComprobanteURL'])): ?>
                                 <button class="btn btn-sm btn-info view-comprobante-btn-admin"

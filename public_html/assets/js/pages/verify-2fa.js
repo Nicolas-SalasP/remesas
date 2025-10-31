@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!verifyForm || !backupForm) return;
 
     const handleSubmit = async (e, formElement) => {
-        e.preventDefault();
+        e.preventDefault(); 
         const formData = new FormData(formElement);
         const code = formData.get('code');
         const submitButton = formElement.querySelector('button[type="submit"]');

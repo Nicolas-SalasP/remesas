@@ -1,8 +1,14 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
+
 if (!isset($_SESSION['user_id'])) { 
     header('Location: ' . BASE_URL . '/login.php'); 
     exit(); 
+}
+
+if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
+    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
+    exit();
 }
 
 if (isset($_SESSION['verification_status']) && in_array($_SESSION['verification_status'], ['Verificado', 'Pendiente'])) {
@@ -19,7 +25,7 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card p-4 shadow-sm">
-                <h1 class="text-center mb-3">Verificacion de Identidad</h1>
+                <h1 class="text-center mb-3">Verificación de Identidad</h1>
                 <p class="text-center text-muted">Para poder realizar transacciones, es obligatorio que verifiques tu identidad. Por favor, sube una foto de tu RUT por ambos lados.</p>
                 
                 <div id="verification-alert" class="alert d-none" role="alert"></div>
@@ -34,7 +40,7 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                         <input class="form-control" type="file" id="docReverso" name="docReverso" accept="image/jpeg, image/png" required>
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">Enviar para Verificacion</button>
+                        <button type="submit" class="btn btn-primary btn-lg">Enviar para Verificación</button>
                     </div>
                 </form>
             </div>

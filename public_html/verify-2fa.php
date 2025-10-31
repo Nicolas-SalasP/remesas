@@ -2,7 +2,13 @@
 require_once __DIR__ . '/../remesas_private/src/core/init.php';
 
 if (isset($_SESSION['user_id'])) {
-    header('Location: ' . BASE_URL . '/dashboard/');
+    if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin') {
+        header('Location: ' . BASE_URL . '/admin/');
+    } elseif (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador') {
+        header('Location: ' . BASE_URL . '/operador/pendientes.php');
+    } else {
+        header('Location: ' . BASE_URL . '/dashboard/');
+    }
     exit();
 }
 
@@ -17,7 +23,7 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
 ?>
 
 <div class="container">
-    <div class="row justify-content-center">
+    <div class="row justify-content-center mt-5">
         <div class="col-md-5">
             <div class="card shadow-sm p-4">
                 <h3 class="card-title text-center mb-3">Verificación de Dos Pasos</h3>

@@ -5,18 +5,10 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: ' . BASE_URL . '/login.php'); 
     exit(); 
 }
-if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] !== 'Persona Natural') {
-    if ($_SESSION['user_rol_name'] === 'Admin') {
-        header('Location: ' . BASE_URL . '/admin/');
-    } else {
-        header('Location: ' . BASE_URL . '/operador/pendientes.php');
-    }
-    exit();
-}
 
 
 $pageTitle = 'Seguridad de la Cuenta';
-$pageScript = 'seguridad.js'; 
+$pageScript = 'seguridad.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 ?>
 
@@ -24,6 +16,16 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card p-4 p-md-5 shadow-sm">
+                <?php ?>
+                <?php if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false): ?>
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading"><i class="bi bi-shield-lock-fill"></i> ¡Acción Requerida!</h4>
+                        <p>Para proteger tu cuenta, es obligatorio configurar la autenticación de dos factores (2FA) antes de continuar.</p>
+                        <hr>
+                        <p class="mb-0">Sigue los pasos a continuación para activarla.</p>
+                    </div>
+                <?php endif; ?>
+
                 <h1 class="mb-4">Seguridad de la Cuenta</h1>
                 
                 <div id="2fa-status-container">
