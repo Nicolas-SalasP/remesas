@@ -127,7 +127,10 @@ class Container {
                 $this->get(DashboardService::class),
                 $this->get(RolRepository::class)
             ),
-            DashboardController::class => new DashboardController($this->get(DashboardService::class)),
+            DashboardController::class => new DashboardController(
+                $this->get(DashboardService::class),
+                $this->get(CountryRepository::class)
+            ),
 
             default => throw new Exception("Clase no configurada en el contenedor: {$className}")
         };
@@ -151,6 +154,7 @@ try {
         'getTasa'               => [ClientController::class, 'getTasa', 'GET'],
         'getPaises'             => [ClientController::class, 'getPaises', 'GET'],
         'getDolarBcv'           => [DashboardController::class, 'getDolarBcvData', 'GET'],
+        'getActiveDestinationCountries' => [ClientController::class, 'getActiveDestinationCountries', 'GET'],
         'getCuentas'            => [ClientController::class, 'getCuentas', 'GET'],
         'addCuenta'             => [ClientController::class, 'addCuenta', 'POST'],
         'createTransaccion'     => [ClientController::class, 'createTransaccion', 'POST'],

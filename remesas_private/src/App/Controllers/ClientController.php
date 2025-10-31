@@ -186,4 +186,10 @@ class ClientController extends BaseController
             $this->sendJsonResponse(['success' => false, 'error' => 'No se pudo desactivar 2FA.'], 500);
         }
     }
+
+    public function getActiveDestinationCountries(): void
+    {
+        $paises = $this->pricingService->getCountriesByRole('Destino');
+        $this->sendJsonResponse($paises);
+    }
 }

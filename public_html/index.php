@@ -27,8 +27,17 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
 
     <section class="card shadow-sm mb-5">
         <div class="card-body p-4" id="rate-container"> 
-            <h3 class="card-title text-center mb-3">Tasa de Referencia (CLP a VES)</h3>
-            
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-7">
+                    <h3 class="card-title mb-0">Tasa de Referencia</h3>
+                </div>
+                <div class="col-md-5">
+                    <label for="country-select-dropdown" class="form-label small text-muted mb-0">Ver tasa para:</label>
+                    <select id="country-select-dropdown" class_name="form-select form-select-sm">
+                        <option value="">Cargando países...</option>
+                    </select>
+                </div>
+            </div>
             <div class="text-center p-3">
                 <h1 id="rate-valor-actual" class="display-4 fw-bold text-primary">
                     <div class="spinner-border text-primary" role="status">
@@ -45,6 +54,7 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
             
         </div>
     </section>
+
     <section class="row text-center">
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">

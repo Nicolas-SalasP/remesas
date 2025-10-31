@@ -87,19 +87,13 @@ class DashboardService
         ];
     }
 
-    public function getDolarBcvData(int $days = 30): array
+    public function getDolarBcvData(int $origenId, int $destinoId, int $days = 30): array
     {
-        $origenID = $this->countryRepository->findIdByName('Chile');
-        $destinoID = $this->countryRepository->findIdByName('Venezuela');
-
-        if (!$origenID || !$destinoID) {
-            error_log("Error getDolarBcvData: No se encontraron los países 'Chile' o 'Venezuela' en la BD.");
-            throw new Exception("Ruta principal no configurada.", 500);
-        }
-
-        $history = $this->transactionRepository->getRateHistoryByDate($origenID, $destinoID, $days);
-        $currentRateInfo = $this->rateRepository->findCurrentRate($origenID, $destinoID);
+        $history = $this->transactionRepository->getRateHistoryByDate($origenId, $destinoId, $days);
+        $currentRateInfo = $this->rateRepository->findCurrentRate($origenId, $destinoId);
         $valorActual = (float)($currentRateInfo['ValorTasa'] ?? 0);
+        $monedaOrigen = $this->countryRepository->findMonedaById($origenId) ?? 'N/A';
+        $monedaDestino = $this->countryRepository->findMonedaById($destinoId) ?? 'N/A';
 
         $labels = [];
         $dataPoints = [];
@@ -113,7 +107,7 @@ class DashboardService
                 $dataPoints[] = (float)$row['TasaPromedio'];
             }
         }
-
+        
         if (end($dataPoints) !== $valorActual && $valorActual > 0) {
              $labels[] = date("d/m");
              $dataPoints[] = $valorActual;
@@ -122,6 +116,8 @@ class DashboardService
         $output = [
             'success' => true,
             'valorActual' => $valorActual,
+            'monedaOrigen' => $monedaOrigen,
+            'monedaDestino' => $monedaDestino,
             'lastUpdate' => date('Y-m-d H:i:s'),
             'labels' => $labels,
             'data' => $dataPoints

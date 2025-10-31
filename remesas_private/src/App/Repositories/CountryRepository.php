@@ -34,6 +34,17 @@ class CountryRepository
         $stmt->close();
         return $result['PaisID'] ?? null;
     }
+    
+    public function findMonedaById(int $paisId): ?string
+    {
+        $sql = "SELECT CodigoMoneda FROM paises WHERE PaisID = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $paisId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result['CodigoMoneda'] ?? null;
+    }
 
     public function findByRoleAndStatus(string $rol, bool $activo = true): array
     {
