@@ -1,107 +1,126 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('transactionsChart');
-    const filterForm = document.getElementById('filter-form');
-    const startDateInput = document.getElementById('fecha_inicio');
-    const endDateInput = document.getElementById('fecha_fin');
-    const chartTitle = document.querySelector('.card-header h5');
+    const loadingEl = document.getElementById('dashboard-loading');
+    const contentEl = document.getElementById('dashboard-content');
+    const kpiTotalUsers = document.getElementById('kpi-total-users');
+    const kpiPendingTxs = document.getElementById('kpi-pending-txs');
+    const kpiAvgDaily = document.getElementById('kpi-avg-daily');
+    const kpiBusiestMonth = document.getElementById('kpi-busiest-month');
+    const ctxDestino = document.getElementById('chart-top-destino');
+    const ctxOrigen = document.getElementById('chart-top-origen');
+    const tableTopUsers = document.getElementById('table-top-users');
+    
+    let chartDestinoInstance = null;
+    let chartOrigenInstance = null;
 
-    if (!ctx || !filterForm) return;
+    const renderBarChart = (canvasCtx, chartInstance, chartData, chartLabel) => {
+        if (!canvasCtx) return null;
 
-    let chartInstance = null;
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
 
-    const renderChart = async (startDate, endDate) => {
-        chartTitle.textContent = 'Cargando...';
+        return new Chart(canvasCtx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: chartLabel,
+                    data: chartData.data,
+                    backgroundColor: [
+                        'rgba(0, 86, 179, 0.7)', 
+                        'rgba(0, 123, 255, 0.7)', 
+                        'rgba(23, 162, 184, 0.7)', 
+                        'rgba(40, 167, 69, 0.7)',  
+                        'rgba(255, 193, 7, 0.7)' 
+                    ],
+                    borderColor: [
+                        'rgba(0, 86, 179, 1)',
+                        'rgba(0, 123, 255, 1)',
+                        'rgba(23, 162, 184, 1)',
+                        'rgba(40, 167, 69, 1)',
+                        'rgba(255, 193, 7, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            callback: function(value) {
+                                if (value % 1 === 0) {
+                                    return value;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    const loadDashboardData = async () => {
         try {
-            const response = await fetch(`../api/?accion=getDashboardStats&fecha_inicio=${startDate}&fecha_fin=${endDate}`);
+            const response = await fetch(`../api/?accion=getDashboardStats`);
+            if (!response.ok) {
+                throw new Error(`Error del servidor: ${response.statusText}`);
+            }
+            
             const result = await response.json();
-
             if (!result.success) {
                 throw new Error(result.error || 'No se pudieron cargar las estadísticas.');
             }
 
-            const startFormatted = new Date(startDate + 'T00:00:00').toLocaleDateString('es-CL');
-            const endFormatted = new Date(endDate + 'T00:00:00').toLocaleDateString('es-CL');
-            chartTitle.textContent = `Estadísticas desde ${startFormatted} hasta ${endFormatted}`;
+            const stats = result.stats;
 
-            if (chartInstance) {
-                chartInstance.destroy();
+            if (stats.kpis) {
+                kpiTotalUsers.textContent = stats.kpis.totalUsers || 0;
+                kpiPendingTxs.textContent = stats.kpis.pendingTransactions || 0;
+                kpiAvgDaily.textContent = stats.kpis.averageDaily || 0;
+                kpiBusiestMonth.textContent = stats.kpis.busiestMonth || 'N/A';
             }
 
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: result.stats.labels,
-                    datasets: result.stats.datasets.map(dataset => ({
-                        ...dataset,
-                        fill: true,
-                        tension: 0.3
-                    }))
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: { display: true, text: 'Cantidad de Transacciones' },
-                            beginAtZero: true
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: { display: true, text: 'Volumen (CLP)' },
-                            grid: { drawOnChartArea: false },
-                            beginAtZero: true
-                        }
-                    }
+            if (stats.charts) {
+                chartDestinoInstance = renderBarChart(ctxDestino, chartDestinoInstance, stats.charts.topDestino, 'Transacciones a Destino');
+                chartOrigenInstance = renderBarChart(ctxOrigen, chartOrigenInstance, stats.charts.topOrigen, 'Transacciones desde Origen');
+            }
+
+            if (stats.tables && stats.tables.topUsers && tableTopUsers) {
+                tableTopUsers.innerHTML = '';
+                if (stats.tables.topUsers.length === 0) {
+                    tableTopUsers.innerHTML = '<tr><td colspan="4" class="text-center">No hay datos de usuarios para mostrar.</td></tr>';
+                } else {
+                    stats.tables.topUsers.forEach(user => {
+                        const row = `
+                            <tr>
+                                <td>${user.UserID}</td>
+                                <td>${user.NombreCompleto || ''}</td>
+                                <td>${user.Email || ''}</td>
+                                <td>${user.TotalTransacciones}</td>
+                            </tr>
+                        `;
+                        tableTopUsers.innerHTML += row;
+                    });
                 }
-            });
+            }
+
+            loadingEl.classList.add('d-none');
+            contentEl.classList.remove('d-none');
+
         } catch (error) {
-            console.error("Error al renderizar el gráfico:", error);
-            chartTitle.textContent = 'Error al cargar datos';
-            ctx.parentElement.innerHTML = `<p class="text-center text-danger">${error.message}</p>`;
+            console.error("Error al cargar el dashboard:", error);
+            loadingEl.innerHTML = `<p class="text-center text-danger p-5">${error.message}</p>`;
         }
     };
 
-    filterForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const startDate = startDateInput.value;
-        const endDate = endDateInput.value;
-
-        if (!startDate || !endDate) {
-            alert('Por favor, selecciona una fecha de inicio y una de fin.');
-            return;
-        }
-
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const diffTime = Math.abs(end - start);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (end < start) {
-            alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
-            return;
-        }
-
-        if (diffDays > 30) {
-            alert('El rango de fechas no puede ser mayor a 31 días.');
-            return;
-        }
-
-        renderChart(startDate, endDate);
-    });
-
-    const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 6);
-
-    const initialEndDate = today.toISOString().split('T')[0];
-    const initialStartDate = sevenDaysAgo.toISOString().split('T')[0];
-
-    startDateInput.value = initialStartDate;
-    endDateInput.value = initialEndDate;
-
-    renderChart(initialStartDate, initialEndDate);
+    loadDashboardData();
 });

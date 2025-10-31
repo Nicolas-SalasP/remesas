@@ -17,6 +17,7 @@ class DashboardService
     private const ESTADO_EN_VERIFICACION = 'En Verificación';
     private const ESTADO_EN_PROCESO = 'En Proceso';
     private const ESTADO_PAGADO = 'Pagado';
+    private const ESTADO_PENDIENTE = 'Pendiente de Pago';
 
     public function __construct(
         TransactionRepository $transactionRepository,
@@ -42,20 +43,44 @@ class DashboardService
     public function getAdminDashboardStats(): array
     {
         $totalUsers = $this->userRepository->countAll();
-
+        
         $estadoVerificacionID = $this->getEstadoId(self::ESTADO_EN_VERIFICACION);
         $estadoEnProcesoID = $this->getEstadoId(self::ESTADO_EN_PROCESO);
-        $pendingTransactions = $this->transactionRepository->countByStatus([$estadoVerificacionID, $estadoEnProcesoID]);
+        $estadoPendienteID = $this->getEstadoId(self::ESTADO_PENDIENTE); 
+        
+        $pendingTransactions = $this->transactionRepository->countByStatus([
+            $estadoVerificacionID, 
+            $estadoEnProcesoID,
+            $estadoPendienteID
+        ]);
 
-        $estadoPagadoID = $this->getEstadoId(self::ESTADO_PAGADO);
-        $completedToday = $this->transactionRepository->countCompletedToday($estadoPagadoID);
-        $totalVolume = $this->transactionRepository->getTotalVolume($estadoPagadoID);
+
+        $topDestino = $this->transactionRepository->getTopCountries('Destino', 5);
+        $topOrigen = $this->transactionRepository->getTopCountries('Origen', 5);
+        $txStats = $this->transactionRepository->getTransactionStats();
+        $topUsers = $this->transactionRepository->getTopUsers(5);
+
+        $formatChartData = function(array $data): array {
+            return [
+                'labels' => array_column($data, 'NombrePais'),
+                'data' => array_column($data, 'Total')
+            ];
+        };
 
         return [
-            'totalUsers' => $totalUsers,
-            'pendingTransactions' => $pendingTransactions,
-            'completedToday' => $completedToday,
-            'totalVolume' => number_format($totalVolume, 2, ',', '.') . ' CLP'
+            'kpis' => [
+                'totalUsers' => $totalUsers,
+                'pendingTransactions' => $pendingTransactions,
+                'averageDaily' => (float)number_format($txStats['PromedioDiario'], 2),
+                'busiestMonth' => $txStats['MesMasConcurrido'] . ' (' . $txStats['TotalMesMasConcurrido'] . ' trans.)'
+            ],
+            'charts' => [
+                'topDestino' => $formatChartData($topDestino),
+                'topOrigen' => $formatChartData($topOrigen)
+            ],
+            'tables' => [
+                'topUsers' => $topUsers
+            ]
         ];
     }
 

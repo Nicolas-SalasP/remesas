@@ -195,4 +195,80 @@ class TransactionRepository
          $stmt->close();
          return $result['EstadoID'] ?? null;
     }
+    public function getTopCountries(string $direction = 'Destino', int $limit = 5): array
+    {
+        $sql = "";
+        if ($direction === 'Destino') {
+            $sql = "SELECT P.NombrePais, COUNT(T.TransaccionID) AS Total
+                    FROM transacciones T
+                    JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
+                    JOIN paises P ON CB.PaisID = P.PaisID
+                    GROUP BY P.NombrePais
+                    ORDER BY Total DESC
+                    LIMIT ?";
+        } else {
+            $sql = "SELECT P.NombrePais, COUNT(T.TransaccionID) AS Total
+                    FROM transacciones T
+                    JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
+                    JOIN paises P ON TS.PaisOrigenID = P.PaisID
+                    GROUP BY P.NombrePais
+                    ORDER BY Total DESC
+                    LIMIT ?";
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function getTransactionStats(): array
+    {
+        $sql = "SELECT
+                    (COUNT(TransaccionID) / (DATEDIFF(MAX(DATE(FechaTransaccion)), MIN(DATE(FechaTransaccion))) + 1)) AS PromedioDiario,
+                    DATE_FORMAT(FechaTransaccion, '%Y-%m') AS Mes,
+                    COUNT(TransaccionID) AS TotalMes
+                FROM transacciones
+                GROUP BY Mes
+                ORDER BY TotalMes DESC
+                LIMIT 1";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        if (!$result) {
+            return ['PromedioDiario' => 0, 'MesMasConcurrido' => 'N/A', 'TotalMesMasConcurrido' => 0];
+        }
+
+        return [
+            'PromedioDiario' => (float)($result['PromedioDiario'] ?? 0),
+            'MesMasConcurrido' => $result['Mes'] ?? 'N/A',
+            'TotalMesMasConcurrido' => (int)($result['TotalMes'] ?? 0)
+        ];
+    }
+
+    public function getTopUsers(int $limit = 5): array
+    {
+        $sql = "SELECT
+                    U.UserID,
+                    CONCAT(U.PrimerNombre, ' ', U.PrimerApellido) AS NombreCompleto,
+                    U.Email,
+                    COUNT(T.TransaccionID) AS TotalTransacciones
+                FROM transacciones T
+                JOIN usuarios U ON T.UserID = U.UserID
+                GROUP BY U.UserID, NombreCompleto, U.Email
+                ORDER BY TotalTransacciones DESC
+                LIMIT ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
 }
