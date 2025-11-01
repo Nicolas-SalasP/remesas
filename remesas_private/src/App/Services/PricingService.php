@@ -1,9 +1,9 @@
 <?php
-
 namespace App\Services;
 
 use App\Repositories\RateRepository;
 use App\Repositories\CountryRepository;
+use App\Services\NotificationService;
 use Exception;
 
 class PricingService
@@ -31,16 +31,20 @@ class PricingService
         return $this->countryRepository->findByRoleAndStatus($role, true);
     }
 
-    public function getCurrentRate(int $origenID, int $destinoID): array
+    public function getCurrentRate(int $origenID, int $destinoID, float $montoOrigen = 0): array
     {
         if ($origenID === $destinoID) {
             throw new Exception("El país de origen y destino no pueden ser iguales.", 400);
         }
 
-        $tasaInfo = $this->rateRepository->findCurrentRate($origenID, $destinoID);
+        $tasaInfo = $this->rateRepository->findCurrentRate($origenID, $destinoID, $montoOrigen);
 
         if (!$tasaInfo) {
-            throw new Exception("Ruta de remesa no configurada o inactiva.", 404);
+            $tasaInfo = $this->rateRepository->findCurrentRate($origenID, $destinoID, 0);
+
+            if (!$tasaInfo) {
+                throw new Exception("Ruta de remesa no configurada o inactiva.", 404);
+            }
         }
         
         return $tasaInfo;
@@ -116,6 +120,10 @@ class PricingService
         $nuevoValor = (float)($data['nuevoValor'] ?? 0);
         $origenId = (int)($data['origenId'] ?? 0);
         $destinoId = (int)($data['destinoId'] ?? 0);
+        $montoMin = (float)($data['montoMin'] ?? 0.00);
+        $montoMax = (float)($data['montoMax'] ?? 9999999999.99);
+        
+        if ($montoMax == 0) $montoMax = 9999999999.99;
 
         if ($nuevoValor <= 0) {
             throw new Exception("El valor de la tasa debe ser un número positivo.", 400);
@@ -126,15 +134,15 @@ class PricingService
 
         $origenNombre = $this->countryRepository->findNameById($origenId) ?? "ID $origenId";
         $destinoNombre = $this->countryRepository->findNameById($destinoId) ?? "ID $destinoId";
-        $rutaLog = "[$origenNombre -> $destinoNombre]";
+        $rutaLog = "[$origenNombre -> $destinoNombre] Rango: [$montoMin - $montoMax]";
 
         if ($tasaId === 'new') {
-            $newTasaId = $this->rateRepository->createRate($origenId, $destinoId, $nuevoValor);
+            $newTasaId = $this->rateRepository->createRate($origenId, $destinoId, $nuevoValor, $montoMin, $montoMax);
             $this->notificationService->logAdminAction($adminId, 'Admin creó tasa', "Ruta: $rutaLog, Valor: $nuevoValor, Nuevo TasaID: $newTasaId");
             return ['TasaID' => $newTasaId];
         } else {
             $tasaIdInt = (int)$tasaId;
-            $success = $this->rateRepository->updateRateValue($tasaIdInt, $nuevoValor);
+            $success = $this->rateRepository->updateRateValue($tasaIdInt, $nuevoValor, $montoMin, $montoMax);
             if ($success) {
                 $this->notificationService->logAdminAction($adminId, 'Admin actualizó tasa', "Ruta: $rutaLog , Nuevo Valor: $nuevoValor");
             }

@@ -8,6 +8,7 @@ use App\Repositories\FormaPagoRepository;
 use App\Services\NotificationService;
 use App\Services\PDFService;
 use App\Services\FileHandlerService;
+use App\Services\ContabilidadService;
 use Exception;
 
 class TransactionService
@@ -19,6 +20,7 @@ class TransactionService
     private FileHandlerService $fileHandler;
     private EstadoTransaccionRepository $estadoTxRepo;
     private FormaPagoRepository $formaPagoRepo;
+    private ContabilidadService $contabilidadService;
 
     private const ESTADO_PENDIENTE_PAGO = 'Pendiente de Pago';
     private const ESTADO_EN_VERIFICACION = 'En Verificación';
@@ -33,7 +35,8 @@ class TransactionService
         PDFService $pdfService,
         FileHandlerService $fileHandler,
         EstadoTransaccionRepository $estadoTxRepo,
-        FormaPagoRepository $formaPagoRepo
+        FormaPagoRepository $formaPagoRepo,
+        ContabilidadService $contabilidadService
     ) {
         $this->txRepository = $txRepository;
         $this->userRepository = $userRepository;
@@ -42,6 +45,7 @@ class TransactionService
         $this->fileHandler = $fileHandler;
         $this->estadoTxRepo = $estadoTxRepo;
         $this->formaPagoRepo = $formaPagoRepo;
+        $this->contabilidadService = $contabilidadService;
     }
 
     private function getEstadoId(string $nombreEstado): int
@@ -84,9 +88,6 @@ class TransactionService
             $pdfContent = $this->pdfService->generateOrder($txData);
             $pdfUrl = $this->fileHandler->savePdfTemporarily($pdfContent, $transactionId);
             
-            // ***** INICIO DE MODIFICACIÓN: Error 500 (Twilio) *****
-            // Comentamos la siguiente línea porque está causando un error fatal
-            // $whatsappSent = $this->notificationService->sendOrderToClientWhatsApp($txData, $pdfUrl);
             $whatsappSent = false;
 
             $logDetail = "TX ID: $transactionId - Notificación WhatsApp: " . ($whatsappSent ? 'Éxito' : 'Fallo');
@@ -214,11 +215,21 @@ class TransactionService
         }
 
         $txData = $this->txRepository->getFullTransactionDetails($txId);
+
+        if ($txData && !empty($txData['PaisDestinoID'])) {
+            $this->contabilidadService->registrarGasto(
+                (int)$txData['PaisDestinoID'],
+                (float)$txData['MontoDestino'],
+                (float)$txData['ComisionDestino'],
+                $adminId,
+                $txId
+            );
+        } else {
+            $this->notificationService->logAdminAction($adminId, 'Error Contabilidad', "TX ID $txId: No se pudo registrar gasto (faltan datos de País Destino).");
+        }
+
         if ($txData && !empty($txData['TelefonoCliente'])) {
-            // ***** INICIO DE MODIFICACIÓN: Error 500 (Twilio) *****
-            // Comentamos esta línea para evitar el error fatal
             // $this->notificationService->sendPaymentConfirmationToClientWhatsApp($txData);
-            // ***** FIN DE MODIFICACIÓN *****
         } else {
              $this->notificationService->logAdminAction($adminId, 'Advertencia Notificación', "TX ID $txId: No se pudo notificar al cliente sobre el pago (faltan datos).");
         }

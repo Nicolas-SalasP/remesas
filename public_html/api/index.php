@@ -13,7 +13,8 @@ use App\Repositories\{
     TipoDocumentoRepository,
     EstadoTransaccionRepository,
     FormaPagoRepository,
-    TipoBeneficiarioRepository
+    TipoBeneficiarioRepository,
+    ContabilidadRepository
 };
 use App\Services\{
     LogService,
@@ -24,13 +25,15 @@ use App\Services\{
     PricingService,
     TransactionService,
     CuentasBeneficiariasService,
-    DashboardService
+    DashboardService,
+    ContabilidadService
 };
 use App\Controllers\{
     AuthController,
     ClientController,
     AdminController,
-    DashboardController
+    DashboardController,
+    ContabilidadController
 };
 
 header('Content-Type: application/json');
@@ -55,7 +58,6 @@ class Container {
 
     private function createInstance(string $className) {
         return match ($className) {
-            // Repositories
             UserRepository::class => new UserRepository($this->getDb()),
             RateRepository::class => new RateRepository($this->getDb()),
             CountryRepository::class => new CountryRepository($this->getDb()),
@@ -67,8 +69,8 @@ class Container {
             EstadoTransaccionRepository::class => new EstadoTransaccionRepository($this->getDb()),
             FormaPagoRepository::class => new FormaPagoRepository($this->getDb()),
             TipoBeneficiarioRepository::class => new TipoBeneficiarioRepository($this->getDb()),
+            ContabilidadRepository::class => new ContabilidadRepository($this->getDb()),
 
-            // Services
             LogService::class => new LogService($this->getDb()),
             NotificationService::class => new NotificationService($this->get(LogService::class)),
             PDFService::class => new PDFService(),
@@ -92,6 +94,12 @@ class Container {
                 $this->get(TipoBeneficiarioRepository::class),
                 $this->get(TipoDocumentoRepository::class)
             ),
+            ContabilidadService::class => new ContabilidadService(
+                $this->get(ContabilidadRepository::class),
+                $this->get(CountryRepository::class),
+                $this->get(LogService::class),
+                $this->getDb()
+            ),
             TransactionService::class => new TransactionService(
                 $this->get(TransactionRepository::class),
                 $this->get(UserRepository::class),
@@ -99,7 +107,8 @@ class Container {
                 $this->get(PDFService::class),
                 $this->get(FileHandlerService::class),
                 $this->get(EstadoTransaccionRepository::class),
-                $this->get(FormaPagoRepository::class)
+                $this->get(FormaPagoRepository::class),
+                $this->get(ContabilidadService::class)
             ),
              DashboardService::class => new DashboardService(
                 $this->get(TransactionRepository::class),
@@ -109,7 +118,6 @@ class Container {
                 $this->get(CountryRepository::class)
             ),
 
-            // Controllers
             AuthController::class => new AuthController($this->get(UserService::class)),
             ClientController::class => new ClientController(
                 $this->get(TransactionService::class),
@@ -131,6 +139,9 @@ class Container {
                 $this->get(DashboardService::class),
                 $this->get(CountryRepository::class)
             ),
+            ContabilidadController::class => new ContabilidadController(
+                $this->get(ContabilidadService::class)
+            ),
 
             default => throw new Exception("Clase no configurada en el contenedor: {$className}")
         };
@@ -143,14 +154,12 @@ try {
     $requestMethod = $_SERVER['REQUEST_METHOD']; 
 
     $routes = [
-        // Auth
         'loginUser'             => [AuthController::class, 'loginUser', 'POST'],
         'registerUser'          => [AuthController::class, 'registerUser', 'POST'],
         'requestPasswordReset'  => [AuthController::class, 'requestPasswordReset', 'POST'],
         'performPasswordReset'  => [AuthController::class, 'performPasswordReset', 'POST'],
         'verify2FACode'         => [AuthController::class, 'verify2FACode', 'POST'], 
 
-        // Client (Dashboard)
         'getTasa'               => [ClientController::class, 'getTasa', 'GET'],
         'getPaises'             => [ClientController::class, 'getPaises', 'GET'],
         'getDolarBcv'           => [DashboardController::class, 'getDolarBcvData', 'GET'],
@@ -169,7 +178,6 @@ try {
         'enable2FA'             => [ClientController::class, 'enable2FA', 'POST'],
         'disable2FA'            => [ClientController::class, 'disable2FA', 'POST'],
 
-        // Admin
         'updateRate'            => [AdminController::class, 'upsertRate', 'POST'],
         'addPais'               => [AdminController::class, 'addPais', 'POST'],
         'updatePais'            => [AdminController::class, 'updatePais', 'POST'],
@@ -183,6 +191,10 @@ try {
         'getDashboardStats'     => [AdminController::class, 'getDashboardStats', 'GET'],
         'updateUserRole'        => [AdminController::class, 'updateUserRole', 'POST'],
         'deleteUser'            => [AdminController::class, 'deleteUser', 'POST'],
+
+        'getSaldosContables'    => [ContabilidadController::class, 'getSaldos', 'GET'],
+        'agregarFondos'         => [ContabilidadController::class, 'agregarFondos', 'POST'],
+        'getResumenContable'    => [ContabilidadController::class, 'getResumenMensual', 'GET'],
     ];
 
     if (isset($routes[$accion])) {

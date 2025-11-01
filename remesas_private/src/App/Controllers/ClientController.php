@@ -49,7 +49,8 @@ class ClientController extends BaseController
     {
         $origenID = (int)($_GET['origenID'] ?? 0);
         $destinoID = (int)($_GET['destinoID'] ?? 0);
-        $tasa = $this->pricingService->getCurrentRate($origenID, $destinoID);
+        $montoOrigen = (float)($_GET['montoOrigen'] ?? 0);
+        $tasa = $this->pricingService->getCurrentRate($origenID, $destinoID, $montoOrigen);
         $this->sendJsonResponse($tasa);
     }
 

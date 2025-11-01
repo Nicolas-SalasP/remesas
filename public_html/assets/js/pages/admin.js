@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Lógica existente de 'adminUploadModal'
-    const adminUploadModalElement = document.getElementById('adminUploadModal');
+const adminUploadModalElement = document.getElementById('adminUploadModal');
     if (adminUploadModalElement) {
         let adminUploadModalInstance = null;
          try {
@@ -237,7 +237,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 if (!adminUploadModalInstance) return;
                 const formData = new FormData(adminUploadForm);
-                const submitButton = adminUploadForm.querySelector('button[type="submit"]');
+                const submitButton = adminUploadModalElement.querySelector('button[type="submit"][form="admin-upload-form"]');
+                
+                if (!submitButton) {
+                    console.error('No se encontró el botón de submit para adminUploadForm');
+                    return;
+                }
+
                 submitButton.disabled = true;
                 submitButton.textContent = 'Subiendo...';
                 try {

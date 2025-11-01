@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Repositories;
 
 use App\Database\Database;
@@ -22,17 +21,17 @@ class TransactionRepository
         $stmt = $this->db->prepare($sql);
 
         $estadoInicialID = $data['estadoID'] ?? 1;
-        
-        $stmt->bind_param("iiiddssii", 
-            $data['userID'],
-            $data['cuentaID'],
-            $data['tasaID'],
-            $data['montoOrigen'],
-            $data['monedaOrigen'],
-            $data['montoDestino'],
-            $data['monedaDestino'],
-            $estadoInicialID,
-            $data['formaPagoID']
+
+        $stmt->bind_param("iiidsdsii", 
+            $data['userID'],            // 1. i (int)
+            $data['cuentaID'],          // 2. i (int)
+            $data['tasaID'],            // 3. i (int)
+            $data['montoOrigen'],       // 4. d (decimal)
+            $data['monedaOrigen'],      // 5. s (string)
+            $data['montoDestino'],      // 6. d (decimal)
+            $data['monedaDestino'],     // 7. s (string)
+            $estadoInicialID,           // 8. i (int)
+            $data['formaPagoID']        // 9. i (int)
         );
 
         if (!$stmt->execute()) {
@@ -56,6 +55,7 @@ class TransactionRepository
             EV.NombreEstado AS UsuarioVerificacionEstadoNombre,
             CB.Alias AS BeneficiarioAlias, CB.TitularPrimerNombre, CB.TitularPrimerApellido,
             CB.TitularNumeroDocumento, CB.NombreBanco, CB.NumeroCuenta, CB.NumeroTelefono AS BeneficiarioTelefono,
+            CB.PaisID AS PaisDestinoID,
             TD_B.NombreDocumento AS BeneficiarioTipoDocumentoNombre,
             TB.Nombre AS BeneficiarioTipoNombre,
             TS.ValorTasa,

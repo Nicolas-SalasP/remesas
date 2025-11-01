@@ -17,14 +17,14 @@ $paisesActivos = $conexion->query("
 
 $tasasExistentes = $conexion->query("
     SELECT 
-        T.TasaID, T.ValorTasa,
+        T.TasaID, T.ValorTasa, T.MontoMinimo, T.MontoMaximo,
         PO.PaisID as OrigenID, PO.NombrePais AS PaisOrigen,
         PD.PaisID as DestinoID, PD.NombrePais AS PaisDestino
     FROM tasas T
     JOIN paises PO ON T.PaisOrigenID = PO.PaisID
     JOIN paises PD ON T.PaisDestinoID = PD.PaisID
     WHERE PO.Activo = TRUE AND PD.Activo = TRUE
-    ORDER BY PO.NombrePais, PD.NombrePais
+    ORDER BY PO.NombrePais, PD.NombrePais, T.MontoMinimo
 ")->fetch_all(MYSQLI_ASSOC);
 
 $paisesOrigen = [];
@@ -51,7 +51,7 @@ foreach ($paisesActivos as $pais) {
         <div class="card-body">
             <form id="rate-editor-form">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="pais-origen" class="form-label">De (Origen):</label>
                         <select id="pais-origen" class="form-select">
                             <option value="">Seleccionar país...</option>
@@ -61,7 +61,7 @@ foreach ($paisesActivos as $pais) {
                         </select>
                     </div>
                     
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="pais-destino" class="form-label">A (Destino):</label>
                         <select id="pais-destino" class="form-select">
                             <option value="">Seleccionar país...</option>
@@ -71,14 +71,24 @@ foreach ($paisesActivos as $pais) {
                         </select>
                     </div>
                     
-                    <div class="col-md-3">
-                        <label for="rate-value" class="form-label">Valor de la Tasa:</label>
+                    <div class="col-md-2">
+                        <label for="rate-value" class="form-label">Valor Tasa:</label>
                         <input type="number" step="0.000001" min="0" class="form-control" id="rate-value" placeholder="0.000000" disabled>
                     </div>
 
-                    <div class="col-md-1 d-grid">
+                    <div class="col-md-2">
+                        <label for="rate-monto-min" class="form-label">Monto Mínimo:</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="rate-monto-min" placeholder="0.00" value="0.00" disabled>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="rate-monto-max" class="form-label">Monto Máximo:</label>
+                        <input type="number" step="0.01" min="0" class="form-control" id="rate-monto-max" placeholder="Sin límite" value="9999999999.99" disabled>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-12 text-end">
                         <button type="submit" id="save-rate-btn" class="btn btn-primary" title="Guardar Tasa" disabled>
-                            <i class="bi bi-save"></i>
+                            <i class="bi bi-save"></i> Guardar Tasa
                         </button>
                     </div>
                 </div>
@@ -99,23 +109,31 @@ foreach ($paisesActivos as $pais) {
                         <tr>
                             <th>Origen</th>
                             <th>Destino</th>
+                            <th>Monto Mínimo</th>
+                            <th>Monto Máximo</th>
                             <th>Valor Tasa</th>
                             <th>Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($tasasExistentes)): ?>
-                            <tr><td colspan="4" class="text-center">No hay tasas configuradas. Usa el editor para crear la primera.</td></tr>
+                            <tr><td colspan="6" class="text-center">No hay tasas configuradas. Usa el editor para crear la primera.</td></tr>
                         <?php else: ?>
                             <?php foreach ($tasasExistentes as $tasa): ?>
                                 <tr id="tasa-row-<?php echo $tasa['TasaID']; ?>" data-origen-id="<?php echo $tasa['OrigenID']; ?>" data-destino-id="<?php echo $tasa['DestinoID']; ?>">
                                     <td><?php echo htmlspecialchars($tasa['PaisOrigen']); ?></td>
                                     <td><?php echo htmlspecialchars($tasa['PaisDestino']); ?></td>
+                                    <td class="rate-min-cell"><?php echo htmlspecialchars(number_format($tasa['MontoMinimo'], 2, ',', '.')); ?></td>
+                                    <td class="rate-max-cell"><?php echo htmlspecialchars(number_format($tasa['MontoMaximo'], 2, ',', '.')); ?></td>
                                     <td class="rate-value-cell"><?php echo htmlspecialchars($tasa['ValorTasa']); ?></td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary edit-rate-btn"
+                                                data-tasa-id="<?php echo $tasa['TasaID']; ?>"
                                                 data-origen-id="<?php echo $tasa['OrigenID']; ?>"
                                                 data-destino-id="<?php echo $tasa['DestinoID']; ?>"
+                                                data-valor="<?php echo $tasa['ValorTasa']; ?>"
+                                                data-min="<?php echo $tasa['MontoMinimo']; ?>"
+                                                data-max="<?php echo $tasa['MontoMaximo']; ?>"
                                                 title="Editar esta tasa">
                                             <i class="bi bi-pencil-fill"></i>
                                         </button>
@@ -130,21 +148,21 @@ foreach ($paisesActivos as $pais) {
     </div>
 </div>
 
+<script>
+    const ratesMap = {};
+    <?php foreach ($tasasExistentes as $tasa): ?>
+        if(!ratesMap[<?php echo $tasa['OrigenID']; ?>]) ratesMap[<?php echo $tasa['OrigenID']; ?>] = {};
+        if(!ratesMap[<?php echo $tasa['OrigenID']; ?>][<?php echo $tasa['DestinoID']; ?>]) ratesMap[<?php echo $tasa['OrigenID']; ?>][<?php echo $tasa['DestinoID']; ?>] = [];
+        
+        ratesMap[<?php echo $tasa['OrigenID']; ?>][<?php echo $tasa['DestinoID']; ?>].push({
+            tasaId: '<?php echo $tasa['TasaID']; ?>',
+            valor: '<?php echo $tasa['ValorTasa']; ?>',
+            min: '<?php echo $tasa['MontoMinimo']; ?>',
+            max: '<?php echo $tasa['MontoMaximo']; ?>'
+        });
+    <?php endforeach; ?>
+</script>
+
 <?php
-echo "<script id='rates-data' type='application/json'>";
-echo json_encode(array_map(fn($t) => [
-    'TasaID' => $t['TasaID'],
-    'ValorTasa' => $t['ValorTasa']
-], array_column($tasasExistentes, null, 'OrigenID_DestinoID_Key') ?: $ratesMap ?? []));
-echo "</script>";
-
-echo "<script>";
-echo "const ratesMap = {};";
-foreach ($tasasExistentes as $tasa) {
-    echo "if(!ratesMap[{$tasa['OrigenID']}]) ratesMap[{$tasa['OrigenID']}] = {};";
-    echo "ratesMap[{$tasa['OrigenID']}][{$tasa['DestinoID']}] = { tasaId: '{$tasa['TasaID']}', valor: '{$tasa['ValorTasa']}' };";
-}
-echo "</script>";
-
 require_once __DIR__ . '/../../remesas_private/src/templates/footer.php';
 ?>

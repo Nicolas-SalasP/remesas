@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeInput = 'origen';
     let currentRate = 0;
     let isCalculating = false;
+    let fetchRateTimer = null;
     const LOGGED_IN_USER_ID = userIdInput ? userIdInput.value : null;
 
     const numberFormatter = new Intl.NumberFormat('es-ES', { style: 'decimal', maximumFractionDigits: 2, minimumFractionDigits: 2 });
@@ -110,12 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         </label>`;
                 });
             } else {
-                beneficiaryListDiv.innerHTML = '<p class="text-muted mb-0">No tienes beneficiarios guardados para este destino.</p>';
+                beneficiaryListDiv.innerHTML = '<p class="text-muted mb-0">No tienes beneficiarios guardados for este destino.</p>';
             }
         } catch (error) {
             console.error('Error loadBeneficiaries:', error);
             beneficiaryListDiv.innerHTML = '<p class="text-danger">Error al cargar los beneficiarios.</p>';
-            throw error; // Relanzar el error para que el 'catch' en nextBtn lo maneje
+            throw error;
         }
     };
 
@@ -182,29 +183,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchRate = async () => {
         const origenID = paisOrigenSelect.value;
         const destinoID = paisDestinoSelect.value;
+        
+        let montoOrigen = 0;
+        if (activeInput === 'origen') {
+            montoOrigen = parseFloat(cleanNumber(montoOrigenInput.value)) || 0;
+        } else {
+            const montoDestino = parseFloat(cleanNumber(montoDestinoInput.value)) || 0;
+            if (currentRate > 0 && montoDestino > 0) {
+                montoOrigen = montoDestino / currentRate;
+            }
+        }
+
         tasaDisplayInput.value = 'Calculando...';
         selectedTasaIdInput.value = '';
-        currentRate = 0;
-
+        
         if (!origenID || !destinoID) {
             tasaDisplayInput.value = 'Selecciona origen y destino';
+             currentRate = 0;
              updateCalculation();
              return;
         }
         if (origenID === destinoID) {
              tasaDisplayInput.value = 'Origen y destino deben ser diferentes';
+             currentRate = 0;
              updateCalculation();
              return;
         }
 
         try {
-            const response = await fetch(`../api/?accion=getTasa&origenID=${origenID}&destinoID=${destinoID}`);
+            const response = await fetch(`../api/?accion=getTasa&origenID=${origenID}&destinoID=${destinoID}&montoOrigen=${montoOrigen}`);
             if (!response.ok) {
                 if (response.status === 404) {
                      tasaDisplayInput.value = 'Tasa no disponible para esta ruta.';
                 } else {
                      tasaDisplayInput.value = 'Error al obtener tasa (Servidor).';
-                     console.error("Error del servidor al obtener tasa:", response.statusText);
                 }
                  currentRate = 0;
                  selectedTasaIdInput.value = '';
@@ -222,31 +234,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedTasaIdInput.value = '';
                 }
             }
-            updateCalculation();
         } catch (e) {
             console.error("Error en fetchRate:", e);
             tasaDisplayInput.value = 'Error de red al obtener tasa.';
             currentRate = 0;
             selectedTasaIdInput.value = '';
-            updateCalculation();
         }
+        
+        updateCalculation();
     };
 
     const updateCalculation = () => {
         if (isCalculating) return;
-        if (currentRate <= 0) {
-             if (activeInput === 'origen') montoDestinoInput.value = ''; else montoOrigenInput.value = '';
-             return;
-        }
-
+        
         isCalculating = true;
-        let sourceInput = activeInput === 'origen' ? montoOrigenInput : montoDestinoInput;
-        let targetInput = activeInput === 'origen' ? montoDestinoInput : montoOrigenInput;
+        let sourceInput, targetInput;
+        
+        if (activeInput === 'origen') {
+            sourceInput = montoOrigenInput;
+            targetInput = montoDestinoInput;
+        } else {
+            sourceInput = montoDestinoInput;
+            targetInput = montoOrigenInput;
+        }
 
         const sourceValue = parseFloat(cleanNumber(sourceInput.value)) || 0;
         let targetValue = 0;
 
-        if (sourceValue > 0) {
+        if (currentRate > 0 && sourceValue > 0) {
             if (activeInput === 'origen') {
                 targetValue = sourceValue * currentRate;
             } else {
@@ -258,6 +273,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         setTimeout(() => { isCalculating = false; }, 50);
+    };
+
+    const handleAmountInput = () => {
+        clearTimeout(fetchRateTimer);
+        fetchRateTimer = setTimeout(() => {
+            fetchRate();
+        }, 300);
     };
 
     const createSummary = () => {
@@ -386,16 +408,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (currentStep === 1) {
             if (paisOrigenSelect.value && paisDestinoSelect.value && paisOrigenSelect.value !== paisDestinoSelect.value) {
-                // ****** INICIO CORRECCIÓN TRY-CATCH ******
                 try {
                     await loadBeneficiaries(paisDestinoSelect.value);
-                    isValid = true; // Solo marcar como válido si loadBeneficiaries tuvo éxito
+                    isValid = true;
                 } catch (error) {
-                    // Si falla la carga de beneficiarios, mostrar error y no avanzar
                     alertMessage = "Error al cargar los beneficiarios para el país destino. Intenta de nuevo o contacta soporte.";
                     isValid = false;
                 }
-                // ****** FIN CORRECCIÓN TRY-CATCH ******
             } else if (paisOrigenSelect.value === paisDestinoSelect.value) {
                 alertMessage = 'El país de origen y destino no pueden ser iguales.';
             } else {
@@ -454,25 +473,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedOption = paisDestinoSelect.options[paisDestinoSelect.selectedIndex];
         currencyLabelDestino.textContent = selectedOption ? selectedOption.getAttribute('data-currency') || 'N/A' : 'N/A';
         fetchRate();
-         loadBeneficiaries(paisDestinoSelect.value);
+        loadBeneficiaries(paisDestinoSelect.value);
     });
 
     swapCurrencyBtn?.addEventListener('click', () => {
         activeInput = (activeInput === 'origen') ? 'destino' : 'origen';
-        const tempValue = montoOrigenInput.value;
-        montoOrigenInput.value = montoDestinoInput.value;
-        montoDestinoInput.value = tempValue;
-        montoOrigenInput.blur();
-        montoDestinoInput.blur();
         montoOrigenInput.readOnly = activeInput !== 'origen';
         montoDestinoInput.readOnly = activeInput !== 'destino';
         montoOrigenInput.classList.toggle('bg-light', activeInput !== 'origen');
         montoDestinoInput.classList.toggle('bg-light', activeInput !== 'destino');
-        updateCalculation();
+        handleAmountInput();
     });
 
-    montoOrigenInput?.addEventListener('input', () => { if (activeInput === 'origen') updateCalculation(); });
-    montoDestinoInput?.addEventListener('input', () => { if (activeInput === 'destino') updateCalculation(); });
+    montoOrigenInput?.addEventListener('input', handleAmountInput);
+    montoDestinoInput?.addEventListener('input', handleAmountInput);
+
     montoOrigenInput?.addEventListener('focus', () => { activeInput = 'origen'; montoOrigenInput.readOnly=false; montoDestinoInput.readOnly=true; montoOrigenInput.classList.remove('bg-light'); montoDestinoInput.classList.add('bg-light'); });
     montoDestinoInput?.addEventListener('focus', () => { activeInput = 'destino'; montoDestinoInput.readOnly=false; montoOrigenInput.readOnly=true; montoDestinoInput.classList.remove('bg-light'); montoOrigenInput.classList.add('bg-light'); });
 
@@ -484,9 +499,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.target.value = numberFormatter.format(valorNumerico);
             } else {
                  e.target.value = '';
-                 if (e.target.id === `monto-${activeInput}`) {
-                     updateCalculation();
-                 }
+            }
+            if (e.target.id === `monto-${activeInput}`) {
+                 updateCalculation();
             }
         });
     });
@@ -526,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
             phoneNumberInput.maxLength = 15;
             phoneNumberInput.placeholder = 'Número sin código de país';
 
-
             addBeneficiaryForm.reset();
             if (selectedCodeFound && paisDestinoData) {
                 phoneCodeSelect.value = paisDestinoData.code;
@@ -565,7 +579,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             data.tipoBeneficiario = benefTipoSelect.value;
             data.tipoDocumento = benefDocTypeSelect.value;
-
 
             try {
                 const response = await fetch('../api/?accion=addCuenta', {
@@ -628,6 +641,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loadTiposBeneficiario();
          loadTiposDocumento();
         updateView();
+        
+        montoOrigenInput.readOnly = false;
+        montoDestinoInput.readOnly = true;
+        montoOrigenInput.classList.remove('bg-light');
+        montoDestinoInput.classList.add('bg-light');
+
     } else {
          console.error("No hay sesión de usuario activa.");
     }

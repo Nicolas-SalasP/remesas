@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
     <link rel="icon" href="<?php echo BASE_URL; ?>/assets/img/SoloLogoNegroSinFondo.png">
     
-    <?php ?>
     <?php if (isset($pageScript) && $pageScript === 'seguridad.js'): ?>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <?php endif; ?>
@@ -31,18 +30,17 @@
                     
                     <?php if (isset($_SESSION['user_id'])): ?>
                         
-                        <?php  ?>
                         <?php if (isset($_SESSION['twofa_enabled']) && $_SESSION['twofa_enabled'] == 1): ?>
                             
-                            <?php ?>
                             <?php if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin'): ?>
-                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/usuarios.php">Gestionar Usuarios</a></li>
-                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Ver Ordenes</a></li>
-                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Gestionar Tasas</a></li>
-                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/paises.php">Gestionar Países</a></li> 
-                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/verificaciones.php">Verificaciones</a></li>
-                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Ver Logs</a></li>
                                 <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/dashboard.php">Dashboard</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/contabilidad.php">Contabilidad</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/usuarios.php">Usuarios</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/">Órdenes</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/tasas.php">Tasas</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/paises.php">Países</a></li> 
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/verificaciones.php">Verificaciones</a></li>
+                                <li class="nav-item"><a class="nav-link fw-bold text-danger" href="<?php echo BASE_URL; ?>/admin/logs.php">Logs</a></li>
 
                             <?php elseif (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operador'): ?>
                                 <li class="nav-item"><a class="nav-link fw-bold text-primary" href="<?php echo BASE_URL; ?>/operador/pendientes.php">Transacciones Pendientes</a></li>
@@ -55,13 +53,10 @@
                                 <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/perfil.php">Mi Perfil</a></li>
                                 <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Seguridad</a></li>
                             <?php endif; ?>
-                            <?php ?>
 
                         <?php else: ?>
-                            <?php ?>
                             <li class="nav-item"><a class="nav-link active fw-bold text-danger" href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Configurar Seguridad (2FA)</a></li>
                         <?php endif; ?>
-                        <?php ?>
 
                     <?php else: ?>
                         <li class="nav-item"><a class="nav-link" href="<?php echo BASE_URL; ?>/index.php">Inicio</a></li>
@@ -82,4 +77,3 @@
     </nav>
 </header>
 <main class="flex-grow-1 py-5">
-<?php ?>

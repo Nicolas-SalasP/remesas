@@ -102,8 +102,9 @@ $transacciones = $conexion->query("
         <form id="admin-upload-form" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="adminReceiptFile" class="form-label">Selecciona el archivo</label>
-                <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required>
-            </div>
+                <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required 
+                       accept="image/png, image/jpeg, application/pdf">
+                </div>
             
             <div class="mb-3">
                 <label for="adminComisionDestino" class="form-label">Comisión Pagada (en divisa de destino)</label>
