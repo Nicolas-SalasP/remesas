@@ -42,6 +42,9 @@ $transacciones = $conexion->query("
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Panel de Administración</h1>
         <div>
+            <a href="exportar_transacciones.php" class="btn btn-success">
+                <i class="bi bi-file-earmark-excel-fill"></i> Exportar a Excel
+            </a>
             <a href="<?php echo BASE_URL; ?>/admin/pendientes.php" class="btn btn-primary">Ver Transacciones Pendientes</a>
             <a href="<?php echo BASE_URL; ?>/admin/logs.php" class="btn btn-secondary">Ver Logs</a>
         </div>

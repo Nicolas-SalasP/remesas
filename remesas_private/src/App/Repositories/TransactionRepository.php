@@ -23,7 +23,7 @@ class TransactionRepository
 
         $estadoInicialID = $data['estadoID'] ?? 1;
 
-        $stmt->bind_param("iiidssdis",
+        $stmt->bind_param("iiidssdsi", 
             $data['userID'],
             $data['cuentaID'],
             $data['tasaID'],
@@ -48,7 +48,7 @@ class TransactionRepository
     {
         $sql = "SELECT
             T.TransaccionID, T.UserID, T.CuentaBeneficiariaID, T.TasaID_Al_Momento,
-            T.MontoOrigen, T.MonedaOrigen, T.MontoDestino, T.MonedaDestino,
+            T.MontoOrigen, T.MonedaOrigen, T.MontoDestino, T.ComisionDestino, T.MonedaDestino,
             T.FechaTransaccion, T.ComprobanteURL, T.ComprobanteEnvioURL,
             U.PrimerNombre, U.PrimerApellido, U.Email, U.NumeroDocumento, U.Telefono,
             TD_U.NombreDocumento AS UsuarioTipoDocumentoNombre,
@@ -104,12 +104,12 @@ class TransactionRepository
         return $affectedRows;
     }
 
-    public function uploadAdminProof(int $transactionId, string $dbPath, int $estadoPagadoID, int $estadoEnProcesoID): int
+    public function uploadAdminProof(int $transactionId, string $dbPath, int $estadoPagadoID, int $estadoEnProcesoID, float $comisionDestino): int
     {
-        $sql = "UPDATE transacciones SET ComprobanteEnvioURL = ?, EstadoID = ?
+        $sql = "UPDATE transacciones SET ComprobanteEnvioURL = ?, EstadoID = ?, ComisionDestino = ?
                 WHERE TransaccionID = ? AND EstadoID = ?";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("siii", $dbPath, $estadoPagadoID, $transactionId, $estadoEnProcesoID);
+        $stmt->bind_param("sdiii", $dbPath, $estadoPagadoID, $comisionDestino, $transactionId, $estadoEnProcesoID);
         $stmt->execute();
         $affectedRows = $stmt->affected_rows;
         $stmt->close();
@@ -196,13 +196,12 @@ class TransactionRepository
          return $result['EstadoID'] ?? null;
     }
 
-    // ***** INICIO DE NUEVOS MÉTODOS PARA DASHBOARD *****
+    // --- MÉTODOS PARA DASHBOARD ---
 
     public function getTopCountries(string $direction = 'Destino', int $limit = 5): array
     {
         $sql = "";
         if ($direction === 'Destino') {
-            // Top Países de Destino (basado en la cuenta beneficiaria)
             $sql = "SELECT P.NombrePais, COUNT(T.TransaccionID) AS Total
                     FROM transacciones T
                     JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
@@ -211,7 +210,6 @@ class TransactionRepository
                     ORDER BY Total DESC
                     LIMIT ?";
         } else {
-            // Top Países de Origen (basado en la tasa usada)
             $sql = "SELECT P.NombrePais, COUNT(T.TransaccionID) AS Total
                     FROM transacciones T
                     JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
@@ -231,7 +229,6 @@ class TransactionRepository
 
     public function getTransactionStats(): array
     {
-        // Esta consulta calcula el promedio diario y el mes más concurrido
         $sql = "SELECT
                     (COUNT(TransaccionID) / (DATEDIFF(MAX(DATE(FechaTransaccion)), MIN(DATE(FechaTransaccion))) + 1)) AS PromedioDiario,
                     DATE_FORMAT(FechaTransaccion, '%Y-%m') AS Mes,
@@ -298,6 +295,38 @@ class TransactionRepository
         $limit = $days + 5;
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("iiii", $origenId, $destinoId, $days, $limit);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function getExportData(): array
+    {
+        $sql = "SELECT
+                    T.TransaccionID,
+                    T.FechaTransaccion,
+                    ET.NombreEstado AS Estado,
+                    CONCAT(U.PrimerNombre, ' ', U.PrimerApellido) AS ClienteNombre,
+                    U.Email AS ClienteEmail,
+                    T.MontoOrigen,
+                    T.MonedaOrigen,
+                    TS.ValorTasa,
+                    T.MontoDestino,
+                    T.ComisionDestino,
+                    T.MonedaDestino,
+                    CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombre,
+                    CB.TitularNumeroDocumento AS BeneficiarioDocumento,
+                    CB.NombreBanco AS BeneficiarioBanco,
+                    CB.NumeroCuenta AS BeneficiarioCuenta
+                FROM transacciones T
+                JOIN usuarios U ON T.UserID = U.UserID
+                JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
+                JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
+                LEFT JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
+                ORDER BY T.FechaTransaccion DESC";
+        
+        $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
         $stmt->close();

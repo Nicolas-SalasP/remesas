@@ -307,10 +307,24 @@ class UserRepository
         $sql = "SELECT twofa_backup_codes FROM usuarios WHERE UserID = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
+
+        if (!$stmt->execute()) {
+            error_log("Error al ejecutar getBackupCodes para UserID {$userId}: " . $stmt->error);
+            $stmt->close();
+            return null;
+        }
+
+        $result = $stmt->get_result();
+        if ($result === false) {
+            error_log("Error al obtener resultado getBackupCodes para UserID {$userId}: " . $stmt->error);
+            $stmt->close();
+            return null;
+        }
+
+        $data = $result->fetch_assoc();
         $stmt->close();
-        return $result['twofa_backup_codes'] ?? null;
+        
+        return $data['twofa_backup_codes'] ?? null;
     }
 
     public function updateBackupCodes(int $userId, string $newEncryptedBackupCodes): bool

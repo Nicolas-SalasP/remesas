@@ -25,7 +25,6 @@ $transacciones = $conexion->query("
 
 <div class="container mt-4">
     <h1 class="mb-4">Transacciones Pendientes</h1>
-    <p><a href="<?php echo BASE_URL; ?>/admin/">Volver al panel principal</a></p>
 
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
@@ -104,6 +103,12 @@ $transacciones = $conexion->query("
             <div class="mb-3">
                 <label for="adminReceiptFile" class="form-label">Selecciona el archivo</label>
                 <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="adminComisionDestino" class="form-label">Comisión Pagada (en divisa de destino)</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="adminComisionDestino" name="comisionDestino" placeholder="Ej: 1.50" value="0" required>
+                <div class="form-text">Ingresa la comisión cobrada por el proveedor en la moneda de destino (Ej: 1.50). Si no hubo comisión, deja 0.</div>
             </div>
             <input type="hidden" id="adminTransactionIdField" name="transactionId">
         </form>

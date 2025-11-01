@@ -109,6 +109,12 @@ $transacciones = $conexion->query("
                 <label for="adminReceiptFile" class="form-label">Selecciona el archivo</label>
                 <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required>
             </div>
+            
+            <div class="mb-3">
+                <label for="adminComisionDestino" class="form-label">Comisión Pagada (en divisa de destino)</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="adminComisionDestino" name="comisionDestino" placeholder="Ej: 1.50" value="0" required>
+                <div class="form-text">Ingresa la comisión cobrada por el proveedor en la moneda de destino (Ej: 1.50). Si no hubo comisión, deja 0.</div>
+            </div>
             <input type="hidden" id="adminTransactionIdField" name="transactionId">
         </form>
       </div>

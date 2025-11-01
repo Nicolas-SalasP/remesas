@@ -83,7 +83,11 @@ class TransactionService
 
             $pdfContent = $this->pdfService->generateOrder($txData);
             $pdfUrl = $this->fileHandler->savePdfTemporarily($pdfContent, $transactionId);
-            $whatsappSent = $this->notificationService->sendOrderToClientWhatsApp($txData, $pdfUrl);
+            
+            // ***** INICIO DE MODIFICACIÓN: Error 500 (Twilio) *****
+            // Comentamos la siguiente línea porque está causando un error fatal
+            // $whatsappSent = $this->notificationService->sendOrderToClientWhatsApp($txData, $pdfUrl);
+            $whatsappSent = false;
 
             $logDetail = "TX ID: $transactionId - Notificación WhatsApp: " . ($whatsappSent ? 'Éxito' : 'Fallo');
             $this->notificationService->logAdminAction($data['userID'], 'Creación de Transacción', $logDetail);
@@ -183,7 +187,7 @@ class TransactionService
         return true;
     }
 
-    public function handleAdminProofUpload(int $adminId, int $txId, array $fileData): bool
+    public function handleAdminProofUpload(int $adminId, int $txId, array $fileData, float $comisionDestino): bool
     {
          if (empty($fileData) || $fileData['error'] === UPLOAD_ERR_NO_FILE) {
              throw new Exception("No se recibió ningún archivo.", 400);
@@ -198,7 +202,8 @@ class TransactionService
 
         $estadoPagadoID = $this->getEstadoId(self::ESTADO_PAGADO);
         $estadoEnProcesoID = $this->getEstadoId(self::ESTADO_EN_PROCESO);
-        $affectedRows = $this->txRepository->uploadAdminProof($txId, $relativePath, $estadoPagadoID, $estadoEnProcesoID);
+        
+        $affectedRows = $this->txRepository->uploadAdminProof($txId, $relativePath, $estadoPagadoID, $estadoEnProcesoID, $comisionDestino);
 
         if ($affectedRows === 0) {
             @unlink($this->fileHandler->getAbsolutePath($relativePath));
@@ -210,38 +215,15 @@ class TransactionService
 
         $txData = $this->txRepository->getFullTransactionDetails($txId);
         if ($txData && !empty($txData['TelefonoCliente'])) {
-            $this->notificationService->sendPaymentConfirmationToClientWhatsApp($txData);
+            // ***** INICIO DE MODIFICACIÓN: Error 500 (Twilio) *****
+            // Comentamos esta línea para evitar el error fatal
+            // $this->notificationService->sendPaymentConfirmationToClientWhatsApp($txData);
+            // ***** FIN DE MODIFICACIÓN *****
         } else {
              $this->notificationService->logAdminAction($adminId, 'Advertencia Notificación', "TX ID $txId: No se pudo notificar al cliente sobre el pago (faltan datos).");
         }
 
-        $this->notificationService->logAdminAction($adminId, 'Admin completó transacción', "TX ID: $txId. Comprobante envío: $relativePath. Estado: 'Pagado'.");
+        $this->notificationService->logAdminAction($adminId, 'Admin completó transacción', "TX ID: $txId. Comprobante envío: $relativePath. Comisión: $comisionDestino. Estado: 'Pagado'.");
         return true;
-    }
-    
-    public function getRateHistoryByDate(int $origenId, int $destinoId, int $days = 30): array
-    {
-        $sql = "SELECT
-                    DATE(T.FechaTransaccion) AS Fecha,
-                    AVG(TS.ValorTasa) AS TasaPromedio
-                FROM transacciones T
-                JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
-                WHERE
-                    TS.PaisOrigenID = ?
-                    AND TS.PaisDestinoID = ?
-                    AND T.FechaTransaccion >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-                GROUP BY
-                    Fecha
-                ORDER BY
-                    Fecha ASC
-                LIMIT ?";
-        
-        $limit = $days + 5;
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("iiii", $origenId, $destinoId, $days, $limit);
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
-        $stmt->close();
-        return $result;
     }
 }

@@ -67,7 +67,7 @@ class AdminController extends BaseController
         );
         $this->sendJsonResponse(['success' => true]);
     }
-    
+
     public function updatePaisRol(): void
     {
         $adminId = $this->ensureLoggedIn();
@@ -86,30 +86,6 @@ class AdminController extends BaseController
         $data = $this->getJsonInput();
         $newStatus = (bool)($data['newStatus'] ?? false);
         $this->pricingService->adminToggleCountryStatus($adminId, (int)($data['paisId'] ?? 0), $newStatus);
-        $this->sendJsonResponse(['success' => true]);
-    }
-
-    public function updateVerificationStatus(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        $this->userService->updateVerificationStatus(
-            $adminId,
-            (int)($data['userId'] ?? 0),
-            $data['newStatus'] ?? ''
-        );
-        $this->sendJsonResponse(['success' => true]);
-    }
-
-    public function toggleUserBlock(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        $this->userService->toggleUserBlock(
-            $adminId,
-            (int)($data['userId'] ?? 0),
-            $data['newStatus'] ?? ''
-        );
         $this->sendJsonResponse(['success' => true]);
     }
 
@@ -134,6 +110,7 @@ class AdminController extends BaseController
         $adminId = $this->ensureLoggedIn();
         $transactionId = (int)($_POST['transactionId'] ?? 0);
         $fileData = $_FILES['receiptFile'] ?? null;
+        $comisionDestino = isset($_POST['comisionDestino']) ? (float)$_POST['comisionDestino'] : 0.00;
 
         if ($transactionId <= 0 || $fileData === null) {
             $this->sendJsonResponse(['success' => false, 'error' => 'ID de transacción inválido o archivo no recibido.'], 400);
@@ -141,7 +118,7 @@ class AdminController extends BaseController
         }
 
         try {
-            $this->txService->handleAdminProofUpload($adminId, $transactionId, $fileData);
+            $this->txService->handleAdminProofUpload($adminId, $transactionId, $fileData, $comisionDestino);
             $this->sendJsonResponse(['success' => true]);
         } catch (Exception $e) {
             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() >= 400 ? $e->getCode() : 500);

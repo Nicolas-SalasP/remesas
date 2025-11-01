@@ -16,7 +16,7 @@ class DashboardService
     private EstadoTransaccionRepository $estadoTxRepo;
     private CountryRepository $countryRepository;
 
-    private const ESTADO_EN_VERIFICACION = 'En Verificación';
+    private const ESTADO_EN_VERIFICACION_ID = 3; 
     private const ESTADO_EN_PROCESO = 'En Proceso';
     private const ESTADO_PAGADO = 'Pagado';
     private const ESTADO_PENDIENTE = 'Pendiente de Pago';
@@ -39,7 +39,7 @@ class DashboardService
     {
         $id = $this->estadoTxRepo->findIdByName($nombreEstado);
         if ($id === null) {
-            throw new Exception("Configuraci車n interna: Estado de transacci車n '{$nombreEstado}' no encontrado.", 500);
+            throw new Exception("Configuración interna: Estado de transacción '{$nombreEstado}' no encontrado.", 500);
         }
         return $id;
     }
@@ -47,8 +47,8 @@ class DashboardService
     public function getAdminDashboardStats(): array
     {
         $totalUsers = $this->userRepository->countAll();
-        
-        $estadoVerificacionID = $this->getEstadoId(self::ESTADO_EN_VERIFICACION);
+
+        $estadoVerificacionID = self::ESTADO_EN_VERIFICACION_ID;
         $estadoEnProcesoID = $this->getEstadoId(self::ESTADO_EN_PROCESO);
         $estadoPendienteID = $this->getEstadoId(self::ESTADO_PENDIENTE); 
         
