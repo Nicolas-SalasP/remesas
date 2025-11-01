@@ -8,6 +8,7 @@ use App\Services\UserService;
 use App\Repositories\FormaPagoRepository;
 use App\Repositories\TipoBeneficiarioRepository;
 use App\Repositories\TipoDocumentoRepository;
+use App\Repositories\RolRepository; // ¡Añadir!
 use Exception;
 
 class ClientController extends BaseController
@@ -19,6 +20,7 @@ class ClientController extends BaseController
     private FormaPagoRepository $formaPagoRepo;
     private TipoBeneficiarioRepository $tipoBeneficiarioRepo;
     private TipoDocumentoRepository $tipoDocumentoRepo;
+    private RolRepository $rolRepo; // ¡Añadir!
 
     public function __construct(
         TransactionService $txService,
@@ -27,7 +29,8 @@ class ClientController extends BaseController
         UserService $userService,
         FormaPagoRepository $formaPagoRepo,
         TipoBeneficiarioRepository $tipoBeneficiarioRepo,
-        TipoDocumentoRepository $tipoDocumentoRepo
+        TipoDocumentoRepository $tipoDocumentoRepo,
+        RolRepository $rolRepo // ¡Añadir!
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
@@ -36,6 +39,7 @@ class ClientController extends BaseController
         $this->formaPagoRepo = $formaPagoRepo;
         $this->tipoBeneficiarioRepo = $tipoBeneficiarioRepo;
         $this->tipoDocumentoRepo = $tipoDocumentoRepo;
+        $this->rolRepo = $rolRepo; // ¡Añadir!
     }
 
     public function getPaises(): void
@@ -75,6 +79,12 @@ class ClientController extends BaseController
         $this->sendJsonResponse($response);
     }
 
+    public function getAssignableRoles(): void
+    {
+        $roles = $this->rolRepo->findAssignableUserRoles();
+        $this->sendJsonResponse($roles);
+    }
+
     public function getCuentas(): void
     {
         $userId = $this->ensureLoggedIn();
@@ -83,12 +93,47 @@ class ClientController extends BaseController
         $this->sendJsonResponse($cuentas);
     }
 
+    public function getBeneficiaryDetails(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $cuentaId = (int)($_GET['id'] ?? 0);
+        if ($cuentaId <= 0) {
+            throw new Exception("ID de cuenta inválido", 400);
+        }
+        $details = $this->cuentasBeneficiariasService->getAccountDetails($userId, $cuentaId);
+        $this->sendJsonResponse(['success' => true, 'details' => $details]);
+    }
+
     public function addCuenta(): void
     {
         $userId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
         $newId = $this->cuentasBeneficiariasService->addAccount($userId, $data);
         $this->sendJsonResponse(['success' => true, 'id' => $newId], 201);
+    }
+
+    public function updateBeneficiary(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        $cuentaId = (int)($data['cuentaId'] ?? 0);
+        if ($cuentaId <= 0) {
+            throw new Exception("ID de cuenta inválido", 400);
+        }
+        $this->cuentasBeneficiariasService->updateAccount($userId, $cuentaId, $data);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Beneficiario actualizado con éxito']);
+    }
+
+    public function deleteBeneficiary(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        $cuentaId = (int)($data['id'] ?? 0);
+        if ($cuentaId <= 0) {
+            throw new Exception("ID de cuenta inválido", 400);
+        }
+        $this->cuentasBeneficiariasService->deleteAccount($userId, $cuentaId);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Beneficiario eliminado con éxito']);
     }
 
     public function createTransaccion(): void
@@ -132,6 +177,23 @@ class ClientController extends BaseController
         $userId = $this->ensureLoggedIn();
         $profile = $this->userService->getUserProfile($userId);
         $this->sendJsonResponse(['success' => true, 'profile' => $profile]);
+    }
+
+    public function updateUserProfile(): void
+    {
+        $userId = $this->ensureLoggedIn();
+        $postData = $_POST;
+        $fileData = $_FILES['fotoPerfil'] ?? null;
+        
+        $result = $this->userService->updateUserProfile($userId, $postData, $fileData);
+        
+        $_SESSION['user_photo_url'] = $result['fotoPerfilUrl'];
+        
+        $this->sendJsonResponse([
+            'success' => true, 
+            'message' => 'Perfil actualizado con éxito.', 
+            'newPhotoUrl' => $result['fotoPerfilUrl']
+        ]);
     }
 
     public function uploadVerificationDocs(): void

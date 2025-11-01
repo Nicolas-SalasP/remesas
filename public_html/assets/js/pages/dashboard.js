@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const countryPhoneCodes = [
         { code: '+54', name: 'Argentina', flag: '🇦🇷', paisId: 7 },
-        { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
+        { code: '+591', name: 'Bolivia', flag: '🇧🇴', paisId: 8 },
         { code: '+55', name: 'Brasil', flag: '🇧🇷' },
         { code: '+56', name: 'Chile', flag: '🇨🇱', paisId: 1 },
         { code: '+57', name: 'Colombia', flag: '🇨🇴', paisId: 2 },
@@ -508,6 +508,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     submitBtn?.addEventListener('click', submitTransaction);
 
+    phoneNumberInput?.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\s+/g, '');
+    });
+
     let addAccountModalInstance = null;
     if (addAccountModalElement) {
          addAccountModalInstance = new bootstrap.Modal(addAccountModalElement);
@@ -526,11 +530,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const paisDestinoData = countryPhoneCodes.find(c => c.paisId && c.paisId.toString() === paisDestinoID);
 
             countryPhoneCodes.forEach(country => {
-                const isSelected = paisDestinoData && country.code === paisDestinoData.code && country.paisId === paisDestinoData.paisId;
-                phoneCodeSelect.innerHTML += `<option value="${country.code}" ${isSelected ? 'selected' : ''}>${country.flag} ${country.code}</option>`;
-                if (isSelected) selectedCodeFound = true;
+                phoneCodeSelect.innerHTML += `<option value="${country.code}">${country.flag} ${country.code}</option>`;
+                if (paisDestinoData && country.code === paisDestinoData.code && country.paisId === paisDestinoData.paisId) {
+                    isSelected = true;
+                    selectedCodeFound = true;
+                }
             });
-             if (!selectedCodeFound) {
+             if (selectedCodeFound && paisDestinoData) {
+                 phoneCodeSelect.value = paisDestinoData.code;
+             } else {
                  phoneCodeSelect.value = "";
              }
 
@@ -542,6 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
             phoneNumberInput.placeholder = 'Número sin código de país';
 
             addBeneficiaryForm.reset();
+            benefPaisIdInput.value = paisDestinoID;
             if (selectedCodeFound && paisDestinoData) {
                 phoneCodeSelect.value = paisDestinoData.code;
             } else {

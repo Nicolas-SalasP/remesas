@@ -12,24 +12,36 @@ class RolRepository
         $this->db = $db;
     }
 
-    public function findIdByName(string $nombreRol): ?int
+    public function findAllAssignable(): array
     {
-        $sql = "SELECT RolID FROM roles WHERE NombreRol = ? LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("s", $nombreRol);
-        $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        return $result['RolID'] ?? null;
-    }
-
-    public function findAll(): array
-    {
-        $sql = "SELECT RolID, NombreRol FROM roles ORDER BY NombreRol ASC";
+        $sql = "SELECT RolID, NombreRol FROM roles WHERE NombreRol != 'SuperAdmin' ORDER BY NombreRol";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
-        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $result;
+    }
+    
+    public function findAssignableUserRoles(): array
+    {
+        $sql = "SELECT RolID, NombreRol FROM roles 
+                WHERE NombreRol IN ('Persona Natural', 'Empresa') 
+                ORDER BY NombreRol";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function findIdByName(string $nombreRol): ?int
+    {
+         $sql = "SELECT RolID FROM roles WHERE NombreRol = ? LIMIT 1";
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("s", $nombreRol);
+         $stmt->execute();
+         $result = $stmt->get_result()->fetch_assoc();
+         $stmt->close();
+         return $result['RolID'] ?? null;
     }
 }

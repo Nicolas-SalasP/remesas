@@ -1,235 +1,210 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const authContainer = document.querySelector('.auth-container');
-    if (authContainer) {
-        const tabLinks = authContainer.querySelectorAll('.tab-link');
-        const authForms = authContainer.querySelectorAll('.auth-form');
-        const loginForm = document.getElementById('form-login');
-        const registerForm = document.getElementById('form-registro');
-        const docTypeSelect = document.getElementById('reg-doc-type');
-        const docNumberInput = document.getElementById('reg-doc-number');
-        const phoneCodeSelect = document.getElementById('reg-phone-code'); // Nuevo
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginFeedback = document.getElementById('login-feedback');
+    const registerFeedback = document.getElementById('register-feedback');
+    const docTypeSelect = document.getElementById('register-doc-type');
+    const docNumInput = document.getElementById('register-doc-num');
+    
+    // --- INICIO DE LA CORRECCIÓN ---
+    const registerPhoneCode = document.getElementById('register-phone-code');
+    const registerTelefono = document.getElementById('register-telefono');
+    const registerRoleSelect = document.getElementById('register-role'); // Nuevo
 
-        const countryPhoneCodes = [
-            { code: '+54', name: 'Argentina', flag: '🇦🇷' },
-            { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
-            { code: '+55', name: 'Brasil', flag: '🇧🇷' },
-            { code: '+56', name: 'Chile', flag: '🇨🇱' },
-            { code: '+57', name: 'Colombia', flag: '🇨🇴' },
-            { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
-            { code: '+53', name: 'Cuba', flag: '🇨🇺' },
-            { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
-            { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
-            { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
-            { code: '+504', name: 'Honduras', flag: '🇭🇳' },
-            { code: '+52', name: 'México', flag: '🇲🇽' },
-            { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
-            { code: '+507', name: 'Panamá', flag: '🇵🇦' },
-            { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
-            { code: '+51', name: 'Perú', flag: '🇵🇪' },
-            { code: '+1', name: 'Puerto Rico', flag: '🇵🇷' },
-            { code: '+1', name: 'Rep. Dominicana', flag: '🇩🇴' },
-            { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
-            { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
-            { code: '+1', name: 'EE.UU.', flag: '🇺🇸' }
-        ];
+    // 1. Array de códigos de teléfono (estático para robustez)
+    const countryPhoneCodes = [
+        { code: '+54', name: 'Argentina', flag: '🇦🇷', paisId: 7 },
+        { code: '+591', name: 'Bolivia', flag: '🇧🇴', paisId: 8 },
+        { code: '+55', name: 'Brasil', flag: '🇧🇷' },
+        { code: '+56', name: 'Chile', flag: '🇨🇱', paisId: 1 },
+        { code: '+57', name: 'Colombia', flag: '🇨🇴', paisId: 2 },
+        { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
+        { code: '+53', name: 'Cuba', flag: '🇨🇺' },
+        { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
+        { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
+        { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
+        { code: '+504', name: 'Honduras', flag: '🇭🇳' },
+        { code: '+52', name: 'México', flag: '🇲🇽' },
+        { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+        { code: '+507', name: 'Panamá', flag: '🇵🇦' },
+        { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
+        { code: '+51', name: 'Perú', flag: '🇵🇪', paisId: 4 },
+        { code: '+1', name: 'Puerto Rico', flag: '🇵🇷' },
+        { code: '+1', name: 'Rep. Dominicana', flag: '🇩🇴' },
+        { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
+        { code: '+58', name: 'Venezuela', flag: '🇻🇪', paisId: 3 },
+        { code: '+1', name: 'EE.UU.', flag: '🇺🇸', paisId: 5 }
+    ];
+
+    // 2. Función para cargar los códigos en el select
+    const loadPhoneCodes = (selectElement) => {
+        if (!selectElement) return;
+        
         countryPhoneCodes.sort((a, b) => a.name.localeCompare(b.name));
+        selectElement.innerHTML = '<option value="">Código...</option>';
+        countryPhoneCodes.forEach(country => {
+            if (country.code) {
+                selectElement.innerHTML += `<option value="${country.code}">${country.flag} ${country.code}</option>`;
+            }
+        });
+    };
+    
+    // 3. Listener para eliminar espacios/letras en tiempo real
+    registerTelefono?.addEventListener('input', (e) => {
+        // Elimina cualquier cosa que no sea un número
+        e.target.value = e.target.value.replace(/\D/g, '');
+    });
+    // --- FIN DE LA CORRECCIÓN ---
 
-        const loadPhoneCodes = () => {
-            if (!phoneCodeSelect) return;
-            phoneCodeSelect.innerHTML = '<option value="">Código...</option>';
-            countryPhoneCodes.forEach(country => {
-                phoneCodeSelect.innerHTML += `<option value="${country.code}">${country.flag} ${country.code}</option>`;
+
+    // Cargar tipos de documento
+    const loadDocumentTypes = async () => {
+        try {
+            const response = await fetch('api/?accion=getDocumentTypes');
+            if (!response.ok) throw new Error('Error al cargar tipos de documento');
+            const tipos = await response.json();
+            
+            docTypeSelect.innerHTML = '<option value="">Selecciona...</option>';
+            tipos.forEach(tipo => {
+                // CORRECCIÓN: Usar tipo.nombre
+                docTypeSelect.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
             });
-            phoneCodeSelect.value = '+56';
-        };
+        } catch (error) {
+            console.error(error);
+            docTypeSelect.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    };
 
-        const loadDocumentTypesForRegistration = async () => {
-            if (!docTypeSelect) return;
-            docTypeSelect.disabled = true;
-            docTypeSelect.innerHTML = '<option value="">Cargando...</option>';
-            try {
-                const response = await fetch('../api/?accion=getDocumentTypes');
-                if (!response.ok) throw new Error('Error al cargar tipos de documento');
-                const tipos = await response.json();
-                docTypeSelect.innerHTML = '<option value="">Selecciona...</option>';
-                tipos.forEach(tipo => {
-                    docTypeSelect.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
-                });
-                docTypeSelect.disabled = false;
-            } catch (error) {
-                console.error('Error loadDocumentTypesForRegistration:', error);
-                docTypeSelect.innerHTML = '<option value="">Error al cargar</option>';
-                docTypeSelect.disabled = false;
-            }
-        };
-
-        tabLinks.forEach(link => {
-            link.addEventListener('click', () => {
-                tabLinks.forEach(item => item.classList.remove('active'));
-                authForms.forEach(form => form.classList.remove('active'));
-                link.classList.add('active');
-                const targetForm = document.getElementById(link.dataset.target);
-                if(targetForm) targetForm.classList.add('active');
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Cargar los roles de "Tipo de Cuenta"
+    const loadAssignableRoles = async () => {
+        if (!registerRoleSelect) return;
+        try {
+            const response = await fetch('api/?accion=getAssignableRoles');
+            if (!response.ok) throw new Error('Error al cargar tipos de cuenta');
+            const roles = await response.json();
+            
+            registerRoleSelect.innerHTML = '<option value="">Selecciona...</option>';
+            roles.forEach(rol => {
+                // CORRECCIÓN: Usar rol.NombreRol
+                registerRoleSelect.innerHTML += `<option value="${rol.NombreRol}">${rol.NombreRol}</option>`;
             });
-        });
+        } catch (error) {
+            console.error(error);
+            registerRoleSelect.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    };
+    // --- FIN DE LA CORRECCIÓN ---
+    
+    // Validar RUT Chileno
+    docTypeSelect?.addEventListener('change', () => {
+        if (docTypeSelect.value === 'RUT (Chile)') {
+            docNumInput.dataset.validateRut = 'true';
+            docNumInput.maxLength = 12;
+            docNumInput.placeholder = '12.345.678-9';
+        } else {
+            docNumInput.dataset.validateRut = 'false';
+            docNumInput.maxLength = 20;
+            docNumInput.placeholder = 'Nro. Documento';
+            docNumInput.classList.remove('is-invalid', 'is-valid');
+        }
+    });
 
-        const handleRutInput = (e) => {
-            e.target.value = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase();
-        };
-
-        const handleRutBlur = (e) => {
-            if (typeof formatRut === 'function') {
-                const clean = cleanRut(e.target.value);
-                if (clean.length > 1) {
-                    e.target.value = formatRut(clean);
-                }
-            }
-        };
-
-        const validateRutOnSubmit = () => {
-            if (docTypeSelect.value !== 'RUT') {
-                return true;
-            }
-            const rutLimpio = cleanRut(docNumberInput.value);
-            
-            if (typeof validateRut !== 'function' || !validateRut(rutLimpio)) {
-                 if (window.showInfoModal) window.showInfoModal('Error de Validación', 'El RUT ingresado no es válido. Por favor, revísalo.', false);
-                 else alert('El RUT ingresado no es válido. Por favor, revísalo.');
-                return false;
-            }
-            return true;
-        };
-
-        docTypeSelect?.addEventListener('change', () => {
-            if (!docNumberInput) return;
-            docNumberInput.value = '';
-            docNumberInput.removeEventListener('input', handleRutInput);
-            docNumberInput.removeEventListener('blur', handleRutBlur);
-            docNumberInput.placeholder = 'Sin puntos ni guiones';
-
-            switch (docTypeSelect.value) {
-                case 'RUT': 
-                    docNumberInput.setAttribute('maxlength', '12');
-                    docNumberInput.addEventListener('input', handleRutInput);
-                    docNumberInput.addEventListener('blur', handleRutBlur);
-                    break;
-                case 'Cédula de Identidad': 
-                    docNumberInput.setAttribute('maxlength', '10');
-                    break;
-                case 'RIF': 
-                    docNumberInput.setAttribute('maxlength', '10');
-                    break;
-                case 'Pasaporte':
-                    docNumberInput.setAttribute('maxlength', '20');
-                    break;
-                default:
-                    docNumberInput.setAttribute('maxlength', '30');
-            }
-        });
-
-        loginForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitButton = loginForm.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.textContent = 'Ingresando...';
-            const formData = {
-                email: document.getElementById('login-email').value,
-                password: document.getElementById('login-password').value
-            };
-            try {
-                const response = await fetch('api/?accion=loginUser', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                const result = await response.json();
-                if (response.ok && result.success) {
-                     if (result.twofa_required) {
-                         window.location.href = result.redirect; 
-                     } else {
-                        window.location.href = result.redirect; 
-                     }
+    docNumInput?.addEventListener('input', (e) => {
+        if (docNumInput.dataset.validateRut === 'true') {
+            // CORRECCIÓN: Usar 'Rut' (mayúscula) que es como se define en rut-validator.js
+            if (typeof Rut !== 'undefined') {
+                const rut = e.target.value;
+                if (Rut.validate(rut)) {
+                    e.target.value = Rut.format(rut);
+                    docNumInput.classList.add('is-valid');
+                    docNumInput.classList.remove('is-invalid');
                 } else {
-                    const errorMessage = result.error || 'Correo electrónico o contraseña no válidos. Inténtalo nuevamente.';
-                    if (window.showInfoModal) showInfoModal('Error de Inicio de Sesión', errorMessage, false);
-                    else alert(errorMessage);
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Ingresar';
-                }
-            } catch (error) {
-                console.error('Error de red o parseo en login:', error);
-                if (window.showInfoModal) showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.', false);
-                else alert('No se pudo conectar con el servidor.');
-                submitButton.disabled = false;
-                submitButton.textContent = 'Ingresar';
-            }
-        });
-
-        registerForm?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (docTypeSelect.value === 'RUT' && !validateRutOnSubmit()) {
-                return; 
-            }
-            
-            const submitButton = registerForm.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            submitButton.textContent = 'Registrando...';
-            
-            let originalDocValue = docNumberInput.value;
-            if (docTypeSelect.value === 'RUT' && typeof cleanRut === 'function') {
-                docNumberInput.value = cleanRut(originalDocValue);
-            }
-
-            const formData = new FormData(registerForm);
-            
-            const phoneCode = formData.get('phoneCode');
-            const phoneNumber = formData.get('phoneNumber');
-            if (phoneCode && phoneNumber) {
-                formData.append('telefono', phoneCode + phoneNumber);
-            }
-            formData.delete('phoneCode');
-            formData.delete('phoneNumber');
-
-            try {
-                const response = await fetch('api/?accion=registerUser', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (response.ok && result.success) {
-                    if (window.showInfoModal) {
-                        window.showInfoModal(
-                            '¡Registro Exitoso!',
-                            'Tu cuenta ha sido creada. Serás redirigido en breve.',
-                            true,
-                            () => { window.location.href = result.redirect; }
-                        );
-                    } else {
-                        alert('Registro exitoso. Redirigiendo...');
-                        window.location.href = result.redirect;
-                    }
-                } else {
-                     const errorMsg = result.error || 'No se pudo crear la cuenta.';
-                     if (window.showInfoModal) window.showInfoModal('Error de Registro', errorMsg, false);
-                     else alert('Error: ' + errorMsg);
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Crear Cuenta';
-                }
-            } catch (error) {
-                console.error('Error de conexión en registro:', error);
-                 if (window.showInfoModal) window.showInfoModal('Error de Conexión', 'No se pudo conectar con el servidor.', false);
-                 else alert('No se pudo conectar con el servidor.');
-                submitButton.disabled = false;
-                submitButton.textContent = 'Crear Cuenta';
-            } finally {
-                 if (docTypeSelect.value === 'RUT') {
-                    docNumberInput.value = originalDocValue;
+                    docNumInput.classList.add('is-invalid');
+                    docNumInput.classList.remove('is-valid');
                 }
             }
-        });
+        }
+    });
 
-        loadDocumentTypesForRegistration();
-        loadPhoneCodes(); 
+
+    // Formulario de Login
+    loginForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginFeedback.textContent = '';
+        const formData = new FormData(loginForm);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch('api/?accion=loginUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                window.location.href = result.redirect;
+            } else {
+                loginFeedback.textContent = result.error || 'Error desconocido';
+            }
+        } catch (error) {
+            loginFeedback.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        }
+    });
+
+    // Formulario de Registro
+    registerForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        registerFeedback.textContent = '';
+
+        const password = registerForm.password.value;
+        const passwordRepeat = registerForm.passwordRepeat.value;
+
+        if (password !== passwordRepeat) {
+            registerFeedback.textContent = 'Las contraseñas no coinciden.';
+            return;
+        }
+
+        if (password.length < 6) {
+             registerFeedback.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+             return;
+        }
+
+        const formData = new FormData(registerForm);
+        
+        try {
+            const response = await fetch('api/?accion=registerUser', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                window.location.href = result.redirect;
+            } else {
+                registerFeedback.textContent = result.error || 'Error al registrar la cuenta.';
+            }
+        } catch (error) {
+            registerFeedback.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        }
+    });
+
+    // Cargas iniciales
+    if(docTypeSelect) {
+        loadDocumentTypes();
     }
+    
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Cargar códigos de teléfono al iniciar
+    if(registerPhoneCode) {
+        loadPhoneCodes(registerPhoneCode);
+    }
+    // Cargar roles de cuenta al iniciar
+    if(registerRoleSelect) {
+        loadAssignableRoles();
+    }
+    // --- FIN DE LA CORRECCIÓN ---
 });

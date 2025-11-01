@@ -35,7 +35,7 @@ if (!$conexion) {
 $sql = "SELECT
             T.TransaccionID, T.FechaTransaccion, T.MontoOrigen, T.MonedaOrigen,
             T.MontoDestino, T.MonedaDestino, T.ComprobanteURL, T.ComprobanteEnvioURL,
-            C.Alias AS BeneficiarioAlias,
+            T.BeneficiarioNombre AS BeneficiarioAlias,
             P.NombrePais AS PaisDestino,
             ET.NombreEstado AS EstadoNombre
         FROM transacciones AS T
@@ -100,16 +100,13 @@ if ($stmt) {
                                         <?php echo htmlspecialchars($tx['EstadoNombre'] ?? 'Desconocido'); ?>
                                     </span>
                                 </td>
-                                <td class="d-flex flex-wrap gap-1"> <?php ?>
-
-                                    <?php ?>
+                                <td class="d-flex flex-wrap gap-1">
                                     <?php if (($tx['EstadoNombre'] ?? '') === 'Pendiente de Pago'): ?>
                                         <button class="btn btn-sm btn-outline-danger cancel-btn" data-tx-id="<?php echo $tx['TransaccionID']; ?>" title="Cancelar Orden">
                                             <i class="bi bi-x-circle"></i> Cancelar
                                         </button>
                                     <?php endif; ?>
 
-                                    <?php ?>
                                     <?php if (empty($tx['ComprobanteURL']) && ($tx['EstadoNombre'] ?? '') === 'Pendiente de Pago'): ?>
                                         <button class="btn btn-sm btn-warning upload-btn" data-bs-toggle="modal" data-bs-target="#uploadReceiptModal" data-tx-id="<?php echo $tx['TransaccionID']; ?>" title="Subir Comprobante de Pago">
                                            <i class="bi bi-upload"></i> Subir Pago
@@ -120,7 +117,6 @@ if ($stmt) {
                                          </button>
                                     <?php endif; ?>
 
-                                    <?php ?>
                                     <?php if (!empty($tx['ComprobanteURL'])): ?>
                                         <button class="btn btn-sm btn-outline-secondary view-comprobante-btn"
                                                 data-bs-toggle="modal"
@@ -134,12 +130,10 @@ if ($stmt) {
                                         </button>
                                     <?php endif; ?>
 
-                                    <?php ?>
                                     <a href="<?php echo BASE_URL; ?>/generar-factura.php?id=<?php echo $tx['TransaccionID']; ?>" target="_blank" class="btn btn-sm btn-info" title="Descargar Orden en PDF">
                                         <i class="bi bi-file-earmark-pdf"></i> Ver Orden
                                     </a>
 
-                                    <?php ?>
                                     <?php if (!empty($tx['ComprobanteEnvioURL'])): ?>
                                         <button class="btn btn-sm btn-success view-comprobante-btn"
                                                 data-bs-toggle="modal"
@@ -158,7 +152,6 @@ if ($stmt) {
                     </tbody>
                 </table>
             </div>
-            <?php ?>
         <?php endif; ?>
     </div>
 </div>

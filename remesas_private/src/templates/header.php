@@ -66,6 +66,17 @@
                 </ul>
                 <div class="d-flex align-items-center">
                     <?php if (isset($_SESSION['user_id'])): ?>
+                        <?php
+                        $defaultPhoto = BASE_URL . '/assets/img/SoloLogoNegroSinFondo.png';
+                        $photoPath = $_SESSION['user_photo_url'] ?? null;
+                        
+                        $photoUrl = $defaultPhoto;
+                        if ($photoPath) {
+                            $secureUrl = BASE_URL . '/admin/view_secure_file.php?file=' . urlencode($photoPath);
+                            $photoUrl = $secureUrl;
+                        }
+                        ?>
+                        <img id="navbar-user-photo" src="<?php echo $photoUrl; ?>" alt="Foto de perfil" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover; border: 1px solid #ddd;">
                         <span class="navbar-text me-3">Hola, <?php echo htmlspecialchars($_SESSION['user_name']); ?></span>
                         <a href="<?php echo BASE_URL; ?>/logout.php" class="btn btn-secondary">Salir</a>
                     <?php else: ?>

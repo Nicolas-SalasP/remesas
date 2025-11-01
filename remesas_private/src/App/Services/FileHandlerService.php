@@ -11,7 +11,6 @@ class FileHandlerService
 
     public function __construct()
     {
-        // Esta ruta es /home/jcenvios1/remesas_private/uploads
         $this->baseUploadPath = realpath(__DIR__ . '/../../../uploads');
         if ($this->baseUploadPath === false || !is_dir($this->baseUploadPath)) {
              @mkdir(__DIR__ . '/../../../uploads', 0755, true);
@@ -35,6 +34,7 @@ class FileHandlerService
         $this->ensureDirectoryIsWritable($this->baseUploadPath . DIRECTORY_SEPARATOR . 'receipts');
         $this->ensureDirectoryIsWritable($this->baseUploadPath . DIRECTORY_SEPARATOR . 'proof_of_sending');
         $this->ensureDirectoryIsWritable($this->baseUploadPath . DIRECTORY_SEPARATOR . 'verifications');
+        $this->ensureDirectoryIsWritable($this->baseUploadPath . DIRECTORY_SEPARATOR . 'profile_pics');
         $this->ensureDirectoryIsWritable($this->publicTempDir);
     }
 
@@ -63,9 +63,6 @@ class FileHandlerService
         return $this->publicTempUrlBase . $filename;
     }
 
-    // ****** INICIO CORRECCIÓN DE RUTAS GUARDADAS ******
-    // Modificadas para devolver la ruta SIN 'uploads/' al principio
-
     public function saveVerificationFile(array $fileData, int $userId, string $prefix): string
     {
         $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'verifications';
@@ -73,7 +70,6 @@ class FileHandlerService
         $maxSize = 5 * 1024 * 1024;
         $savedFilename = $this->handleUpload($fileData, $targetDir, $prefix . '_' . $userId, $allowedTypes, $maxSize);
         
-        // Devolver solo la ruta relativa DESDE la carpeta base 'uploads'
         return 'verifications' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
@@ -85,7 +81,6 @@ class FileHandlerService
          $filenamePrefix = 'tx_recibo_' . $transactionId;
          $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
          
-         // Devolver solo la ruta relativa DESDE la carpeta base 'uploads'
          return 'receipts' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
@@ -97,34 +92,33 @@ class FileHandlerService
          $filenamePrefix = 'tx_envio_' . $transactionId;
          $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
 
-         // Devolver solo la ruta relativa DESDE la carpeta base 'uploads'
          return 'proof_of_sending' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
-    // ****** FIN CORRECCIÓN DE RUTAS GUARDADAS ******
-
+    public function saveProfilePicture(array $fileData, int $userId): string
+    {
+        $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'profile_pics';
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        $maxSize = 2 * 1024 * 1024;
+        $filenamePrefix = 'user_profile_' . $userId;
+        $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
+        
+        return 'profile_pics' . DIRECTORY_SEPARATOR . $savedFilename;
+    }
 
     public function getAbsolutePath(string $relativePath): string
     {
-        // Limpiar la ruta relativa (quitar barras iniciales, normalizar separadores)
         $cleanPath = ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath), DIRECTORY_SEPARATOR);
 
-        // ****** INICIO CORRECCIÓN DUPLICADO 'uploads/' ******
-        // Define el prefijo que queremos eliminar si existe
         $prefixToRemove = 'uploads' . DIRECTORY_SEPARATOR;
 
-        // Comprueba si la ruta limpia comienza con "uploads/" (o "uploads\")
         if (strpos($cleanPath, $prefixToRemove) === 0) {
-            // Si comienza con "uploads/", lo quita para evitar la duplicación
             $cleanPath = substr($cleanPath, strlen($prefixToRemove));
         }
-        // ****** FIN CORRECCIÓN DUPLICADO 'uploads/' ******
 
-        // Devuelve la ruta base + la ruta limpia (ej: /.../uploads + receipts/file.pdf)
         return $this->baseUploadPath . DIRECTORY_SEPARATOR . $cleanPath;
     }
 
-    // handleUpload ahora devuelve solo el nombre del archivo final
     private function handleUpload(array $fileData, string $targetDirectory, string $filenamePrefix, array $allowedMimeTypes, int $maxFileSize): string
     {
         if ($fileData['error'] !== UPLOAD_ERR_OK) {
@@ -142,12 +136,16 @@ class FileHandlerService
         finfo_close($finfo);
 
         if (!in_array($fileType, $allowedMimeTypes)) {
-             // Simplificado el mensaje de error
-            throw new Exception("Formato de archivo no permitido. Solo se aceptan JPG, PNG o PDF.", 400);
+            throw new Exception("Formato de archivo no permitido. Solo se aceptan: " . implode(', ', $allowedMimeTypes), 400);
         }
 
-        $extensionMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'application/pdf' => 'pdf'];
-        $extension = $extensionMap[$fileType] ?? 'tmp'; // Fallback
+        $extensionMap = [
+            'image/jpeg' => 'jpg', 
+            'image/png' => 'png', 
+            'application/pdf' => 'pdf',
+            'image/webp' => 'webp'
+        ];
+        $extension = $extensionMap[$fileType] ?? 'tmp';
         
         $safeFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filenamePrefix);
         $newFilename = $safeFilename . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
@@ -158,7 +156,7 @@ class FileHandlerService
             throw new Exception("No se pudo guardar el archivo. Inténtalo de nuevo.", 500);
         }
 
-        return $newFilename; // Devolver solo el nombre del archivo
+        return $newFilename;
     }
 
     private function getUploadErrorMessage(int $errorCode): string

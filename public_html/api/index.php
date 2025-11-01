@@ -108,7 +108,8 @@ class Container {
                 $this->get(FileHandlerService::class),
                 $this->get(EstadoTransaccionRepository::class),
                 $this->get(FormaPagoRepository::class),
-                $this->get(ContabilidadService::class)
+                $this->get(ContabilidadService::class),
+                $this->get(CuentasBeneficiariasRepository::class)
             ),
              DashboardService::class => new DashboardService(
                 $this->get(TransactionRepository::class),
@@ -126,7 +127,8 @@ class Container {
                 $this->get(UserService::class),
                 $this->get(FormaPagoRepository::class),
                 $this->get(TipoBeneficiarioRepository::class),
-                $this->get(TipoDocumentoRepository::class)
+                $this->get(TipoDocumentoRepository::class),
+                $this->get(RolRepository::class)
             ),
             AdminController::class => new AdminController(
                 $this->get(TransactionService::class),
@@ -165,15 +167,20 @@ try {
         'getDolarBcv'           => [DashboardController::class, 'getDolarBcvData', 'GET'],
         'getActiveDestinationCountries' => [ClientController::class, 'getActiveDestinationCountries', 'GET'],
         'getCuentas'            => [ClientController::class, 'getCuentas', 'GET'],
+        'getBeneficiaryDetails' => [ClientController::class, 'getBeneficiaryDetails', 'GET'],
         'addCuenta'             => [ClientController::class, 'addCuenta', 'POST'],
+        'updateBeneficiary'     => [ClientController::class, 'updateBeneficiary', 'POST'],
+        'deleteBeneficiary'     => [ClientController::class, 'deleteBeneficiary', 'POST'],
         'createTransaccion'     => [ClientController::class, 'createTransaccion', 'POST'],
         'cancelTransaction'     => [ClientController::class, 'cancelTransaction', 'POST'],
         'uploadReceipt'         => [ClientController::class, 'uploadReceipt', 'POST'],
         'getUserProfile'        => [ClientController::class, 'getUserProfile', 'GET'],
+        'updateUserProfile'     => [ClientController::class, 'updateUserProfile', 'POST'],
         'uploadVerificationDocs'=> [ClientController::class, 'uploadVerificationDocs', 'POST'],
         'getFormasDePago'       => [ClientController::class, 'getFormasDePago', 'GET'],
         'getBeneficiaryTypes'   => [ClientController::class, 'getBeneficiaryTypes', 'GET'],
         'getDocumentTypes'      => [ClientController::class, 'getDocumentTypes', 'GET'],
+        'getAssignableRoles'    => [ClientController::class, 'getAssignableRoles', 'GET'],
         'generate2FASecret'     => [ClientController::class, 'generate2FASecret', 'POST'],
         'enable2FA'             => [ClientController::class, 'enable2FA', 'POST'],
         'disable2FA'            => [ClientController::class, 'disable2FA', 'POST'],

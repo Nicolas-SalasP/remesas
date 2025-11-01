@@ -35,6 +35,7 @@ class AuthController extends BaseController
         $_SESSION['user_rol_name'] = $result['Rol'];
         $_SESSION['verification_status'] = $result['VerificacionEstado'];
         $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
+        $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
         $_SESSION['ultima_actividad'] = time();
         
         $this->sendJsonResponse([
@@ -61,6 +62,7 @@ class AuthController extends BaseController
         $_SESSION['user_rol_name'] = $result['Rol'];
         $_SESSION['verification_status'] = $result['VerificacionEstado'];
         $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
+        $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
         $_SESSION['ultima_actividad'] = time();
 
         $redirectUrl = BASE_URL . '/dashboard/verificar.php';
@@ -111,8 +113,10 @@ class AuthController extends BaseController
              $_SESSION['user_name'] = $user['PrimerNombre'];
              $_SESSION['user_rol_name'] = $user['Rol'];
              $_SESSION['verification_status'] = $user['VerificacionEstado'];
-             $_SESSION['twofa_enabled'] = $user['twofa_enabled']; // Será true
+             $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
+             $_SESSION['user_photo_url'] = $user['FotoPerfilURL'] ?? null;
              $_SESSION['ultima_actividad'] = time();
+             
              $redirectUrl = BASE_URL . '/dashboard/'; 
              
              if ($user['Rol'] === 'Admin') {

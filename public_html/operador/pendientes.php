@@ -15,11 +15,10 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 $transacciones = $conexion->query("
     SELECT T.*,
            U.PrimerNombre, U.PrimerApellido,
-           CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombreCompleto,
+           T.BeneficiarioNombre AS BeneficiarioNombreCompleto,
            ET.NombreEstado AS EstadoNombre
     FROM transacciones T
     JOIN usuarios U ON T.UserID = U.UserID
-    JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
     JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
     WHERE ET.NombreEstado IN ('En Verificación', 'En Proceso')
     ORDER BY T.FechaTransaccion ASC
@@ -107,9 +106,8 @@ $transacciones = $conexion->query("
         <form id="admin-upload-form" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="adminReceiptFile" class="form-label">Selecciona el archivo</label>
-                <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required 
-                       accept="image/png, image/jpeg, application/pdf">
-                </div>
+                <input class="form-control" type="file" id="adminReceiptFile" name="receiptFile" required accept="image/png, image/jpeg, application/pdf">
+            </div>
             
             <div class="mb-3">
                 <label for="adminComisionDestino" class="form-label">Comisión Pagada (en divisa de destino)</label>

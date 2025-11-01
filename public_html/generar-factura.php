@@ -24,12 +24,11 @@ if (!$conexion) {
 $sql = "SELECT
             T.TransaccionID, T.FechaTransaccion, T.MontoOrigen, T.MonedaOrigen, T.MontoDestino, T.MonedaDestino,
             U.PrimerNombre, U.PrimerApellido, U.Email, U.NumeroDocumento,
-            CB.TitularPrimerNombre, CB.TitularPrimerApellido, CB.TitularNumeroDocumento, CB.NombreBanco, CB.NumeroCuenta,
+            T.BeneficiarioNombre, T.BeneficiarioDocumento, T.BeneficiarioBanco, T.BeneficiarioNumeroCuenta,
             TS.ValorTasa,
             ET.NombreEstado AS Estado
         FROM transacciones AS T
         JOIN usuarios AS U ON T.UserID = U.UserID
-        JOIN cuentas_beneficiarias AS CB ON T.CuentaBeneficiariaID = CB.CuentaID
         LEFT JOIN tasas AS TS ON T.TasaID_Al_Momento = TS.TasaID
         LEFT JOIN estados_transaccion AS ET ON T.EstadoID = ET.EstadoID
         WHERE T.TransaccionID = ?";
@@ -105,10 +104,10 @@ try {
         $pdf->Cell(60, 6, mb_convert_encoding(htmlspecialchars($valueBen), 'ISO-8859-1', 'UTF-8'), $currentBorder, 1, 'L', $fill);
     };
 
-    $printDataRow('Nombre:', $tx['PrimerNombre'] . ' ' . $tx['PrimerApellido'], 'Nombre:', $tx['TitularPrimerNombre'] . ' ' . $tx['TitularPrimerApellido']);
-    $printDataRow('Documento:', $tx['NumeroDocumento'], 'Documento:', $tx['TitularNumeroDocumento']);
-    $printDataRow('Email:', $tx['Email'], 'Banco:', $tx['NombreBanco']);
-    $printDataRow('', '', 'Cuenta:', $tx['NumeroCuenta'], true);
+    $printDataRow('Nombre:', $tx['PrimerNombre'] . ' ' . $tx['PrimerApellido'], 'Nombre:', $tx['BeneficiarioNombre']);
+    $printDataRow('Documento:', $tx['NumeroDocumento'], 'Documento:', $tx['BeneficiarioDocumento']);
+    $printDataRow('Email:', $tx['Email'], 'Banco:', $tx['BeneficiarioBanco']);
+    $printDataRow('', '', 'Cuenta:', $tx['BeneficiarioNumeroCuenta'], true);
     $pdf->Ln(8);
 
     $pdf->SetFont('Arial', 'B', 12);

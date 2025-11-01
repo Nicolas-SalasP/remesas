@@ -19,7 +19,7 @@ class UserRepository
                     U.UserID, U.PasswordHash, U.PrimerNombre, U.FailedLoginAttempts, U.LockoutUntil,
                     R.RolID, R.NombreRol AS Rol,
                     EV.EstadoID AS VerificacionEstadoID, EV.NombreEstado AS VerificacionEstado,
-                    U.twofa_enabled 
+                    U.twofa_enabled, U.FotoPerfilURL
                 FROM usuarios U
                 LEFT JOIN roles R ON U.RolID = R.RolID
                 LEFT JOIN estados_verificacion EV ON U.VerificacionEstadoID = EV.EstadoID
@@ -89,7 +89,7 @@ class UserRepository
     {
         $sql = "SELECT
                     U.UserID, U.PrimerNombre, U.SegundoNombre, U.PrimerApellido, U.SegundoApellido,
-                    U.Email, U.Telefono, U.NumeroDocumento,
+                    U.Email, U.Telefono, U.NumeroDocumento, U.FotoPerfilURL,
                     U.DocumentoImagenURL_Frente, U.DocumentoImagenURL_Reverso,
                     U.FailedLoginAttempts, U.LockoutUntil, U.FechaRegistro,
                     U.twofa_enabled, 
@@ -152,6 +152,22 @@ class UserRepository
         $sql = "UPDATE usuarios SET PasswordHash = ? WHERE UserID = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("si", $passwordHash, $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    public function updateProfileInfo(int $userId, string $telefono, ?string $fotoPerfilUrl): bool
+    {
+        if ($fotoPerfilUrl !== null) {
+            $sql = "UPDATE usuarios SET Telefono = ?, FotoPerfilURL = ? WHERE UserID = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("ssi", $telefono, $fotoPerfilUrl, $userId);
+        } else {
+            $sql = "UPDATE usuarios SET Telefono = ? WHERE UserID = ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bind_param("si", $telefono, $userId);
+        }
         $success = $stmt->execute();
         $stmt->close();
         return $success;

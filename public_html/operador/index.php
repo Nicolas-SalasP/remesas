@@ -24,11 +24,10 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $transacciones = $conexion->query("
     SELECT T.*, U.PrimerNombre, U.PrimerApellido,
-           CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombreCompleto,
+           T.BeneficiarioNombre AS BeneficiarioNombreCompleto,
            ET.NombreEstado AS EstadoNombre
     FROM transacciones T
     JOIN usuarios U ON T.UserID = U.UserID
-    JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
     LEFT JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
     ORDER BY T.FechaTransaccion DESC
 ")->fetch_all(MYSQLI_ASSOC);

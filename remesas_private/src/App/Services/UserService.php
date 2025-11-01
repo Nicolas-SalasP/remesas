@@ -65,12 +65,31 @@ class UserService
 
     public function registerUser(array $data): array
     {
-        $requiredFields = ['primerNombre', 'primerApellido', 'email', 'password', 'tipoDocumento', 'numeroDocumento', 'telefono'];
+        // --- INICIO DE LA CORRECCIÓN ---
+        $requiredFields = ['primerNombre', 'primerApellido', 'email', 'password', 'tipoDocumento', 'numeroDocumento', 'phoneNumber', 'tipoPersona'];
         foreach($requiredFields as $field) {
             if (empty($data[$field])) {
                  throw new Exception("El campo '$field' es obligatorio.", 400);
             }
         }
+        
+        // Combinar código y número
+        $phoneCode = $data['phoneCode'] ?? '';
+        $phoneNumber = preg_replace('/\D/', '', $data['phoneNumber'] ?? ''); // Elimina NO números
+        $data['telefono'] = $phoneCode . $phoneNumber;
+
+        if (empty($data['telefono'])) {
+            throw new Exception("El campo 'telefono' es obligatorio.", 400);
+        }
+        
+        // Validar y obtener ID del Rol
+        $rolID = $this->rolRepo->findIdByName($data['tipoPersona']);
+        if (!$rolID || !in_array($data['tipoPersona'], ['Persona Natural', 'Empresa'])) {
+            throw new Exception("El tipo de cuenta '{$data['tipoPersona']}' no es válido.", 400);
+        }
+        $data['rolID'] = $rolID;
+        // --- FIN DE LA CORRECCIÓN ---
+
         if (strlen($data['password']) < 6) {
             throw new Exception("La contraseña debe tener al menos 6 caracteres.", 400);
         }
@@ -85,14 +104,13 @@ class UserService
             throw new Exception("Tipo de documento '{$data['tipoDocumento']}' no válido.", 400);
         }
         $data['tipoDocumentoID'] = $tipoDocumentoID;
-
-        $rolPersonaNaturalID = $this->rolRepo->findIdByName('Persona Natural');
-         if (!$rolPersonaNaturalID) throw new Exception("Rol 'Persona Natural' no encontrado en la base de datos.", 500);
-        $data['rolID'] = $rolPersonaNaturalID;
         
         $estadoNoVerificadoID = $this->estadoVerificacionRepo->findIdByName('No Verificado');
         if(!$estadoNoVerificadoID) throw new Exception("Rol 'No Verificado' no encontrado.", 500);
         $data['verificacionEstadoID'] = $estadoNoVerificadoID;
+
+        $data['segundoNombre'] = $data['segundoNombre'] ?? null;
+        $data['segundoApellido'] = $data['segundoApellido'] ?? null;
 
 
         try {
@@ -153,9 +171,45 @@ class UserService
         if (!$profile) {
             throw new Exception("Perfil de usuario no encontrado.", 404);
         }
+        
+        unset($profile['PasswordHash']);
         unset($profile['twofa_secret']);
         unset($profile['twofa_backup_codes']);
+        
         return $profile;
+    }
+
+    public function updateUserProfile(int $userId, array $postData, ?array $fileData): array
+    {
+        $telefono = $postData['telefono'] ?? '';
+        if (empty($telefono)) {
+            throw new Exception("El número de teléfono no puede estar vacío.", 400);
+        }
+        
+        $user = $this->getUserProfile($userId);
+        $fotoPerfilUrl = $user['FotoPerfilURL'] ?? null;
+        $newPhotoPath = null;
+
+        if (isset($fileData) && $fileData['error'] === UPLOAD_ERR_OK) {
+            try {
+                $newPhotoPath = $this->fileHandler->saveProfilePicture($fileData, $userId);
+            } catch (Exception $e) {
+                throw new Exception("Error al guardar la foto de perfil: " . $e->getMessage(), $e->getCode() ?: 500);
+            }
+        }
+        
+        $success = $this->userRepository->updateProfileInfo($userId, $telefono, $newPhotoPath);
+        
+        if (!$success && $newPhotoPath === null) {
+            if ($this->userRepository->findUserById($userId)['Telefono'] == $telefono) {
+                return ['fotoPerfilUrl' => $fotoPerfilUrl, 'telefono' => $telefono];
+            }
+            throw new Exception("No se pudo actualizar la información del perfil.", 500);
+        }
+        
+        $this->notificationService->logAdminAction($userId, 'Perfil Actualizado', "Teléfono y/o foto actualizados.");
+        
+        return ['fotoPerfilUrl' => $newPhotoPath ?? $fotoPerfilUrl, 'telefono' => $telefono];
     }
 
     public function uploadVerificationDocs(int $userId, array $files): void
@@ -398,7 +452,7 @@ class UserService
         $key = array_search($code, $backupCodes);
         if ($key !== false) {
             unset($backupCodes[$key]);
-            $newEncryptedBackupCodes = $this->encryptData(json_encode(array_values($backupCodes))); // Re-indexar
+            $newEncryptedBackupCodes = $this->encryptData(json_encode(array_values($backupCodes)));
             $this->userRepository->updateBackupCodes($userId, $newEncryptedBackupCodes);
             $this->notificationService->logAdminAction($userId, 'Código Respaldo 2FA Usado', "Se utilizó un código de respaldo.");
             return true;

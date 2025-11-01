@@ -34,16 +34,22 @@ class CuentasBeneficiariasService
             $cuentas = array_filter($cuentas, fn($cuenta) => isset($cuenta['PaisID']) && $cuenta['PaisID'] == $paisId);
         }
 
-        return array_map(fn($cuenta) => [
-            'CuentaID' => $cuenta['CuentaID'],
-            'Alias' => $cuenta['Alias'] ?? 'Sin Alias',
-        ], array_values($cuentas));
+        return $cuentas;
     }
 
-    public function addAccount(int $userId, array $data): int
+    public function getAccountDetails(int $userId, int $cuentaId): ?array
+    {
+        $cuenta = $this->cuentasBeneficiariasRepository->findByIdAndUserId($cuentaId, $userId);
+        if (!$cuenta) {
+            throw new Exception("Cuenta no encontrada o no te pertenece.", 404);
+        }
+        return $cuenta;
+    }
+
+    private function validateAndPrepareBeneficiaryData(array $data): array
     {
         $requiredFields = [
-            'paisID', 'alias', 'tipoBeneficiario', 'primerNombre', 'primerApellido',
+            'alias', 'tipoBeneficiario', 'primerNombre', 'primerApellido',
             'tipoDocumento', 'numeroDocumento', 'nombreBanco', 'numeroCuenta', 'numeroTelefono'
         ];
 
@@ -60,20 +66,27 @@ class CuentasBeneficiariasService
         }
         $data['tipoBeneficiarioID'] = $tipoBeneficiarioID;
 
-        $receivedDocTypeName = $data['tipoDocumento'] ?? '[No recibido]';
-        error_log("CuentasBeneficiariasService::addAccount - Intentando buscar TipoDocumentoID para: '" . $receivedDocTypeName . "'");
-
         $tipoDocumentoID = $this->tipoDocumentoRepo->findIdByName($data['tipoDocumento']);
         if (!$tipoDocumentoID) {
-            error_log("TipoDocumento no encontrado en BD: '" . $receivedDocTypeName . "'");
-            throw new Exception("El tipo de documento seleccionado ('{$data['tipoDocumento']}') no es válido o no está configurado correctamente.", 400);
+            error_log("TipoDocumento no encontrado en BD: '" . $data['tipoDocumento'] . "'");
+            throw new Exception("El tipo de documento seleccionado ('{$data['tipoDocumento']}') no es válido.", 400);
         }
         $data['titularTipoDocumentoID'] = $tipoDocumentoID;
 
-        $data['UserID'] = $userId;
-
         $data['segundoNombre'] = isset($data['segundoNombre']) && trim($data['segundoNombre']) !== '' ? trim($data['segundoNombre']) : null;
         $data['segundoApellido'] = isset($data['segundoApellido']) && trim($data['segundoApellido']) !== '' ? trim($data['segundoApellido']) : null;
+        
+        return $data;
+    }
+
+    public function addAccount(int $userId, array $data): int
+    {
+        $data = $this->validateAndPrepareBeneficiaryData($data);
+        $data['UserID'] = $userId;
+        
+        if (!isset($data['paisID']) || empty($data['paisID'])) {
+            throw new Exception("El campo 'paisID' es obligatorio.", 400);
+        }
 
         try {
             $newId = $this->cuentasBeneficiariasRepository->create($data);
@@ -83,6 +96,35 @@ class CuentasBeneficiariasService
         } catch (Exception $e) {
              error_log("Error al crear cuenta beneficiaria en CuentasBeneficiariasRepository: " . $e->getMessage());
             throw new Exception("Error al guardar la cuenta del beneficiario en la base de datos.", $e->getCode() ?: 500);
+        }
+    }
+    
+    public function updateAccount(int $userId, int $cuentaId, array $data): bool
+    {
+        $data = $this->validateAndPrepareBeneficiaryData($data);
+        
+        try {
+            $success = $this->cuentasBeneficiariasRepository->update($cuentaId, $userId, $data);
+            $logAlias = $data['alias'] ?? 'N/A';
+            $this->notificationService->logAdminAction($userId, 'Usuario actualizó beneficiario', "Alias: {$logAlias} - ID: {$cuentaId}");
+            return $success;
+        } catch (Exception $e) {
+             error_log("Error al actualizar cuenta beneficiaria: " . $e->getMessage());
+            throw new Exception("Error al actualizar la cuenta del beneficiario.", $e->getCode() ?: 500);
+        }
+    }
+    
+    public function deleteAccount(int $userId, int $cuentaId): bool
+    {
+        try {
+            $success = $this->cuentasBeneficiariasRepository->delete($cuentaId, $userId);
+            if ($success) {
+                $this->notificationService->logAdminAction($userId, 'Usuario eliminó beneficiario', "ID: {$cuentaId}");
+            }
+            return $success;
+        } catch (Exception $e) {
+             error_log("Error al eliminar cuenta beneficiaria: " . $e->getMessage());
+            throw new Exception($e->getMessage(), $e->getCode() ?: 500);
         }
     }
 }

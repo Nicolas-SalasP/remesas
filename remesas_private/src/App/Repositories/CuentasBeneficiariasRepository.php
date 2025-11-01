@@ -15,7 +15,6 @@ class CuentasBeneficiariasRepository
 
     public function findByUserId(int $userId): array
     {
-
         $sql = "SELECT
                     cb.CuentaID, cb.Alias, cb.UserID, cb.PaisID,
                     p.NombrePais,
@@ -43,7 +42,13 @@ class CuentasBeneficiariasRepository
 
     public function findByIdAndUserId(int $cuentaId, int $userId): ?array
     {
-         $sql = "SELECT cb.* FROM cuentas_beneficiarias cb WHERE cb.CuentaID = ? AND cb.UserID = ?";
+         $sql = "SELECT cb.*, 
+                        td.NombreDocumento AS TitularTipoDocumentoNombre, 
+                        tb.Nombre AS TipoBeneficiarioNombre
+                 FROM cuentas_beneficiarias cb 
+                 LEFT JOIN tipos_documento td ON cb.TitularTipoDocumentoID = td.TipoDocumentoID
+                 LEFT JOIN tipos_beneficiario tb ON cb.TipoBeneficiarioID = tb.TipoBeneficiarioID
+                 WHERE cb.CuentaID = ? AND cb.UserID = ?";
          $stmt = $this->db->prepare($sql);
          $stmt->bind_param("ii", $cuentaId, $userId);
          $stmt->execute();
@@ -84,4 +89,51 @@ class CuentasBeneficiariasRepository
         return $newId;
     }
 
+    public function update(int $cuentaId, int $userId, array $data): bool
+    {
+        $sql = "UPDATE cuentas_beneficiarias SET
+                    Alias = ?, TipoBeneficiarioID = ?, 
+                    TitularPrimerNombre = ?, TitularSegundoNombre = ?, 
+                    TitularPrimerApellido = ?, TitularSegundoApellido = ?, 
+                    TitularTipoDocumentoID = ?, TitularNumeroDocumento = ?, 
+                    NombreBanco = ?, NumeroCuenta = ?, NumeroTelefono = ?
+                WHERE CuentaID = ? AND UserID = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("sisssssssssii",
+            $data['alias'], $data['tipoBeneficiarioID'],
+            $data['primerNombre'], $data['segundoNombre'],
+            $data['primerApellido'], $data['segundoApellido'],
+            $data['titularTipoDocumentoID'], $data['numeroDocumento'],
+            $data['nombreBanco'], $data['numeroCuenta'], $data['numeroTelefono'],
+            $cuentaId, $userId
+        );
+        
+        if (!$stmt->execute()) {
+             error_log("Error al actualizar cuenta beneficiaria: " . $stmt->error);
+             throw new Exception("Error al actualizar la cuenta del beneficiario."); 
+        }
+        $success = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $success;
+    }
+    
+    public function delete(int $cuentaId, int $userId): bool
+    {
+        $sql = "DELETE FROM cuentas_beneficiarias WHERE CuentaID = ? AND UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ii", $cuentaId, $userId);
+        
+        try {
+            $stmt->execute();
+            $success = $stmt->affected_rows > 0;
+            $stmt->close();
+            return $success;
+        } catch (\mysqli_sql_exception $e) {
+            if ($e->getCode() == 1451) {
+                throw new Exception("No se puede eliminar este beneficiario porque está siendo usado en transacciones pasadas.", 409);
+            }
+            throw $e;
+        }
+    }
 }

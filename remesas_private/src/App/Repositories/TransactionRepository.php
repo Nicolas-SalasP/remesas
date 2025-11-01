@@ -15,23 +15,32 @@ class TransactionRepository
 
     public function create(array $data): int
     {
-        $sql = "INSERT INTO transacciones (UserID, CuentaBeneficiariaID, TasaID_Al_Momento, MontoOrigen, MonedaOrigen, MontoDestino, MonedaDestino, EstadoID, FormaPagoID)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO transacciones (
+                    UserID, CuentaBeneficiariaID, TasaID_Al_Momento, 
+                    MontoOrigen, MonedaOrigen, MontoDestino, MonedaDestino, 
+                    EstadoID, FormaPagoID,
+                    BeneficiarioNombre, BeneficiarioDocumento, BeneficiarioBanco, BeneficiarioNumeroCuenta, BeneficiarioTelefono
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($sql);
 
         $estadoInicialID = $data['estadoID'] ?? 1;
 
-        $stmt->bind_param("iiidsdsii", 
-            $data['userID'],            // 1. i (int)
-            $data['cuentaID'],          // 2. i (int)
-            $data['tasaID'],            // 3. i (int)
-            $data['montoOrigen'],       // 4. d (decimal)
-            $data['monedaOrigen'],      // 5. s (string)
-            $data['montoDestino'],      // 6. d (decimal)
-            $data['monedaDestino'],     // 7. s (string)
-            $estadoInicialID,           // 8. i (int)
-            $data['formaPagoID']        // 9. i (int)
+        $stmt->bind_param("iiidsdsiisssss", 
+            $data['userID'],
+            $data['cuentaID'],
+            $data['tasaID'],
+            $data['montoOrigen'],
+            $data['monedaOrigen'],
+            $data['montoDestino'],
+            $data['monedaDestino'],
+            $estadoInicialID,
+            $data['formaPagoID'],
+            $data['beneficiarioNombre'],
+            $data['beneficiarioDocumento'],
+            $data['beneficiarioBanco'],
+            $data['beneficiarioNumeroCuenta'],
+            $data['beneficiarioTelefono']
         );
 
         if (!$stmt->execute()) {
@@ -49,27 +58,34 @@ class TransactionRepository
             T.TransaccionID, T.UserID, T.CuentaBeneficiariaID, T.TasaID_Al_Momento,
             T.MontoOrigen, T.MonedaOrigen, T.MontoDestino, T.ComisionDestino, T.MonedaDestino,
             T.FechaTransaccion, T.ComprobanteURL, T.ComprobanteEnvioURL,
-            U.PrimerNombre, U.PrimerApellido, U.Email, U.NumeroDocumento, U.Telefono,
+            U.PrimerNombre, U.PrimerApellido, U.Email, U.NumeroDocumento, U.Telefono, U.FotoPerfilURL,
             TD_U.NombreDocumento AS UsuarioTipoDocumentoNombre,
             R.NombreRol AS UsuarioRolNombre,
             EV.NombreEstado AS UsuarioVerificacionEstadoNombre,
-            CB.Alias AS BeneficiarioAlias, CB.TitularPrimerNombre, CB.TitularPrimerApellido,
-            CB.TitularNumeroDocumento, CB.NombreBanco, CB.NumeroCuenta, CB.NumeroTelefono AS BeneficiarioTelefono,
-            CB.PaisID AS PaisDestinoID,
-            TD_B.NombreDocumento AS BeneficiarioTipoDocumentoNombre,
-            TB.Nombre AS BeneficiarioTipoNombre,
+            
+            T.BeneficiarioNombre,
+            T.BeneficiarioDocumento,
+            T.BeneficiarioBanco,
+            T.BeneficiarioNumeroCuenta,
+            T.BeneficiarioTelefono,
+
             TS.ValorTasa,
             ET.EstadoID, ET.NombreEstado AS Estado,
-            FP.FormaPagoID, FP.Nombre AS FormaDePago
+            FP.FormaPagoID, FP.Nombre AS FormaDePago,
+
+            CB.PaisID AS PaisDestinoID,
+            TD_B.NombreDocumento AS BeneficiarioTipoDocumentoNombre,
+            TB.Nombre AS BeneficiarioTipoNombre
+            
         FROM transacciones AS T
         JOIN usuarios AS U ON T.UserID = U.UserID
-        JOIN cuentas_beneficiarias AS CB ON T.CuentaBeneficiariaID = CB.CuentaID
         JOIN tasas AS TS ON T.TasaID_Al_Momento = TS.TasaID
         LEFT JOIN estados_transaccion AS ET ON T.EstadoID = ET.EstadoID
         LEFT JOIN formas_pago AS FP ON T.FormaPagoID = FP.FormaPagoID
         LEFT JOIN tipos_documento AS TD_U ON U.TipoDocumentoID = TD_U.TipoDocumentoID
         LEFT JOIN roles AS R ON U.RolID = R.RolID
         LEFT JOIN estados_verificacion AS EV ON U.VerificacionEstadoID = EV.EstadoID
+        LEFT JOIN cuentas_beneficiarias AS CB ON T.CuentaBeneficiariaID = CB.CuentaID
         LEFT JOIN tipos_documento AS TD_B ON CB.TitularTipoDocumentoID = TD_B.TipoDocumentoID
         LEFT JOIN tipos_beneficiario AS TB ON CB.TipoBeneficiarioID = TB.TipoBeneficiarioID
         WHERE T.TransaccionID = ?";
@@ -315,14 +331,13 @@ class TransactionRepository
                     T.MontoDestino,
                     T.ComisionDestino,
                     T.MonedaDestino,
-                    CONCAT(CB.TitularPrimerNombre, ' ', CB.TitularPrimerApellido) AS BeneficiarioNombre,
-                    CB.TitularNumeroDocumento AS BeneficiarioDocumento,
-                    CB.NombreBanco AS BeneficiarioBanco,
-                    CB.NumeroCuenta AS BeneficiarioCuenta
+                    T.BeneficiarioNombre,
+                    T.BeneficiarioDocumento,
+                    T.BeneficiarioBanco,
+                    T.BeneficiarioNumeroCuenta
                 FROM transacciones T
                 JOIN usuarios U ON T.UserID = U.UserID
                 JOIN tasas TS ON T.TasaID_Al_Momento = TS.TasaID
-                JOIN cuentas_beneficiarias CB ON T.CuentaBeneficiariaID = CB.CuentaID
                 LEFT JOIN estados_transaccion ET ON T.EstadoID = ET.EstadoID
                 ORDER BY T.FechaTransaccion DESC";
         

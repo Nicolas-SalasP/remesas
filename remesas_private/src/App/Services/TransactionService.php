@@ -5,6 +5,7 @@ use App\Repositories\TransactionRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\EstadoTransaccionRepository;
 use App\Repositories\FormaPagoRepository;
+use App\Repositories\CuentasBeneficiariasRepository;
 use App\Services\NotificationService;
 use App\Services\PDFService;
 use App\Services\FileHandlerService;
@@ -15,6 +16,7 @@ class TransactionService
 {
     private TransactionRepository $txRepository;
     private UserRepository $userRepository;
+    private CuentasBeneficiariasRepository $cuentasRepo;
     private NotificationService $notificationService;
     private PDFService $pdfService;
     private FileHandlerService $fileHandler;
@@ -36,7 +38,8 @@ class TransactionService
         FileHandlerService $fileHandler,
         EstadoTransaccionRepository $estadoTxRepo,
         FormaPagoRepository $formaPagoRepo,
-        ContabilidadService $contabilidadService
+        ContabilidadService $contabilidadService,
+        CuentasBeneficiariasRepository $cuentasRepo
     ) {
         $this->txRepository = $txRepository;
         $this->userRepository = $userRepository;
@@ -46,6 +49,7 @@ class TransactionService
         $this->estadoTxRepo = $estadoTxRepo;
         $this->formaPagoRepo = $formaPagoRepo;
         $this->contabilidadService = $contabilidadService;
+        $this->cuentasRepo = $cuentasRepo;
     }
 
     private function getEstadoId(string $nombreEstado): int
@@ -70,6 +74,23 @@ class TransactionService
                  throw new Exception("Faltan datos para crear la transacción: $field", 400);
             }
         }
+
+        $beneficiario = $this->cuentasRepo->findByIdAndUserId((int)$data['cuentaID'], (int)$data['userID']);
+        if (!$beneficiario) {
+            throw new Exception("Beneficiario no encontrado o no te pertenece.", 404);
+        }
+
+        $data['beneficiarioNombre'] = trim(implode(' ', [
+            $beneficiario['TitularPrimerNombre'],
+            $beneficiario['TitularSegundoNombre'],
+            $beneficiario['TitularPrimerApellido'],
+            $beneficiario['TitularSegundoApellido']
+        ]));
+        $data['beneficiarioDocumento'] = $beneficiario['TitularNumeroDocumento'];
+        $data['beneficiarioBanco'] = $beneficiario['NombreBanco'];
+        $data['beneficiarioNumeroCuenta'] = $beneficiario['NumeroCuenta'];
+        $data['beneficiarioTelefono'] = $beneficiario['NumeroTelefono'];
+
 
         $formaPagoID = $this->formaPagoRepo->findIdByName($data['formaDePago']);
         if (!$formaPagoID) {
