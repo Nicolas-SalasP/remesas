@@ -22,8 +22,8 @@ class TransactionRepository
         $stmt = $this->db->prepare($sql);
 
         $estadoInicialID = $data['estadoID'] ?? 1;
-
-        $stmt->bind_param("iiidssdsi", 
+        
+        $stmt->bind_param("iiiddssii", 
             $data['userID'],
             $data['cuentaID'],
             $data['tasaID'],
