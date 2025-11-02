@@ -136,17 +136,25 @@ class PricingService
         $destinoNombre = $this->countryRepository->findNameById($destinoId) ?? "ID $destinoId";
         $rutaLog = "[$origenNombre -> $destinoNombre] Rango: [$montoMin - $montoMax]";
 
+        $currentTasaId = 0;
+
         if ($tasaId === 'new') {
             $newTasaId = $this->rateRepository->createRate($origenId, $destinoId, $nuevoValor, $montoMin, $montoMax);
             $this->notificationService->logAdminAction($adminId, 'Admin creó tasa', "Ruta: $rutaLog, Valor: $nuevoValor, Nuevo TasaID: $newTasaId");
-            return ['TasaID' => $newTasaId];
+            $currentTasaId = $newTasaId;
         } else {
             $tasaIdInt = (int)$tasaId;
             $success = $this->rateRepository->updateRateValue($tasaIdInt, $nuevoValor, $montoMin, $montoMax);
             if ($success) {
                 $this->notificationService->logAdminAction($adminId, 'Admin actualizó tasa', "Ruta: $rutaLog , Nuevo Valor: $nuevoValor");
             }
-            return ['TasaID' => $tasaIdInt];
+            $currentTasaId = $tasaIdInt;
         }
+
+        if ($currentTasaId > 0) {
+            $this->rateRepository->logRateChange($currentTasaId, $origenId, $destinoId, $nuevoValor, $montoMin, $montoMax);
+        }
+
+        return ['TasaID' => $currentTasaId];
     }
 }

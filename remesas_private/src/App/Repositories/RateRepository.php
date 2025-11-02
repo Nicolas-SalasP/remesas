@@ -56,4 +56,41 @@ class RateRepository
         $stmt->close();
         return $newId;
     }
+
+    public function logRateChange(int $tasaId, int $origenId, int $destinoId, float $valor, float $montoMin, float $montoMax): bool
+    {
+        $sql = "INSERT INTO tasas_historico (TasaID_Referencia, PaisOrigenID, PaisDestinoID, ValorTasa, MontoMinimo, MontoMaximo, FechaCambio) 
+                VALUES (?, ?, ?, ?, ?, ?, NOW())";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iiddss", $tasaId, $origenId, $destinoId, $valor, $montoMin, $montoMax);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    public function getRateHistoryByDate(int $origenId, int $destinoId, int $days = 30): array
+    {
+        $sql = "SELECT
+                    DATE(FechaCambio) AS Fecha,
+                    AVG(ValorTasa) AS TasaPromedio
+                FROM tasas_historico
+                WHERE
+                    PaisOrigenID = ?
+                    AND PaisDestinoID = ?
+                    AND FechaCambio >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+                    AND MontoMinimo = 0.00
+                GROUP BY
+                    Fecha
+                ORDER BY
+                    Fecha ASC
+                LIMIT ?";
+        
+        $limit = $days + 5;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("iiii", $origenId, $destinoId, $days, $limit);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(\MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
 }

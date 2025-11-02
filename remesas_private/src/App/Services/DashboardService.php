@@ -89,8 +89,8 @@ class DashboardService
 
     public function getDolarBcvData(int $origenId, int $destinoId, int $days = 30): array
     {
-        $history = $this->transactionRepository->getRateHistoryByDate($origenId, $destinoId, $days);
-        $currentRateInfo = $this->rateRepository->findCurrentRate($origenId, $destinoId);
+        $history = $this->rateRepository->getRateHistoryByDate($origenId, $destinoId, $days);
+        $currentRateInfo = $this->rateRepository->findCurrentRate($origenId, $destinoId, 0);
         $valorActual = (float)($currentRateInfo['ValorTasa'] ?? 0);
         $monedaOrigen = $this->countryRepository->findMonedaById($origenId) ?? 'N/A';
         $monedaDestino = $this->countryRepository->findMonedaById($destinoId) ?? 'N/A';
@@ -108,9 +108,17 @@ class DashboardService
             }
         }
         
-        if (end($dataPoints) !== $valorActual && $valorActual > 0) {
-             $labels[] = date("d/m");
-             $dataPoints[] = $valorActual;
+        $lastDataPoint = end($dataPoints);
+        $lastLabel = end($labels);
+        $todayLabel = date("d/m");
+
+        if ($valorActual > 0) {
+            if ($lastLabel === $todayLabel) {
+                $dataPoints[count($dataPoints) - 1] = $valorActual;
+            } elseif (empty($history) || $lastDataPoint !== $valorActual) {
+                 $labels[] = $todayLabel;
+                 $dataPoints[] = $valorActual;
+            }
         }
 
         $output = [
