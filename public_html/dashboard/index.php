@@ -36,7 +36,6 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
     <div class="row">
         <div class="col-lg-10 offset-lg-1 col-xl-8 offset-xl-2">
             <div class="card p-4 p-md-5 shadow-sm">
-                
                 <form id="remittance-form" novalidate>
                     <input type="hidden" id="user-id" value="<?php echo htmlspecialchars($_SESSION['user_id']); ?>">
                     <input type="hidden" id="selected-tasa-id">
@@ -107,10 +106,16 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
       </div>
       <div class="modal-body">
         <form id="add-beneficiary-form">
+            <input type="hidden" id="benef-pais-id" name="paisID">
+            
             <div class="row">
                 <div class="col-md-6 mb-3"><label for="benef-alias" class="form-label">Alias de la cuenta</label><input type="text" class="form-control" id="benef-alias" name="alias" required></div>
                 <div class="col-md-6 mb-3"><label for="benef-tipo" class="form-label">Tipo de Beneficiario</label><select id="benef-tipo" name="tipoBeneficiario" class="form-select" required><option value="">Cargando...</option></select></div>
             </div>
+            
+            <hr>
+            <h6 class="text-muted">Datos del Titular</h6>
+            
             <div class="row">
                 <div class="col-md-6 mb-3"><label for="benef-firstname" class="form-label">Primer Nombre</label><input type="text" class="form-control" id="benef-firstname" name="primerNombre" required></div>
                 <div class="col-md-6 mb-3"><label for="benef-secondname" class="form-label">Segundo Nombre</label><input type="text" class="form-control" id="benef-secondname" name="segundoNombre"></div>
@@ -123,19 +128,19 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                 <div class="col-md-6 mb-3"><label for="benef-doc-type" class="form-label">Tipo de Documento</label><select id="benef-doc-type" name="tipoDocumento" class="form-select" required><option value="">Cargando...</option></select></div>
                 <div class="col-md-6 mb-3"><label for="benef-doc-number" class="form-label">Número de Documento</label><input type="text" class="form-control" id="benef-doc-number" name="numeroDocumento" required></div>
             </div>
-            <div class="mb-3">
-                <label for="benef-phone-number" class="form-label">Número de Teléfono</label>
-                <div class="input-group">
-                    <select class="input-group-text" id="benef-phone-code" name="phoneCode"></select>
-                    <input type="tel" class="form-control" id="benef-phone-number" name="phoneNumber" required>
-                </div>
-            </div>
+            
             <div class="row">
                  <div class="col-md-6 mb-3"><label for="benef-bank" class="form-label">Nombre del Banco</label><input type="text" class="form-control" id="benef-bank" name="nombreBanco" required></div>
                 <div class="col-md-6 mb-3"><label for="benef-account-num" class="form-label">Número de Cuenta</label><input type="text" class="form-control" id="benef-account-num" name="numeroCuenta" required></div>
             </div>
-            <input type="hidden" id="benef-pais-id" name="paisID">
-        </form>
+            <div class="mb-3">
+                <label for="benef-phone-number" class="form-label">Número de Teléfono</label>
+                <div class="input-group">
+                    <select class="input-group-text" id="benef-phone-code" name="phoneCode" style="max-width: 130px;"></select>
+                    <input type="tel" class="form-control" id="benef-phone-number" name="phoneNumber" required placeholder="Número">
+                </div>
+            </div>
+            </form>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>

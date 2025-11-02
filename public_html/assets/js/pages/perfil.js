@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const benefPhoneNumberInput = document.getElementById('benef-phone-number');
     const benefTipoSelect = document.getElementById('benef-tipo');
     const benefDocTypeSelect = document.getElementById('benef-doc-type');
+    const benefDocNumberInput = document.getElementById('benef-doc-number');
 
     // --- LÓGICA COMPARTIDA ---
     
@@ -239,7 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const loadDropdownData = async (endpoint, selectElement, key = 'nombre') => {
+    const loadDropdownData = async (endpoint, selectElement, textKey = 'nombre', valueKey = '') => {
+        const valKey = valueKey || textKey;
+
          selectElement.disabled = true;
          selectElement.innerHTML = '<option value="">Cargando...</option>';
         try {
@@ -248,14 +251,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             selectElement.innerHTML = '<option value="">Selecciona...</option>';
             data.forEach(item => {
-                const value = (typeof item === 'object') ? item[key] : item;
+                
+                let text, value;
+                if (typeof item === 'object') {
+                    text = item[textKey];
+                    value = item[valKey];
+                } else {
+                    text = item;
+                    value = item;
+                }
+
                 let dataAttributes = '';
                 if (typeof item === 'object') {
                     Object.keys(item).forEach(k => {
                         dataAttributes += ` data-${k}="${item[k]}"`;
                     });
                 }
-                selectElement.innerHTML += `<option value="${value}" ${dataAttributes}>${value}</option>`;
+                selectElement.innerHTML += `<option value="${value}" ${dataAttributes}>${text}</option>`;
             });
              selectElement.disabled = false;
         } catch (error) {
@@ -266,6 +278,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     benefPaisIdInput?.addEventListener('change', () => {
         setPhoneCodeByPais(benefPaisIdInput.value, benefPhoneCodeSelect);
+    });
+
+    benefDocTypeSelect?.addEventListener('change', () => {
+        if (benefDocNumberInput) {
+            benefDocNumberInput.maxLength = 20;
+            benefDocNumberInput.placeholder = 'Número de Documento';
+            benefDocNumberInput.pattern = null;
+            benefDocNumberInput.value = '';
+        }
     });
 
     beneficiaryListContainer.addEventListener('click', async (e) => {
@@ -301,6 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('benef-doc-number').value = details.TitularNumeroDocumento;
                 document.getElementById('benef-account-num').value = details.NumeroCuenta;
                 
+                if (benefDocNumberInput) {
+                    benefDocNumberInput.pattern = null;
+                }
+
                 const fullPhone = details.NumeroTelefono || '';
                 const selectedCode = benefPhoneCodeSelect.value;
                 
@@ -354,6 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
         benefPaisIdInput.disabled = false;
         benefPaisIdInput.value = '';
         benefPhoneCodeSelect.value = '';
+
+        if (benefDocNumberInput) {
+            benefDocNumberInput.maxLength = 20;
+            benefDocNumberInput.placeholder = 'Número de Documento';
+            benefDocNumberInput.pattern = null;
+        }
     });
 
     addBeneficiaryForm.addEventListener('submit', async (e) => {
@@ -420,17 +451,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     telefonoEl?.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\s+/g, '');
+        e.target.value = e.target.value.replace(/\D/g, '');
     });
     
     benefPhoneNumberInput?.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\s+/g, '');
+        e.target.value = e.target.value.replace(/\D/g, '');
     });
 
     Promise.all([
-        loadDropdownData('getPaises&rol=Destino', benefPaisIdInput, 'NombrePais'),
-        loadDropdownData('getBeneficiaryTypes', benefTipoSelect),
-        loadDropdownData('getDocumentTypes', benefDocTypeSelect)
+        loadDropdownData('getPaises&rol=Destino', benefPaisIdInput, 'NombrePais', 'PaisID'), 
+        loadDropdownData('getBeneficiaryTypes', benefTipoSelect, 'nombre'), 
+        loadDropdownData('getDocumentTypes', benefDocTypeSelect, 'nombre') 
     ]).then(() => {
         loadPhoneCodes(benefPhoneCodeSelect);
         loadUserProfile();

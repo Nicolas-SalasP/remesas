@@ -118,8 +118,11 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                     </select>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label for="benef-bank" class="form-label">Nombre del Banco</label>
-                    <input type="text" class="form-control" id="benef-bank" name="nombreBanco" required>
+                    <label for="benef-phone-number" class="form-label">Teléfono</label>
+                    <div class="input-group">
+                        <select class="input-group-text" id="benef-phone-code" name="phoneCode" style="max-width: 130px;"></select>
+                        <input type="tel" class="form-control" id="benef-phone-number" name="phoneNumber" required placeholder="Número">
+                    </div>
                 </div>
             </div>
             <hr>
@@ -137,14 +140,8 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                 <div class="col-md-6 mb-3"><label for="benef-doc-number" class="form-label">Número de Documento</label><input type="text" class="form-control" id="benef-doc-number" name="numeroDocumento" required></div>
             </div>
              <div class="row">
+                 <div class="col-md-6 mb-3"><label for="benef-bank" class="form-label">Nombre del Banco</label><input type="text" class="form-control" id="benef-bank" name="nombreBanco" required></div>
                  <div class="col-md-6 mb-3"><label for="benef-account-num" class="form-label">Número de Cuenta</label><input type="text" class="form-control" id="benef-account-num" name="numeroCuenta" required></div>
-                 <div class="col-md-6 mb-3">
-                    <label for="benef-phone-number" class="form-label">Teléfono</label>
-                    <div class="input-group">
-                        <select class="input-group-text" id="benef-phone-code" name="phoneCode" style="max-width: 130px;"></select>
-                        <input type="tel" class="form-control" id="benef-phone-number" name="phoneNumber" required placeholder="Número">
-                    </div>
-                </div>
             </div>
         </form>
       </div>

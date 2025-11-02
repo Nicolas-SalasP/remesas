@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const benefTipoSelect = document.getElementById('benef-tipo');
     const benefDocTypeSelect = document.getElementById('benef-doc-type');
     const benefDocNumberInput = document.getElementById('benef-doc-number');
+    const stepperWrapper = document.querySelector('.stepper-wrapper');
+    const stepperItems = document.querySelectorAll('.stepper-item');
 
     let currentStep = 1;
     let activeInput = 'origen';
@@ -72,6 +74,22 @@ document.addEventListener('DOMContentLoaded', () => {
         prevBtn.classList.toggle('d-none', currentStep === 1 || currentStep === 5);
         nextBtn.classList.toggle('d-none', currentStep >= 4);
         if (submitBtn) submitBtn.classList.toggle('d-none', currentStep !== 4);
+        
+        if (stepperWrapper) {
+            stepperWrapper.classList.toggle('d-none', currentStep === 5);
+        }
+        stepperItems.forEach((item, index) => {
+            const step = index + 1;
+            if (step < currentStep) {
+                item.classList.add('completed');
+                item.classList.remove('active');
+            } else if (step === currentStep) {
+                item.classList.add('active');
+                item.classList.remove('completed');
+            } else {
+                item.classList.remove('active', 'completed');
+            }
+        });
     };
 
     const loadPaises = async (rol, selectElement) => {
@@ -509,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
     submitBtn?.addEventListener('click', submitTransaction);
 
     phoneNumberInput?.addEventListener('input', (e) => {
-        e.target.value = e.target.value.replace(/\s+/g, '');
+        e.target.value = e.target.value.replace(/\D/g, '');
     });
 
     let addAccountModalInstance = null;
@@ -542,9 +560,12 @@ document.addEventListener('DOMContentLoaded', () => {
                  phoneCodeSelect.value = "";
              }
 
-            benefDocNumberInput.maxLength = 20;
-            benefDocNumberInput.pattern = null;
-            benefDocNumberInput.placeholder = 'Número de Documento';
+            if (benefDocNumberInput) {
+                benefDocNumberInput.maxLength = 20;
+                benefDocNumberInput.removeAttribute('pattern');
+                benefDocNumberInput.placeholder = 'Número de Documento';
+            }
+            
             benefDocTypeSelect.value = '';
             phoneNumberInput.maxLength = 15;
             phoneNumberInput.placeholder = 'Número sin código de país';
@@ -561,10 +582,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         benefDocTypeSelect?.addEventListener('change', () => {
-            benefDocNumberInput.maxLength = 20;
-            benefDocNumberInput.placeholder = 'Número de Documento';
-            benefDocNumberInput.pattern = null;
-            benefDocNumberInput.value = '';
+            if (benefDocNumberInput) {
+                benefDocNumberInput.maxLength = 20;
+                benefDocNumberInput.placeholder = 'Número de Documento';
+                benefDocNumberInput.removeAttribute('pattern');
+                benefDocNumberInput.value = '';
+            }
         });
 
         addBeneficiaryForm?.addEventListener('submit', async (e) => {
@@ -575,11 +598,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const formData = new FormData(addBeneficiaryForm);
             const data = Object.fromEntries(formData.entries());
+            
+            if (!data.paisID || data.paisID === '') {
+                 console.error("Error: paisID está vacío en el formulario del modal.");
+                 window.showInfoModal('Error', 'El ID del país no se encontró. Cierra el modal y vuelve a intentarlo.', false);
+                 submitModalButton.disabled = false;
+                 submitModalButton.textContent = 'Guardar Cuenta';
+                 return;
+            }
 
             if (data.phoneCode && data.phoneNumber) {
-                 data.numeroTelefono = data.phoneCode + data.phoneNumber.replace(/\s+/g, '');
+                 data.numeroTelefono = data.phoneCode + data.phoneNumber.replace(/\D/g, '');
             } else if (data.phoneNumber) {
-                data.numeroTelefono = data.phoneNumber.replace(/\s+/g, '');
+                data.numeroTelefono = data.phoneNumber.replace(/\D/g, '');
             } else {
                 data.numeroTelefono = null;
             }
