@@ -98,15 +98,16 @@ class TransactionRepository
         return $result;
     }
 
-    public function uploadUserReceipt(int $transactionId, int $userId, string $dbPath, int $estadoEnVerificacionID, int $estadoPendienteID): int
+    public function uploadUserReceipt(int $transactionId, int $userId, string $dbPath, string $fileHash, int $estadoEnVerificacionID, int $estadoPendienteID): int
     {
-        $sql = "UPDATE transacciones SET ComprobanteURL = ?, EstadoID = ?
+        $sql = "UPDATE transacciones SET ComprobanteURL = ?, ComprobanteHash = ?, EstadoID = ?
                 WHERE TransaccionID = ? AND UserID = ? AND EstadoID IN (?, ?)";
         
         $stmt = $this->db->prepare($sql);
         
-        $stmt->bind_param("siiiii", 
+        $stmt->bind_param("ssiiiii", 
             $dbPath, 
+            $fileHash,
             $estadoEnVerificacionID,
             $transactionId,
             $userId,
@@ -162,6 +163,17 @@ class TransactionRepository
         $affectedRows = $stmt->affected_rows;
         $stmt->close();
         return $affectedRows;
+    }
+
+    public function findByHash(string $fileHash): ?array
+    {
+        $sql = "SELECT TransaccionID FROM transacciones WHERE ComprobanteHash = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("s", $fileHash);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result;
     }
 
      // --- MÉTODOS PARA ESTADÍSTICAS  ---

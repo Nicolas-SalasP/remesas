@@ -128,6 +128,16 @@ class TransactionService
              throw new Exception("No se recibió ningún archivo.", 400);
         }
 
+        $fileHash = hash_file('sha256', $fileData['tmp_name']);
+        if ($fileHash === false) {
+            throw new Exception("Error al analizar el archivo del comprobante.", 500);
+        }
+
+        $existingTx = $this->txRepository->findByHash($fileHash);
+        if ($existingTx) {
+            throw new Exception("Este comprobante ya fue subido para la transacción #" . $existingTx['TransaccionID'] . ".", 409);
+        }
+
         $relativePath = "";
         try {
             $relativePath = $this->fileHandler->saveReceiptFile($fileData, $txId);
@@ -138,7 +148,18 @@ class TransactionService
         $estadoEnVerificacionID = $this->getEstadoId(self::ESTADO_EN_VERIFICACION);
         $estadoPendienteID = $this->getEstadoId(self::ESTADO_PENDIENTE_PAGO);
 
-        $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $relativePath, $estadoEnVerificacionID, $estadoPendienteID);
+        try {
+            $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $relativePath, $fileHash, $estadoEnVerificacionID, $estadoPendienteID);
+        } catch (\mysqli_sql_exception $e) {
+            @unlink($this->fileHandler->getAbsolutePath($relativePath)); 
+
+            if ($e->getCode() == 1062) { 
+                $existingTx = $this->txRepository->findByHash($fileHash);
+                $txMsg = $existingTx ? " la transacción #" . $existingTx['TransaccionID'] : " otra transacción";
+                throw new Exception("Este comprobante ya fue subido para" . $txMsg . ".", 409);
+            }
+            throw new Exception("Error de base de datos al guardar el comprobante: " . $e->getMessage(), 500);
+        }
 
         if ($affectedRows === 0) {
             @unlink($this->fileHandler->getAbsolutePath($relativePath)); 
