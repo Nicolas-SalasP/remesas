@@ -1,6 +1,19 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
+if (isset($_SERVER['HTTP_REFERER'])) {
+    $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
+    $serverHost = $_SERVER['HTTP_HOST'];
+
+    if (substr($refererHost, -strlen($serverHost)) !== $serverHost && $refererHost !== $serverHost) {
+        http_response_code(403);
+        die("Acceso denegado (hotlinking).");
+    }
+} elseif (php_sapi_name() !== 'cli' && empty($_SERVER['HTTP_REFERER'])) {
+    http_response_code(403);
+    die("Acceso denegado.");
+}
+
 if (!isset($_SESSION['user_id'])) {
     http_response_code(403);
     die('Acceso denegado. Debes iniciar sesión.');

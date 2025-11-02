@@ -223,5 +223,14 @@ if (!empty($baseUrlPhp)) {
 }
 ?>
 
+<script>
+document.addEventListener('contextmenu', function(e) {
+    if (e.target.tagName === 'IMG' && 
+       (e.target.closest('#viewComprobanteModal') || e.target.closest('#userDetailsModal'))) {
+        
+        e.preventDefault();
+    }
+});
+</script>
 </body>
 </html>

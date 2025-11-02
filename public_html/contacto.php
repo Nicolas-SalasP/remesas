@@ -6,39 +6,73 @@
 ?>
 
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card p-4 p-md-5 shadow-sm">
-                <div class="text-center mb-4">
-                    <h1>Ponte en Contacto Hoy</h1>
-                    <p class="lead text-muted">¿Tienes alguna duda? Estamos aquí para ayudarte.</p>
-                </div>
+    
+    <div class="text-center mb-4">
+        <h1 class="display-6 fw-bold">Ponte en Contacto Hoy</h1>
+        <p class="lead text-muted">¿Tienes alguna duda? Estamos aquí para ayudarte.</p>
+    </div>
 
+    <div class="row g-5"> <?php ?>
+        
+        <div class="col-lg-7">
+            <div class="card p-4 p-md-5 shadow-sm border-0 h-100">
+                <h4 class="mb-4 fw-bold text-primary"><i class="bi bi-envelope-fill me-2"></i>Escríbenos un Mensaje</h4>
+                
                 <form id="contact-form" novalidate>
-                    <div class="mb-3">
-                        <label for="contact-name" class="form-label">Nombre Completo</label>
-                        <input type="text" class="form-control" id="contact-name" name="name" required>
+                    <div class="mb-3 input-group">
+                        <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+                        <input type="text" class="form-control" id="contact-name" name="name" placeholder="Nombre Completo" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="contact-email" class="form-label">Correo Electrónico</label>
-                        <input type="email" class="form-control" id="contact-email" name="email" required>
+                    
+                    <div class="mb-3 input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
+                        <input type="email" class="form-control" id="contact-email" name="email" placeholder="Correo Electrónico" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="contact-subject" class="form-label">Asunto</label>
-                        <input type="text" class="form-control" id="contact-subject" name="subject" required>
+                    
+                    <div class="mb-3 input-group">
+                        <span class="input-group-text"><i class="bi bi-chat-left-dots-fill"></i></span>
+                        <input type="text" class="form-control" id="contact-subject" name="subject" placeholder="Asunto" required>
                     </div>
+                    
                     <div class="mb-3">
-                        <label for="contact-message" class="form-label">Mensaje</label>
-                        <textarea class="form-control" id="contact-message" name="message" rows="5" required></textarea>
+                        <textarea class="form-control" id="contact-message" name="message" rows="5" placeholder="Escribe tu mensaje aquí..." required></textarea>
                     </div>
-                    <button type="submit" id="contact-submit-btn" class="btn btn-primary w-100 py-2">
-                        Enviar Mensaje
-                    </button>
+                    
+                    <div class="d-grid">
+                        <button type="submit" id="contact-submit-btn" class="btn btn-primary btn-lg py-2">
+                            <i class="bi bi-send-fill me-2"></i>Enviar Mensaje
+                        </button>
+                    </div>
                 </form>
                 
                 <div id="contact-feedback" class="mt-3"></div>
             </div>
         </div>
+
+        <div class="col-lg-5">
+            <div class="card p-4 shadow-sm border-0 h-100">
+                <h4 class="mb-4 fw-bold text-primary"><i class="bi bi-geo-alt-fill me-2"></i>Nuestra Ubicación</h4>
+                
+                <p>
+                    <strong class="d-block">Dirección:</strong>
+                    <i class="bi bi-geo-alt-fill me-2"></i>Agustinas 681, Santiago, Chile
+                </p>
+
+                <hr class="my-3">
+                
+                <div class="ratio ratio-16x9 rounded shadow-sm">
+                    <iframe 
+                        src="https://maps.google.com/maps?q=Agustinas%20681%2C%20Santiago%2C%20Chile&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+                        style="border:0;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        referrerpolicy="no-referrer-when-downgrade"
+                        title="Mapa de ubicación de JC Envios">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
