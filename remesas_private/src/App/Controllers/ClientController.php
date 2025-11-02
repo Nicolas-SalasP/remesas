@@ -8,7 +8,8 @@ use App\Services\UserService;
 use App\Repositories\FormaPagoRepository;
 use App\Repositories\TipoBeneficiarioRepository;
 use App\Repositories\TipoDocumentoRepository;
-use App\Repositories\RolRepository; // ¡Añadir!
+use App\Repositories\RolRepository;
+use App\Services\NotificationService;
 use Exception;
 
 class ClientController extends BaseController
@@ -20,7 +21,8 @@ class ClientController extends BaseController
     private FormaPagoRepository $formaPagoRepo;
     private TipoBeneficiarioRepository $tipoBeneficiarioRepo;
     private TipoDocumentoRepository $tipoDocumentoRepo;
-    private RolRepository $rolRepo; // ¡Añadir!
+    private RolRepository $rolRepo;
+    private NotificationService $notificationService;
 
     public function __construct(
         TransactionService $txService,
@@ -30,7 +32,8 @@ class ClientController extends BaseController
         FormaPagoRepository $formaPagoRepo,
         TipoBeneficiarioRepository $tipoBeneficiarioRepo,
         TipoDocumentoRepository $tipoDocumentoRepo,
-        RolRepository $rolRepo // ¡Añadir!
+        RolRepository $rolRepo,
+        NotificationService $notificationService
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
@@ -39,7 +42,8 @@ class ClientController extends BaseController
         $this->formaPagoRepo = $formaPagoRepo;
         $this->tipoBeneficiarioRepo = $tipoBeneficiarioRepo;
         $this->tipoDocumentoRepo = $tipoDocumentoRepo;
-        $this->rolRepo = $rolRepo; // ¡Añadir!
+        $this->rolRepo = $rolRepo;
+        $this->notificationService = $notificationService;
     }
 
     public function getPaises(): void
@@ -254,5 +258,38 @@ class ClientController extends BaseController
     {
         $paises = $this->pricingService->getCountriesByRole('Destino');
         $this->sendJsonResponse($paises);
+    }
+
+    public function handleContactForm(): void
+    {
+        $data = $this->getJsonInput();
+
+        $name = trim(htmlspecialchars($data['name'] ?? '', ENT_QUOTES, 'UTF-8'));
+        $email = trim($data['email'] ?? '');
+        $subject = trim(htmlspecialchars($data['subject'] ?? '', ENT_QUOTES, 'UTF-8'));
+        $message = trim(htmlspecialchars($data['message'] ?? '', ENT_QUOTES, 'UTF-8'));
+
+        if (empty($name) || empty($email) || empty($subject) || empty($message)) {
+            throw new Exception("Todos los campos son obligatorios.", 400);
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception("El correo electrónico no es válido.", 400);
+        }
+        
+        if (strlen($name) > 100 || strlen($subject) > 200 || strlen($message) > 5000) {
+            throw new Exception("Uno o más campos exceden el límite de longitud.", 400);
+        }
+
+        try {
+            $success = $this->notificationService->sendContactFormEmail($name, $email, $subject, $message);
+            if ($success) {
+                $this->sendJsonResponse(['success' => true, 'message' => 'Mensaje enviado con éxito.']);
+            } else {
+                throw new Exception("No se pudo enviar el correo. Intenta más tarde.", 500);
+            }
+        } catch (Exception $e) {
+            throw new Exception("Error del servidor al enviar el correo: " . $e->getMessage(), 500);
+        }
     }
 }

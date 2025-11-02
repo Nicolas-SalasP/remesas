@@ -6,6 +6,7 @@ use App\Repositories\UserRepository;
 use App\Repositories\RateRepository;
 use App\Repositories\EstadoTransaccionRepository;
 use App\Repositories\CountryRepository;
+use App\Repositories\TasasHistoricoRepository;
 use Exception;
 
 class DashboardService
@@ -15,6 +16,7 @@ class DashboardService
     private RateRepository $rateRepository;
     private EstadoTransaccionRepository $estadoTxRepo;
     private CountryRepository $countryRepository;
+    private TasasHistoricoRepository $tasasHistoricoRepo;
 
     private const ESTADO_EN_VERIFICACION_ID = 3; 
     private const ESTADO_EN_PROCESO = 'En Proceso';
@@ -26,13 +28,15 @@ class DashboardService
         UserRepository $userRepository,
         RateRepository $rateRepository,
         EstadoTransaccionRepository $estadoTxRepo,
-        CountryRepository $countryRepository
+        CountryRepository $countryRepository,
+        TasasHistoricoRepository $tasasHistoricoRepo
     ) {
         $this->transactionRepository = $transactionRepository;
         $this->userRepository = $userRepository;
         $this->rateRepository = $rateRepository;
         $this->estadoTxRepo = $estadoTxRepo;
         $this->countryRepository = $countryRepository;
+        $this->tasasHistoricoRepo = $tasasHistoricoRepo;
     }
 
     private function getEstadoId(string $nombreEstado): int
@@ -89,7 +93,7 @@ class DashboardService
 
     public function getDolarBcvData(int $origenId, int $destinoId, int $days = 30): array
     {
-        $history = $this->rateRepository->getRateHistoryByDate($origenId, $destinoId, $days);
+        $history = $this->tasasHistoricoRepo->getRateHistoryByDate($origenId, $destinoId, $days);
         $currentRateInfo = $this->rateRepository->findCurrentRate($origenId, $destinoId, 0);
         $valorActual = (float)($currentRateInfo['ValorTasa'] ?? 0);
         $monedaOrigen = $this->countryRepository->findMonedaById($origenId) ?? 'N/A';

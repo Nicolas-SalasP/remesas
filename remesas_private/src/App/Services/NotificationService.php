@@ -12,6 +12,7 @@ class NotificationService
     private LogService $logService;
     private const PROVEEDOR_WHATSAPP_NUMBER = '+56912345678';
     private const WHATSAPP_API_URL = 'https://api.whatsapp-provider.com/send';
+    private const ADMIN_EMAIL_ADDRESS = 'nicolas.salas.1200@gmail.com';
 
     public function __construct(LogService $logService)
     {
@@ -71,12 +72,7 @@ class NotificationService
 
     public function sendOrderToProviderWhatsApp(array $txData, string $pdfContent): bool
     {
-        // NOTA: Se le notifica al proveedor para que proceda con el pago al beneficiario.
         $mensaje = "NUEVA ORDEN URGENTE #{$txData['TransaccionID']} PENDIENTE DE PAGO AL BENEFICIARIO. Monto: {$txData['MontoDestino']} {$txData['MonedaDestino']}.";
-
-        // Lógica de API (MOCK):
-        // $response = HttpClient::post(self::WHATSAPP_API_URL, [ 'to' => self::PROVEEDOR_WHATSAPP_NUMBER, ... ]);
-
         error_log("WHATSAPP - PROVEEDOR: Orden #{$txData['TransaccionID']} enviada para pago.");
         return true;
     }
@@ -151,6 +147,54 @@ class NotificationService
         } catch (Exception $e) {
             error_log("Error General al enviar email de recuperación a {$email}: {$e->getMessage()}");
             $this->logService->logAction(null, 'Error Email Recuperación', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+    public function sendContactFormEmail(string $name, string $fromEmail, string $subject, string $message): bool
+    {
+        $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+        $safeFromEmail = htmlspecialchars($fromEmail, ENT_QUOTES, 'UTF-8');
+        $safeSubject = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
+        $safeMessageHtml = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
+        $safeMessageText = htmlspecialchars_decode($safeMessageHtml, ENT_QUOTES);
+
+
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->setFrom('no-responder@jcenvios.cl', 'Formulario de Contacto (JC Envíos)');
+            $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
+            $mail->addReplyTo($safeFromEmail, $safeName);
+            $mail->isHTML(true);
+            $mail->Subject = "Nuevo Mensaje de Contacto: " . $safeSubject;
+            $mail->CharSet = 'UTF-8';
+
+            $mail->Body = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:<br><br>" .
+                "<strong>Nombre:</strong> {$safeName}<br>" .
+                "<strong>Correo:</strong> {$safeFromEmail}<br>" .
+                "<strong>Asunto:</strong> {$safeSubject}<br>" .
+                "<strong>Mensaje:</strong><br><blockquote style='border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px;'>" .
+                $safeMessageHtml .
+                "</blockquote>";
+            
+            $mail->AltBody = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:\n\n" .
+                "Nombre: {$safeName}\n" .
+                "Correo: {$safeFromEmail}\n" .
+                "Asunto: {$safeSubject}\n" .
+                "Mensaje:\n" .
+                $safeMessageText;
+
+            $mail->send();
+            $this->logService->logAction(null, 'Formulario Contacto Enviado', "Enviado por: {$safeFromEmail}");
+            return true;
+        } catch (PHPMailerException $e) {
+            error_log("PHPMailer Error: No se pudo enviar el email de contacto de {$fromEmail}. Error: {$mail->ErrorInfo}");
+            $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error: {$mail->ErrorInfo}");
+            return false;
+        } catch (Exception $e) {
+            error_log("Error General al enviar email de contacto de {$fromEmail}: {$e->getMessage()}");
+            $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error General: {$e->getMessage()}");
             return false;
         }
     }

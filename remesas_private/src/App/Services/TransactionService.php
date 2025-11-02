@@ -152,7 +152,6 @@ class TransactionService
             $affectedRows = $this->txRepository->uploadUserReceipt($txId, $userId, $relativePath, $fileHash, $estadoEnVerificacionID, $estadoPendienteID);
         } catch (\mysqli_sql_exception $e) {
             @unlink($this->fileHandler->getAbsolutePath($relativePath)); 
-
             if ($e->getCode() == 1062) { 
                 $existingTx = $this->txRepository->findByHash($fileHash);
                 $txMsg = $existingTx ? " la transacción #" . $existingTx['TransaccionID'] : " otra transacción";

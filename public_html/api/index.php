@@ -14,7 +14,8 @@ use App\Repositories\{
     EstadoTransaccionRepository,
     FormaPagoRepository,
     TipoBeneficiarioRepository,
-    ContabilidadRepository
+    ContabilidadRepository,
+    TasasHistoricoRepository // Para el gráfico
 };
 use App\Services\{
     LogService,
@@ -58,6 +59,7 @@ class Container {
 
     private function createInstance(string $className) {
         return match ($className) {
+            // Repositorios
             UserRepository::class => new UserRepository($this->getDb()),
             RateRepository::class => new RateRepository($this->getDb()),
             CountryRepository::class => new CountryRepository($this->getDb()),
@@ -70,7 +72,9 @@ class Container {
             FormaPagoRepository::class => new FormaPagoRepository($this->getDb()),
             TipoBeneficiarioRepository::class => new TipoBeneficiarioRepository($this->getDb()),
             ContabilidadRepository::class => new ContabilidadRepository($this->getDb()),
+            TasasHistoricoRepository::class => new TasasHistoricoRepository($this->getDb()),
 
+            // Services
             LogService::class => new LogService($this->getDb()),
             NotificationService::class => new NotificationService($this->get(LogService::class)),
             PDFService::class => new PDFService(),
@@ -116,9 +120,11 @@ class Container {
                 $this->get(UserRepository::class),
                 $this->get(RateRepository::class),
                 $this->get(EstadoTransaccionRepository::class),
-                $this->get(CountryRepository::class)
+                $this->get(CountryRepository::class),
+                $this->get(TasasHistoricoRepository::class)
             ),
 
+            // Controllers
             AuthController::class => new AuthController($this->get(UserService::class)),
             ClientController::class => new ClientController(
                 $this->get(TransactionService::class),
@@ -128,7 +134,8 @@ class Container {
                 $this->get(FormaPagoRepository::class),
                 $this->get(TipoBeneficiarioRepository::class),
                 $this->get(TipoDocumentoRepository::class),
-                $this->get(RolRepository::class)
+                $this->get(RolRepository::class),
+                $this->get(NotificationService::class)
             ),
             AdminController::class => new AdminController(
                 $this->get(TransactionService::class),
@@ -161,6 +168,7 @@ try {
         'requestPasswordReset'  => [AuthController::class, 'requestPasswordReset', 'POST'],
         'performPasswordReset'  => [AuthController::class, 'performPasswordReset', 'POST'],
         'verify2FACode'         => [AuthController::class, 'verify2FACode', 'POST'], 
+        'submitContactForm'     => [ClientController::class, 'handleContactForm', 'POST'],
 
         'getTasa'               => [ClientController::class, 'getTasa', 'GET'],
         'getPaises'             => [ClientController::class, 'getPaises', 'GET'],
