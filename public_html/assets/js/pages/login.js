@@ -5,68 +5,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerFeedback = document.getElementById('register-feedback');
     const docTypeSelect = document.getElementById('register-doc-type');
     const docNumInput = document.getElementById('register-doc-num');
-    
-    // --- INICIO DE LA CORRECCIÓN ---
+
     const registerPhoneCode = document.getElementById('register-phone-code');
     const registerTelefono = document.getElementById('register-telefono');
-    const registerRoleSelect = document.getElementById('register-role'); // Nuevo
+    const registerRoleSelect = document.getElementById('register-role');
 
-    // 1. Array de códigos de teléfono (estático para robustez)
     const countryPhoneCodes = [
-        { code: '+54', name: 'Argentina', flag: '🇦🇷', paisId: 7 },
-        { code: '+591', name: 'Bolivia', flag: '🇧🇴', paisId: 8 },
-        { code: '+55', name: 'Brasil', flag: '🇧🇷' },
-        { code: '+56', name: 'Chile', flag: '🇨🇱', paisId: 1 },
-        { code: '+57', name: 'Colombia', flag: '🇨🇴', paisId: 2 },
-        { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
-        { code: '+53', name: 'Cuba', flag: '🇨🇺' },
-        { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
-        { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
-        { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
-        { code: '+504', name: 'Honduras', flag: '🇭🇳' },
-        { code: '+52', name: 'México', flag: '🇲🇽' },
-        { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
-        { code: '+507', name: 'Panamá', flag: '🇵🇦' },
-        { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
-        { code: '+51', name: 'Perú', flag: '🇵🇪', paisId: 4 },
-        { code: '+1', name: 'Puerto Rico', flag: '🇵🇷' },
-        { code: '+1', name: 'Rep. Dominicana', flag: '🇩🇴' },
-        { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
-        { code: '+58', name: 'Venezuela', flag: '🇻🇪', paisId: 3 },
-        { code: '+1', name: 'EE.UU.', flag: '🇺🇸', paisId: 5 }
+        { code: '+54', name: 'Argentina' },
+        { code: '+591', name: 'Bolivia' },
+        { code: '+55', name: 'Brasil' },
+        { code: '+56', name: 'Chile' },
+        { code: '+57', name: 'Colombia' },
+        { code: '+506', name: 'Costa Rica' },
+        { code: '+53', name: 'Cuba' },
+        { code: '+593', name: 'Ecuador' },
+        { code: '+503', name: 'El Salvador' },
+        { code: '+502', name: 'Guatemala' },
+        { code: '+504', name: 'Honduras' },
+        { code: '+52', name: 'M\u00e9xico' }, 
+        { code: '+505', name: 'Nicaragua' },
+        { code: '+507', name: 'Panam\u00e1' },
+        { code: '+595', name: 'Paraguay' },
+        { code: '+51', name: 'Per\u00fa' },
+        { code: '+1', name: 'Puerto Rico' },
+        { code: '+1', name: 'Rep. Dominicana' },
+        { code: '+598', name: 'Uruguay' },
+        { code: '+58', name: 'Venezuela' },
+        { code: '+1', name: 'EE.UU.' }
     ];
 
-    // 2. Función para cargar los códigos en el select
     const loadPhoneCodes = (selectElement) => {
         if (!selectElement) return;
-        
+
         countryPhoneCodes.sort((a, b) => a.name.localeCompare(b.name));
-        selectElement.innerHTML = '<option value="">Código...</option>';
+        selectElement.innerHTML = '<option value="">C\u00f3digo...</option>';
         countryPhoneCodes.forEach(country => {
             if (country.code) {
-                selectElement.innerHTML += `<option value="${country.code}">${country.flag} ${country.code}</option>`;
+                selectElement.innerHTML += `<option value="${country.code}">${country.code} (${country.name})</option>`;
             }
         });
     };
-    
-    // 3. Listener para eliminar espacios/letras en tiempo real
+
     registerTelefono?.addEventListener('input', (e) => {
-        // Elimina cualquier cosa que no sea un número
         e.target.value = e.target.value.replace(/\D/g, '');
     });
-    // --- FIN DE LA CORRECCIÓN ---
 
 
-    // Cargar tipos de documento
     const loadDocumentTypes = async () => {
         try {
             const response = await fetch('api/?accion=getDocumentTypes');
             if (!response.ok) throw new Error('Error al cargar tipos de documento');
             const tipos = await response.json();
-            
+
             docTypeSelect.innerHTML = '<option value="">Selecciona...</option>';
             tipos.forEach(tipo => {
-                // CORRECCIÓN: Usar tipo.nombre
                 docTypeSelect.innerHTML += `<option value="${tipo.nombre}">${tipo.nombre}</option>`;
             });
         } catch (error) {
@@ -75,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- INICIO DE LA CORRECCIÓN ---
     // Cargar los roles de "Tipo de Cuenta"
     const loadAssignableRoles = async () => {
         if (!registerRoleSelect) return;
@@ -83,10 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('api/?accion=getAssignableRoles');
             if (!response.ok) throw new Error('Error al cargar tipos de cuenta');
             const roles = await response.json();
-            
+
             registerRoleSelect.innerHTML = '<option value="">Selecciona...</option>';
             roles.forEach(rol => {
-                // CORRECCIÓN: Usar rol.NombreRol
                 registerRoleSelect.innerHTML += `<option value="${rol.NombreRol}">${rol.NombreRol}</option>`;
             });
         } catch (error) {
@@ -94,11 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
             registerRoleSelect.innerHTML = '<option value="">Error al cargar</option>';
         }
     };
-    // --- FIN DE LA CORRECCIÓN ---
-    
+
     // Validar RUT Chileno
     docTypeSelect?.addEventListener('change', () => {
-        if (docTypeSelect.value === 'RUT (Chile)') {
+        docNumInput.removeAttribute('pattern');
+        docNumInput.classList.remove('is-invalid', 'is-valid');
+        docNumInput.value = '';
+
+        if (docTypeSelect.value === 'RUT') {
             docNumInput.dataset.validateRut = 'true';
             docNumInput.maxLength = 12;
             docNumInput.placeholder = '12.345.678-9';
@@ -106,20 +99,27 @@ document.addEventListener('DOMContentLoaded', () => {
             docNumInput.dataset.validateRut = 'false';
             docNumInput.maxLength = 20;
             docNumInput.placeholder = 'Nro. Documento';
-            docNumInput.classList.remove('is-invalid', 'is-valid');
         }
     });
 
     docNumInput?.addEventListener('input', (e) => {
         if (docNumInput.dataset.validateRut === 'true') {
-            // CORRECCIÓN: Usar 'Rut' (mayúscula) que es como se define en rut-validator.js
-            if (typeof Rut !== 'undefined') {
+            if (typeof validateRut === 'function' && typeof formatRut === 'function') {
                 const rut = e.target.value;
-                if (Rut.validate(rut)) {
-                    e.target.value = Rut.format(rut);
+                if (validateRut(rut)) {
+                    e.target.value = formatRut(rut);
                     docNumInput.classList.add('is-valid');
                     docNumInput.classList.remove('is-invalid');
-                } else {
+                }
+            }
+        }
+    });
+
+    docNumInput?.addEventListener('blur', (e) => {
+        if (docNumInput.dataset.validateRut === 'true') {
+            if (typeof validateRut === 'function') {
+                const rut = e.target.value;
+                if (rut && !validateRut(rut)) {
                     docNumInput.classList.add('is-invalid');
                     docNumInput.classList.remove('is-valid');
                 }
@@ -159,21 +159,39 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         registerFeedback.textContent = '';
 
+        const submitButton = registerForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        submitButton.textContent = 'Registrando...';
+
         const password = registerForm.password.value;
         const passwordRepeat = registerForm.passwordRepeat.value;
 
         if (password !== passwordRepeat) {
             registerFeedback.textContent = 'Las contraseñas no coinciden.';
+            submitButton.disabled = false;
+            submitButton.textContent = 'Registrar Cuenta';
             return;
         }
 
         if (password.length < 6) {
-             registerFeedback.textContent = 'La contraseña debe tener al menos 6 caracteres.';
-             return;
+            registerFeedback.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+            submitButton.disabled = false;
+            submitButton.textContent = 'Registrar Cuenta';
+            return;
+        }
+
+        if (docNumInput.dataset.validateRut === 'true' && (typeof validateRut !== 'function' || !validateRut(docNumInput.value))) {
+            registerFeedback.textContent = 'El RUT ingresado no es válido.';
+            submitButton.disabled = false;
+            submitButton.textContent = 'Registrar Cuenta';
+            return;
         }
 
         const formData = new FormData(registerForm);
-        
+
+        const phoneInput = formData.get('phoneNumber');
+        formData.set('phoneNumber', phoneInput.replace(/\D/g, ''));
+
         try {
             const response = await fetch('api/?accion=registerUser', {
                 method: 'POST',
@@ -189,22 +207,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             registerFeedback.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Registrar Cuenta';
         }
     });
 
     // Cargas iniciales
-    if(docTypeSelect) {
+    if (docTypeSelect) {
         loadDocumentTypes();
     }
-    
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Cargar códigos de teléfono al iniciar
-    if(registerPhoneCode) {
+
+    if (registerPhoneCode) {
         loadPhoneCodes(registerPhoneCode);
     }
-    // Cargar roles de cuenta al iniciar
-    if(registerRoleSelect) {
+    if (registerRoleSelect) {
         loadAssignableRoles();
     }
-    // --- FIN DE LA CORRECCIÓN ---
 });

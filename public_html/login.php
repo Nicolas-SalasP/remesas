@@ -113,7 +113,7 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                             <div class="form-group col-sm-6 mb-3">
                                                 <label for="register-telefono" class="form-label">Teléfono</label>
                                                 <div class="input-group">
-                                                    <select class="input-group-text" id="register-phone-code" name="phoneCode" style="max-width: 130px;"></select>
+                                                    <select class="form-select" id="register-phone-code" name="phoneCode" style="max-width: 130px;"></select>
                                                     <input type="tel" class="form-control" id="register-telefono" placeholder="Número" name="phoneNumber" required>
                                                 </div>
                                             </div>
