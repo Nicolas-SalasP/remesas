@@ -9,18 +9,19 @@ $pageTitle = 'Gestionar Usuarios';
 $pageScript = 'admin.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
-$adminID = $_SESSION['user_id'];
-
-$rolesDisponibles = $conexion->query("SELECT RolID, NombreRol FROM roles ORDER BY NombreRol")->fetch_all(MYSQLI_ASSOC);
-
+$adminID = (int)$_SESSION['user_id'];
 $mostrarInactivos = isset($_GET['mostrar_inactivos']) && $_GET['mostrar_inactivos'] == '1';
 
-$sqlWhere = "WHERE U.UserID != $adminID";
+global $conexion;
+$params = [$adminID];
+$types = 'i';
+
+$sqlWhere = "WHERE U.UserID != ?";
 if (!$mostrarInactivos) {
     $sqlWhere .= " AND (U.LockoutUntil IS NULL OR U.LockoutUntil <= NOW())";
 }
 
-$usuarios = $conexion->query("
+$sql = "
     SELECT
         U.UserID, U.PrimerNombre, U.SegundoNombre, U.PrimerApellido, U.SegundoApellido, 
         U.Email, U.Telefono, U.LockoutUntil, U.RolID, U.FechaRegistro, U.twofa_enabled,
@@ -32,7 +33,21 @@ $usuarios = $conexion->query("
     LEFT JOIN roles R ON U.RolID = R.RolID
     $sqlWhere
     ORDER BY U.FechaRegistro DESC
-")->fetch_all(MYSQLI_ASSOC);
+";
+
+$stmt = $conexion->prepare($sql);
+
+if ($stmt) {
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $usuarios = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+} else {
+    error_log("Error al preparar la consulta de usuarios: " . $conexion->error);
+    $usuarios = [];
+}
+
+$rolesDisponibles = $conexion->query("SELECT RolID, NombreRol FROM roles ORDER BY NombreRol")->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <div class="container mt-4">
@@ -42,8 +57,8 @@ $usuarios = $conexion->query("
 
     <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" value="1" id="mostrar_inactivos" 
-               <?php echo $mostrarInactivos ? 'checked' : ''; ?> 
-               onchange="window.location.href = this.checked ? '?mostrar_inactivos=1' : '?mostrar_inactivos=0'">
+            <?php echo $mostrarInactivos ? 'checked' : ''; ?> 
+            onchange="window.location.href = this.checked ? '?mostrar_inactivos=1' : '?mostrar_inactivos=0'">
         <label class="form-check-label" for="mostrar_inactivos">
             Mostrar usuarios desactivados (bloqueados)
         </label>

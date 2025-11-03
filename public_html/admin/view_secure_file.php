@@ -19,18 +19,17 @@ if (!isset($_SESSION['user_id'])) {
     die('Acceso denegado. Debes iniciar sesión.');
 }
 
+if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') {
+    http_response_code(403);
+    die('Acceso denegado. Se requiere rol de administrador.');
+}
+
 if (!isset($_GET['file']) || empty($_GET['file'])) {
     http_response_code(400);
     die('Archivo no especificado.');
 }
 
 $filePath = $_GET['file'];
-if (strpos($filePath, '..') !== false || strpos($filePath, './') !== false) {
-    http_response_code(403);
-    die('Acceso denegado (path inválido).');
-}
-
-$filePath = ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $filePath), DIRECTORY_SEPARATOR);
 
 $baseUploadPath = realpath(__DIR__ . '/../../remesas_private/uploads');
 if (!$baseUploadPath) {
@@ -39,32 +38,22 @@ if (!$baseUploadPath) {
     die("Error interno del servidor.");
 }
 
-$fullPath = null;
+$filePath = ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $filePath), DIRECTORY_SEPARATOR);
 
-if (strpos($filePath, 'verifications' . DIRECTORY_SEPARATOR) === 0) {
-    $fullPath = $baseUploadPath . DIRECTORY_SEPARATOR . $filePath;
-} elseif (strpos($filePath, 'receipts' . DIRECTORY_SEPARATOR) === 0) {
-    $fullPath = $baseUploadPath . DIRECTORY_SEPARATOR . $filePath;
-} elseif (strpos($filePath, 'proof_of_sending' . DIRECTORY_SEPARATOR) === 0) {
-    $fullPath = $baseUploadPath . DIRECTORY_SEPARATOR . $filePath;
-} elseif (strpos($filePath, 'profile_pics' . DIRECTORY_SEPARATOR) === 0) {
-    $fullPath = $baseUploadPath . DIRECTORY_SEPARATOR . $filePath;
-} else {
-    http_response_code(403);
-    die('Acceso denegado a esta ruta de archivo.');
-}
+$fullPathAttempt = $baseUploadPath . DIRECTORY_SEPARATOR . $filePath;
+$realFullPath = realpath($fullPathAttempt);
 
-if (!file_exists($fullPath) || !is_readable($fullPath)) {
+if ($realFullPath === false || strpos($realFullPath, $baseUploadPath) !== 0 || !is_file($realFullPath) || !is_readable($realFullPath)) {
     http_response_code(404);
-    error_log("Archivo seguro no encontrado o no legible: " . $fullPath);
-    die('Archivo no encontrado.');
+    error_log("Intento de Path Traversal o archivo no encontrado: " . $fullPathAttempt);
+    die("Archivo no encontrado o acceso no permitido.");
 }
 
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
 if (!$finfo) {
-     http_response_code(500); die('Error al abrir fileinfo.');
+    http_response_code(500); die('Error al abrir fileinfo.');
 }
-$mimeType = finfo_file($finfo, $fullPath);
+$mimeType = finfo_file($finfo, $realFullPath);
 finfo_close($finfo);
 
 $allowedMimeTypes = [
@@ -80,13 +69,14 @@ if (!in_array($mimeType, $allowedMimeTypes)) {
 }
 
 header('Content-Type: ' . $mimeType);
-header('Content-Length: ' . filesize($fullPath));
-header('Content-Disposition: inline; filename="' . basename($filePath) . '"');
+header('Content-Length: ' . filesize($realFullPath));
+header('Content-Disposition: inline; filename="' . basename($realFullPath) . '"');
 header('X-Content-Type-Options: nosniff');
 
 if (ob_get_level()) {
     ob_end_clean();
 }
 
-readfile($fullPath);
+readfile($realFullPath);
 exit;
+?>

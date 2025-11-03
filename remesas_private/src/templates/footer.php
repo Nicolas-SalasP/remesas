@@ -204,8 +204,15 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
   integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="<?php echo BASE_URL; ?>/assets/js/utils/modalUtils.js?v=<?php echo time(); ?>" charset="UTF-8"></script>
+
+<?php
+$jsUtilsPath = '/assets/js/utils/modalUtils.js';
+$jsUtilsFilePath = __DIR__ . '/../../../public_html' . $jsUtilsPath;
+$jsUtilsVersion = file_exists($jsUtilsFilePath) ? filemtime($jsUtilsFilePath) : '1.0.0';
+?>
+<script src="<?php echo BASE_URL . $jsUtilsPath; ?>?v=<?php echo $jsUtilsVersion; ?>" charset="UTF-8"></script>
 <?php ?>
+
 <script>
   const baseUrlJs = <?php echo defined('BASE_URL') ? json_encode(rtrim(BASE_URL, '/')) : '""'; ?>;
 </script>
@@ -216,6 +223,16 @@
 $baseUrlPhp = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
 
 if (!empty($baseUrlPhp)) {
+
+  function get_js_version($scriptPath)
+  {
+    $physicalPath = __DIR__ . '/../../../public_html' . $scriptPath;
+    if (file_exists($physicalPath)) {
+      return filemtime($physicalPath);
+    }
+    return '1.0.0';
+  }
+
   if (isset($pageScripts) && is_array($pageScripts)) {
     foreach ($pageScripts as $script) {
       if (!empty($script) && pathinfo($script, PATHINFO_EXTENSION) === 'js') {
@@ -225,12 +242,14 @@ if (!empty($baseUrlPhp)) {
         } else {
           $filePath = '/assets/js/pages/' . htmlspecialchars($scriptPath);
         }
-        echo '<script src="' . $baseUrlPhp . $filePath . '?v=' . time() . '" charset="UTF-8"></script>' . "\n";
+        $jsVersion = get_js_version($filePath);
+        echo '<script src="' . $baseUrlPhp . $filePath . '?v=' . $jsVersion . '" charset="UTF-8"></script>' . "\n";
       }
     }
   } elseif (isset($pageScript) && !empty($pageScript) && pathinfo($pageScript, PATHINFO_EXTENSION) === 'js') {
     $filePath = '/assets/js/pages/' . htmlspecialchars($pageScript);
-    echo '<script src="' . $baseUrlPhp . $filePath . '?v=' . time() . '" charset="UTF-8"></script>' . "\n";
+    $jsVersion = get_js_version($filePath);
+    echo '<script src="' . $baseUrlPhp . $filePath . '?v=' . $jsVersion . '" charset="UTF-8"></script>' . "\n";
   }
 } else {
   error_log("Advertencia: La constante BASE_URL no está definida. No se incluirán scripts JS específicos.");

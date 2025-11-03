@@ -10,7 +10,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
+    
+    <?php
+    $cssFilePath = __DIR__ . '/../../../public_html/assets/css/style.css';
+    $cssVersion = file_exists($cssFilePath) ? filemtime($cssFilePath) : '1.0.0';
+    ?>
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo $cssVersion; ?>">
+    
     <link rel="icon" href="<?php echo BASE_URL; ?>/assets/img/SoloLogoNegroSinFondo.png">
 
     <?php if (isset($pageScript) && $pageScript === 'seguridad.js'): ?>
@@ -98,7 +104,8 @@
 
                             $photoUrl = $defaultPhoto;
                             if ($photoPath) {
-                                $secureUrl = BASE_URL . '/admin/view_secure_file.php?file=' . urlencode($photoPath);
+                                $photoVersion = isset($photoPath) ? hash('md5', $photoPath) : '1';
+                                $secureUrl = BASE_URL . '/admin/view_secure_file.php?file=' . urlencode($photoPath) . '&v=' . $photoVersion;
                                 $photoUrl = $secureUrl;
                             }
                             ?>
