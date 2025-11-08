@@ -305,8 +305,9 @@ class UserRepository
          $stmt = $this->db->prepare($sql);
          $stmt->bind_param("si", $encryptedBackupCodes, $userId);
          $success = $stmt->execute();
-         $stmt->close();
-         return $success && $stmt->affected_rows > 0; 
+        $affected = $stmt->affected_rows;
+        $stmt->close();
+        return $success && $affected > 0; 
      }
 
     public function disable2FA(int $userId): bool {

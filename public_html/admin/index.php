@@ -38,9 +38,12 @@ $transacciones = $conexion->query("
 ?>
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Panel de Administración</h1>
-        <div>
+    
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h1 class="mb-0 me-3">Panel de Administracion</h1> <?php ?>
+        
+        <?php?>
+        <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-md-end mt-3 mt-md-0">
             <a href="exportar_transacciones.php" class="btn btn-success">
                 <i class="bi bi-file-earmark-excel-fill"></i> Exportar a Excel
             </a>
@@ -48,7 +51,6 @@ $transacciones = $conexion->query("
             <a href="<?php echo BASE_URL; ?>/admin/logs.php" class="btn btn-secondary">Ver Logs</a>
         </div>
     </div>
-    
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">

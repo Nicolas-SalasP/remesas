@@ -103,29 +103,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     docNumInput?.addEventListener('input', (e) => {
-        if (docNumInput.dataset.validateRut === 'true') {
-            if (typeof validateRut === 'function' && typeof formatRut === 'function') {
-                const rut = e.target.value;
-                if (validateRut(rut)) {
-                    e.target.value = formatRut(rut);
-                    docNumInput.classList.add('is-valid');
-                    docNumInput.classList.remove('is-invalid');
-                }
+        if (docNumInput.dataset.validateRut !== 'true' || typeof cleanRut !== 'function' || typeof validateRut !== 'function' || typeof formatRut !== 'function') {
+            return;
+        }
+
+        let rutLimpio = cleanRut(e.target.value);
+
+        if (rutLimpio.length > 9) {
+            rutLimpio = rutLimpio.slice(0, 9);
+        }
+
+        e.target.value = formatRut(rutLimpio);
+
+        docNumInput.classList.remove('is-valid', 'is-invalid');
+        if (rutLimpio.length > 1) {
+            if (validateRut(rutLimpio)) {
+                docNumInput.classList.add('is-valid');
+            } else if (rutLimpio.length === 9) {
+                docNumInput.classList.add('is-invalid');
             }
         }
     });
 
-    docNumInput?.addEventListener('blur', (e) => {
-        if (docNumInput.dataset.validateRut === 'true') {
-            if (typeof validateRut === 'function') {
-                const rut = e.target.value;
-                if (rut && !validateRut(rut)) {
-                    docNumInput.classList.add('is-invalid');
-                    docNumInput.classList.remove('is-valid');
-                }
-            }
-        }
-    });
 
 
     // Formulario de Login
@@ -180,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (docNumInput.dataset.validateRut === 'true' && (typeof validateRut !== 'function' || !validateRut(docNumInput.value))) {
+        if (docNumInput.dataset.validateRut === 'true' && (typeof validateRut !== 'function' || !validateRut(cleanRut(docNumInput.value)))) {
             registerFeedback.textContent = 'El RUT ingresado no es válido.';
             submitButton.disabled = false;
             submitButton.textContent = 'Registrar Cuenta';
@@ -188,6 +187,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const formData = new FormData(registerForm);
+        
+        if (docNumInput.dataset.validateRut === 'true' && typeof cleanRut === 'function') {
+             formData.set('numeroDocumento', cleanRut(docNumInput.value));
+        }
 
         const phoneInput = formData.get('phoneNumber');
         formData.set('phoneNumber', phoneInput.replace(/\D/g, ''));
@@ -213,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Cargas iniciales
     if (docTypeSelect) {
         loadDocumentTypes();
     }

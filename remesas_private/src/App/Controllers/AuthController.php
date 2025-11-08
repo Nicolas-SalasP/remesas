@@ -50,24 +50,25 @@ class AuthController extends BaseController
     {
         $data = $_POST;
 
-        if (empty($data['primerNombre']) || empty($data['primerApellido']) || empty($data['email']) || empty($data['password']) || empty($data['tipoDocumento']) || empty($data['numeroDocumento']) || empty($data['telefono'])) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'Faltan campos obligatorios.'], 400);
-             return;
+        try {
+            $result = $this->userService->registerUser($data);
+
+            $_SESSION['user_id'] = $result['UserID'];
+            $_SESSION['user_name'] = $result['PrimerNombre'];
+            $_SESSION['user_rol_name'] = $result['Rol'];
+            $_SESSION['verification_status'] = $result['VerificacionEstado'];
+            $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
+            $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
+            $_SESSION['ultima_actividad'] = time();
+
+            $redirectUrl = BASE_URL . '/dashboard/verificar.php';
+
+            $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl], 201);
+
+        } catch (Exception $e) {
+            $statusCode = $e->getCode() >= 400 ? $e->getCode() : 400;
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $statusCode);
         }
-
-        $result = $this->userService->registerUser($data);
-
-        $_SESSION['user_id'] = $result['UserID'];
-        $_SESSION['user_name'] = $result['PrimerNombre'];
-        $_SESSION['user_rol_name'] = $result['Rol'];
-        $_SESSION['verification_status'] = $result['VerificacionEstado'];
-        $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
-        $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
-        $_SESSION['ultima_actividad'] = time();
-
-        $redirectUrl = BASE_URL . '/dashboard/verificar.php';
-
-        $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl], 201);
     }
 
     public function requestPasswordReset(): void

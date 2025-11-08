@@ -125,6 +125,23 @@ class AdminController extends BaseController
         }
     }
 
+    public function updateVerificationStatus(): void
+    {
+        $adminId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        
+        $targetUserId = (int)($data['userId'] ?? 0);
+        $newStatusName = (string)($data['newStatus'] ?? '');
+
+        if ($targetUserId <= 0 || empty($newStatusName)) {
+             $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o estado inválidos.'], 400);
+             return;
+        }
+        
+        $this->userService->updateVerificationStatus($adminId, $targetUserId, $newStatusName);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Estado de verificación actualizado.']);
+    }
+
     public function getDashboardStats(): void
     {
         $stats = $this->dashboardService->getAdminDashboardStats();

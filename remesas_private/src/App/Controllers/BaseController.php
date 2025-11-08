@@ -9,7 +9,18 @@ abstract class BaseController
     {
         http_response_code($statusCode);
         header('Content-Type: application/json');
-        echo json_encode($data);
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        $jsonOutput = json_encode($data);
+        if ($jsonOutput === false) {
+            error_log("Fallo en sendJsonResponse: Error al codificar JSON: " . json_last_error_msg());
+            http_response_code(500);
+            echo '{"success":false,"error":"Error interno del servidor [JSON_ENCODE_FAIL]"}';
+        } else {
+            echo $jsonOutput;
+        }
+        
         exit();
     }
 

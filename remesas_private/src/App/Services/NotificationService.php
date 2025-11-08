@@ -119,6 +119,14 @@ class NotificationService
         $mail = new PHPMailer(true);
         try {
             $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = SMTP_USER;
+            $mail->Password = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port = SMTP_PORT;
+            $mail->CharSet = 'UTF-8';
+
             $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Recuperación');
             $mail->addAddress($email);
             $mail->isHTML(true);
@@ -151,6 +159,64 @@ class NotificationService
         }
     }
 
+    public function send2FABackupCodes(string $email, string $secretKey, array $backupCodes): bool
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = SMTP_USER;
+            $mail->Password = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port = SMTP_PORT;
+            $mail->CharSet = 'UTF-8';
+            
+            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Seguridad');
+            $mail->addAddress($email);
+            $mail->isHTML(true);
+            $mail->Subject = "¡IMPORTANTE! Tus Códigos de Respaldo 2FA de JC Envíos";
+
+            $codesList = "<ul style='font-family: monospace; font-size: 1.2em; line-height: 1.6;'>";
+            foreach ($backupCodes as $code) {
+                $codesList .= "<li>" . htmlspecialchars($code) . "</li>";
+            }
+            $codesList .= "</ul>";
+
+            $mail->Body = "Hola,<br><br>¡Has activado exitosamente la <strong>Autenticación de Dos Factores (2FA)</strong> en tu cuenta de JC Envíos!<br><br>" .
+                "<p style='color: red; font-weight: bold;'>Por favor, guarda estos códigos de respaldo en un lugar seguro (como un gestor de contraseñas). Los necesitarás para acceder a tu cuenta si pierdes tu dispositivo de autenticación.</p>" .
+                "<h3>Tus Códigos de Respaldo:</h3>" .
+                $codesList .
+                "<p>Cada código solo puede ser usado una vez.</p>" .
+                "<hr>" .
+                "<p><strong>Clave Secreta (para configuración manual):</strong><br>" .
+                "<code style='font-family: monospace; font-size: 1.2em; background: #f4f4f4; padding: 5px; border-radius: 4px;'>" . htmlspecialchars($secretKey) . "</code></p>" .
+                "<br><p>Si no reconoces esta actividad, por favor contacta a soporte inmediatamente.</p>" .
+                "Saludos,<br>El equipo de JC Envíos";
+
+            $mail->AltBody = "Hola,\n\n¡Has activado exitosamente la Autenticación de Dos Factores (2FA) en tu cuenta de JC Envíos!\n\n" .
+                "IMPORTANTE: Guarda estos códigos de respaldo en un lugar seguro. Los necesitarás para acceder a tu cuenta si pierdes tu dispositivo de autenticación.\n\n" .
+                "Tus Códigos de Respaldo:\n" .
+                implode("\n", $backupCodes) .
+                "\n\nClave Secreta (para configuración manual):\n" .
+                $secretKey .
+                "\n\nSi no reconoces esta actividad, por favor contacta a soporte inmediatamente.\n" .
+                "Saludos,\nEl equipo de JC Envíos";
+
+            $mail->send();
+            $this->logService->logAction(null, 'Email Códigos 2FA Enviado', "Enviado a: {$email}");
+            return true;
+        } catch (PHPMailerException $e) {
+            error_log("PHPMailer Error: No se pudo enviar el email de códigos 2FA a {$email}. Error: {$mail->ErrorInfo}");
+            $this->logService->logAction(null, 'Error Email 2FA', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
+            return false;
+        } catch (Exception $e) {
+            error_log("Error General al enviar email de códigos 2FA a {$email}: {$e->getMessage()}");
+            $this->logService->logAction(null, 'Error Email 2FA', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
+            return false;
+        }
+    }
+    
     public function sendContactFormEmail(string $name, string $fromEmail, string $subject, string $message): bool
     {
         $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
@@ -163,12 +229,19 @@ class NotificationService
         $mail = new PHPMailer(true);
         try {
             $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = SMTP_USER;
+            $mail->Password = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port = SMTP_PORT;
+            $mail->CharSet = 'UTF-8';
+            
             $mail->setFrom('no-responder@jcenvios.cl', 'Formulario de Contacto (JC Envíos)');
             $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
             $mail->addReplyTo($safeFromEmail, $safeName);
             $mail->isHTML(true);
             $mail->Subject = "Nuevo Mensaje de Contacto: " . $safeSubject;
-            $mail->CharSet = 'UTF-8';
 
             $mail->Body = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:<br><br>" .
                 "<strong>Nombre:</strong> {$safeName}<br>" .
@@ -195,6 +268,63 @@ class NotificationService
         } catch (Exception $e) {
             error_log("Error General al enviar email de contacto de {$fromEmail}: {$e->getMessage()}");
             $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error General: {$e->getMessage()}");
+            return false;
+        }
+    }
+
+    public function sendNewOrderEmail(array $txData, string $pdfContent): bool
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = SMTP_USER;
+            $mail->Password = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port = SMTP_PORT;
+            $mail->CharSet = 'UTF-8';
+
+            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Órdenes');
+            $mail->addAddress($txData['Email'], $txData['PrimerNombre'] . ' ' . $txData['PrimerApellido']);
+            $mail->isHTML(true);
+            $mail->Subject = "Confirmación de tu Orden de Envío #" . $txData['TransaccionID'];
+
+            $montoOrigenF = number_format($txData['MontoOrigen'], 2, ',', '.');
+            $montoDestinoF = number_format($txData['MontoDestino'], 2, ',', '.');
+
+            $mail->Body = "Hola " . htmlspecialchars($txData['PrimerNombre']) . ",<br><br>" .
+                "Hemos recibido tu orden de envío <strong>#" . $txData['TransaccionID'] . "</strong>. Adjuntamos el comprobante de la orden en formato PDF.<br><br>" .
+                "<strong>Resumen de tu orden:</strong><br>" .
+                "<ul>" .
+                "<li><strong>Monto a Enviar:</strong> " . $montoOrigenF . " " . htmlspecialchars($txData['MonedaOrigen']) . "</li>" .
+                "<li><strong>Monto a Recibir:</strong> " . $montoDestinoF . " " . htmlspecialchars($txData['MonedaDestino']) . "</li>" .
+                "<li><strong>Beneficiario:</strong> " . htmlspecialchars($txData['BeneficiarioNombre']) . "</li>" .
+                "</ul>" .
+                "Por favor, realiza el pago correspondiente y sube tu comprobante en la sección 'Mi Historial' de nuestra plataforma para que podamos procesar tu envío.<br><br>" .
+                "Gracias por confiar en JC Envíos.";
+
+            $mail->AltBody = "Hola " . $txData['PrimerNombre'] . ",\n\n" .
+                "Hemos recibido tu orden de envío #" . $txData['TransaccionID'] . ". Adjuntamos el comprobante de la orden en formato PDF.\n\n" .
+                "Resumen de tu orden:\n" .
+                "- Monto a Enviar: " . $montoOrigenF . " " . $txData['MonedaOrigen'] . "\n" .
+                "- Monto a Recibir: " . $montoDestinoF . " " . $txData['MonedaDestino'] . "\n" .
+                "- Beneficiario: " . $txData['BeneficiarioNombre'] . "\n\n" .
+                "Por favor, realiza el pago correspondiente y sube tu comprobante en la sección 'Mi Historial' de nuestra plataforma para que podamos procesar tu envío.\n\n" .
+                "Gracias por confiar en JC Envíos.";
+
+            $mail->addStringAttachment($pdfContent, 'orden-'.$txData['TransaccionID'].'.pdf', 'base64', 'application/pdf');
+
+            $mail->send();
+            $this->logService->logAction($txData['UserID'], 'Email Orden Creada', "Enviado a: " . $txData['Email'] . " (TX ID: " . $txData['TransaccionID'] . ")");
+            return true;
+        } catch (PHPMailerException $e) {
+            error_log("PHPMailer Error: No se pudo enviar el email de orden a " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
+            $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
+            return false;
+        } catch (Exception $e) {
+            error_log("Error General al enviar email de orden a " . $txData['Email'] . ": {$e->getMessage()}");
+            $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error General: {$e->getMessage()}");
             return false;
         }
     }

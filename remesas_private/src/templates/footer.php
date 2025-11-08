@@ -214,7 +214,8 @@ $jsUtilsVersion = file_exists($jsUtilsFilePath) ? filemtime($jsUtilsFilePath) : 
 <?php ?>
 
 <script>
-  const baseUrlJs = <?php echo defined('BASE_URL') ? json_encode(rtrim(BASE_URL, '/')) : '""'; ?>;
+    const baseUrlJs = <?php echo defined('BASE_URL') ? json_encode(rtrim(BASE_URL, '/')) : '""'; ?>;
+    const CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
 </script>
 <?php ?>
 
