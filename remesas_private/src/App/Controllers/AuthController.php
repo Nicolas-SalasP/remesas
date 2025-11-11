@@ -15,35 +15,41 @@ class AuthController extends BaseController
 
     public function loginUser(): void
     {
-        $data = $this->getJsonInput();
-        $result = $this->userService->loginUser($data['email'] ?? '', $data['password'] ?? '');
+        try {
+            $data = $this->getJsonInput();
+            $result = $this->userService->loginUser($data['email'] ?? '', $data['password'] ?? '');
 
-        if ($result['twofa_enabled']) {
-             $_SESSION['2fa_user_id'] = $result['UserID'];
-             unset($_SESSION['user_id']);
-             unset($_SESSION['user_rol_name']);
-             $this->sendJsonResponse([
-                 'success' => true,
-                 'twofa_required' => true,
-                 'redirect' => BASE_URL . '/verify-2fa.php'
-             ]);
-             return;
+            if ($result['twofa_enabled']) {
+                $_SESSION['2fa_user_id'] = $result['UserID'];
+                unset($_SESSION['user_id']);
+                unset($_SESSION['user_rol_name']);
+                $this->sendJsonResponse([
+                    'success' => true,
+                    'twofa_required' => true,
+                    'redirect' => BASE_URL . '/verify-2fa.php'
+                ]);
+                return;
+            }
+
+            $_SESSION['user_id'] = $result['UserID'];
+            $_SESSION['user_name'] = $result['PrimerNombre'];
+            $_SESSION['user_rol_name'] = $result['Rol'];
+            $_SESSION['verification_status'] = $result['VerificacionEstado'];
+            $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
+            $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
+            $_SESSION['ultima_actividad'] = time();
+
+            $this->sendJsonResponse([
+                'success' => true,
+                'twofa_required' => false,
+                'redirect' => BASE_URL . '/dashboard/seguridad.php',
+                'verificationStatus' => $result['VerificacionEstado']
+            ]);
+
+        } catch (Exception $e) {
+            $statusCode = $e->getCode() >= 400 ? $e->getCode() : 401;
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $statusCode);
         }
-        
-        $_SESSION['user_id'] = $result['UserID'];
-        $_SESSION['user_name'] = $result['PrimerNombre'];
-        $_SESSION['user_rol_name'] = $result['Rol'];
-        $_SESSION['verification_status'] = $result['VerificacionEstado'];
-        $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
-        $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
-        $_SESSION['ultima_actividad'] = time();
-        
-        $this->sendJsonResponse([
-            'success' => true,
-            'twofa_required' => false,
-            'redirect' => BASE_URL . '/dashboard/seguridad.php',
-            'verificationStatus' => $result['VerificacionEstado']
-        ]);
     }
 
     public function registerUser(): void
@@ -85,52 +91,52 @@ class AuthController extends BaseController
         $this->sendJsonResponse(['success' => true, 'message' => '¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.']);
     }
 
-     public function verify2FACode(): void
-     {
-         if (!isset($_SESSION['2fa_user_id'])) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'No hay una autenticación pendiente.'], 400);
-             return;
-         }
-         
-         $userId = $_SESSION['2fa_user_id'];
-         $data = $this->getJsonInput();
-         $code = $data['code'] ?? '';
+    public function verify2FACode(): void
+    {
+        if (!isset($_SESSION['2fa_user_id'])) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'No hay una autenticación pendiente.'], 400);
+            return;
+        }
 
-         $isValid = false;
-         if (!empty($code)) {
+        $userId = $_SESSION['2fa_user_id'];
+        $data = $this->getJsonInput();
+        $code = $data['code'] ?? '';
+
+        $isValid = false;
+        if (!empty($code)) {
             $isValid = $this->userService->verifyUser2FACode($userId, $code);
-             if (!$isValid) {
-                 $isValid = $this->userService->verifyBackupCode($userId, $code);
-             }
-         }
+            if (!$isValid) {
+                $isValid = $this->userService->verifyBackupCode($userId, $code);
+            }
+        }
 
-         if ($isValid) {
-             unset($_SESSION['2fa_user_id']);
-             session_regenerate_id(true);
-             
-             $user = $this->userService->getUserProfile($userId); 
+        if ($isValid) {
+            unset($_SESSION['2fa_user_id']);
+            session_regenerate_id(true);
 
-             $_SESSION['user_id'] = $user['UserID'];
-             $_SESSION['user_name'] = $user['PrimerNombre'];
-             $_SESSION['user_rol_name'] = $user['Rol'];
-             $_SESSION['verification_status'] = $user['VerificacionEstado'];
-             $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
-             $_SESSION['user_photo_url'] = $user['FotoPerfilURL'] ?? null;
-             $_SESSION['ultima_actividad'] = time();
-             
-             $redirectUrl = BASE_URL . '/dashboard/'; 
-             
-             if ($user['Rol'] === 'Admin') {
-                 $redirectUrl = BASE_URL . '/admin/';
-             } elseif ($user['Rol'] === 'Operador') {
-                 $redirectUrl = BASE_URL . '/operador/pendientes.php';
-             } elseif ($user['VerificacionEstado'] !== 'Verificado') {
-                 $redirectUrl = BASE_URL . '/dashboard/verificar.php';
-             }
+            $user = $this->userService->getUserProfile($userId);
 
-             $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl]);
-         } else {
-             $this->sendJsonResponse(['success' => false, 'error' => 'Código 2FA o de respaldo inválido.'], 401);
-         }
-     }
+            $_SESSION['user_id'] = $user['UserID'];
+            $_SESSION['user_name'] = $user['PrimerNombre'];
+            $_SESSION['user_rol_name'] = $user['Rol'];
+            $_SESSION['verification_status'] = $user['VerificacionEstado'];
+            $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
+            $_SESSION['user_photo_url'] = $user['FotoPerfilURL'] ?? null;
+            $_SESSION['ultima_actividad'] = time();
+
+            $redirectUrl = BASE_URL . '/dashboard/';
+
+            if ($user['Rol'] === 'Admin') {
+                $redirectUrl = BASE_URL . '/admin/';
+            } elseif ($user['Rol'] === 'Operador') {
+                $redirectUrl = BASE_URL . '/operador/pendientes.php';
+            } elseif ($user['VerificacionEstado'] !== 'Verificado') {
+                $redirectUrl = BASE_URL . '/dashboard/verificar.php';
+            }
+
+            $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl]);
+        } else {
+            $this->sendJsonResponse(['success' => false, 'error' => 'Código 2FA o de respaldo inválido.'], 401);
+        }
+    }
 }

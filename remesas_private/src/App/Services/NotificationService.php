@@ -171,7 +171,7 @@ class NotificationService
             $mail->SMTPSecure = SMTP_SECURE;
             $mail->Port = SMTP_PORT;
             $mail->CharSet = 'UTF-8';
-            
+
             $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Seguridad');
             $mail->addAddress($email);
             $mail->isHTML(true);
@@ -216,7 +216,7 @@ class NotificationService
             return false;
         }
     }
-    
+
     public function sendContactFormEmail(string $name, string $fromEmail, string $subject, string $message): bool
     {
         $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
@@ -236,7 +236,7 @@ class NotificationService
             $mail->SMTPSecure = SMTP_SECURE;
             $mail->Port = SMTP_PORT;
             $mail->CharSet = 'UTF-8';
-            
+
             $mail->setFrom('no-responder@jcenvios.cl', 'Formulario de Contacto (JC Envíos)');
             $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
             $mail->addReplyTo($safeFromEmail, $safeName);
@@ -250,7 +250,7 @@ class NotificationService
                 "<strong>Mensaje:</strong><br><blockquote style='border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px;'>" .
                 $safeMessageHtml .
                 "</blockquote>";
-            
+
             $mail->AltBody = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:\n\n" .
                 "Nombre: {$safeName}\n" .
                 "Correo: {$safeFromEmail}\n" .
@@ -313,7 +313,7 @@ class NotificationService
                 "Por favor, realiza el pago correspondiente y sube tu comprobante en la sección 'Mi Historial' de nuestra plataforma para que podamos procesar tu envío.\n\n" .
                 "Gracias por confiar en JC Envíos.";
 
-            $mail->addStringAttachment($pdfContent, 'orden-'.$txData['TransaccionID'].'.pdf', 'base64', 'application/pdf');
+            $mail->addStringAttachment($pdfContent, 'orden-' . $txData['TransaccionID'] . '.pdf', 'base64', 'application/pdf');
 
             $mail->send();
             $this->logService->logAction($txData['UserID'], 'Email Orden Creada', "Enviado a: " . $txData['Email'] . " (TX ID: " . $txData['TransaccionID'] . ")");
@@ -321,11 +321,13 @@ class NotificationService
         } catch (PHPMailerException $e) {
             error_log("PHPMailer Error: No se pudo enviar el email de orden a " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
             $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
-            return false;
+
+            throw $e;
+
         } catch (Exception $e) {
             error_log("Error General al enviar email de orden a " . $txData['Email'] . ": {$e->getMessage()}");
             $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error General: {$e->getMessage()}");
-            return false;
+            throw $e;
         }
     }
 }

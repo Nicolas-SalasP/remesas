@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { code: '+503', name: 'El Salvador' },
         { code: '+502', name: 'Guatemala' },
         { code: '+504', name: 'Honduras' },
-        { code: '+52', name: 'M\u00e9xico' }, 
+        { code: '+52', name: 'M\u00e9xico' },
         { code: '+505', name: 'Nicaragua' },
         { code: '+507', name: 'Panam\u00e1' },
         { code: '+595', name: 'Paraguay' },
@@ -126,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-
     // Formulario de Login
     loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -140,16 +139,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-
             const result = await response.json();
 
             if (response.ok && result.success) {
                 window.location.href = result.redirect;
             } else {
-                loginFeedback.textContent = result.error || 'Error desconocido';
+                const errorMsg = result.error || 'Error desconocido';
+                if (window.showInfoModal) {
+                    window.showInfoModal('Error de Inicio de Sesion', errorMsg, false);
+                } else {
+                    loginFeedback.textContent = errorMsg;
+                }
             }
         } catch (error) {
-            loginFeedback.textContent = 'Error de conexión. Inténtalo de nuevo.';
+            const errorMsg = 'Error de conexión. Inténtalo de nuevo.';
+            if (window.showInfoModal) {
+                window.showInfoModal('Error de Conexión', errorMsg, false);
+            } else {
+                loginFeedback.textContent = errorMsg;
+            }
         }
     });
 
@@ -187,9 +195,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const formData = new FormData(registerForm);
-        
+
         if (docNumInput.dataset.validateRut === 'true' && typeof cleanRut === 'function') {
-             formData.set('numeroDocumento', cleanRut(docNumInput.value));
+            formData.set('numeroDocumento', cleanRut(docNumInput.value));
         }
 
         const phoneInput = formData.get('phoneNumber');
@@ -206,10 +214,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok && result.success) {
                 window.location.href = result.redirect;
             } else {
-                registerFeedback.textContent = result.error || 'Error al registrar la cuenta.';
+                const errorMsg = result.error || 'Error al registrar la cuenta.';
+                if (window.showInfoModal) {
+                    window.showInfoModal('Error de Registro', errorMsg, false);
+                } else {
+                    registerFeedback.textContent = errorMsg;
+                }
             }
+
         } catch (error) {
-            registerFeedback.textContent = 'Error de conexión. Inténtalo de nuevo.';
+            const errorMsg = 'Error de conexión. Inténtalo de nuevo.';
+            if (window.showInfoModal) {
+                window.showInfoModal('Error de Red', errorMsg, false);
+            } else {
+                registerFeedback.textContent = errorMsg;
+            }
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = 'Registrar Cuenta';
