@@ -171,7 +171,7 @@ class NotificationService
             $mail->SMTPSecure = SMTP_SECURE;
             $mail->Port = SMTP_PORT;
             $mail->CharSet = 'UTF-8';
-
+            
             $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Seguridad');
             $mail->addAddress($email);
             $mail->isHTML(true);
@@ -216,7 +216,7 @@ class NotificationService
             return false;
         }
     }
-
+    
     public function sendContactFormEmail(string $name, string $fromEmail, string $subject, string $message): bool
     {
         $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
@@ -236,7 +236,7 @@ class NotificationService
             $mail->SMTPSecure = SMTP_SECURE;
             $mail->Port = SMTP_PORT;
             $mail->CharSet = 'UTF-8';
-
+            
             $mail->setFrom('no-responder@jcenvios.cl', 'Formulario de Contacto (JC Envíos)');
             $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
             $mail->addReplyTo($safeFromEmail, $safeName);
@@ -250,7 +250,7 @@ class NotificationService
                 "<strong>Mensaje:</strong><br><blockquote style='border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px;'>" .
                 $safeMessageHtml .
                 "</blockquote>";
-
+            
             $mail->AltBody = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:\n\n" .
                 "Nombre: {$safeName}\n" .
                 "Correo: {$safeFromEmail}\n" .
@@ -313,7 +313,7 @@ class NotificationService
                 "Por favor, realiza el pago correspondiente y sube tu comprobante en la sección 'Mi Historial' de nuestra plataforma para que podamos procesar tu envío.\n\n" .
                 "Gracias por confiar en JC Envíos.";
 
-            $mail->addStringAttachment($pdfContent, 'orden-' . $txData['TransaccionID'] . '.pdf', 'base64', 'application/pdf');
+            $mail->addStringAttachment($pdfContent, 'orden-'.$txData['TransaccionID'].'.pdf', 'base64', 'application/pdf');
 
             $mail->send();
             $this->logService->logAction($txData['UserID'], 'Email Orden Creada', "Enviado a: " . $txData['Email'] . " (TX ID: " . $txData['TransaccionID'] . ")");
@@ -328,6 +328,55 @@ class NotificationService
             error_log("Error General al enviar email de orden a " . $txData['Email'] . ": {$e->getMessage()}");
             $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error General: {$e->getMessage()}");
             throw $e;
+        }
+    }
+
+    public function sendWelcomeEmail(string $email, string $nombre): bool
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = SMTP_USER;
+            $mail->Password = SMTP_PASS;
+            $mail->SMTPSecure = SMTP_SECURE;
+            $mail->Port = SMTP_PORT;
+            $mail->CharSet = 'UTF-8';
+
+            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Bienvenido');
+            $mail->addAddress($email, $nombre);
+            $mail->isHTML(true);
+            $mail->Subject = "¡Bienvenido a JC Envíos!";
+
+            // --- ENLACE DE VIDEO ---
+            $videoTutorialLink = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+            $mail->Body = "Hola " . htmlspecialchars($nombre) . ",<br><br>" .
+                "¡Te damos la bienvenida a <strong>JC Envíos</strong>! Estamos felices de tenerte con nosotros.<br><br>" .
+                "Para ayudarte a comenzar y realizar tu primer envío de forma fácil y segura, hemos preparado un breve video tutorial para ti:<br><br>" .
+                "<a href='" . $videoTutorialLink . "' style='display: inline-block; padding: 12px 20px; font-size: 16px; color: #ffffff; background-color: #0d6efd; text-decoration: none; border-radius: 5px;'>Ver Video Tutorial</a><br><br>" .
+                "<strong>Siguiente paso:</strong><br>" .
+                "Recuerda que para poder realizar transacciones, debes verificar tu identidad. Puedes hacerlo subiendo tus documentos directamente desde tu perfil.<br><br>" .
+                "Gracias por tu confianza,<br>El equipo de JC Envíos";
+
+            $mail->AltBody = "Hola " . $nombre . ",\n\n" .
+                "¡Te damos la bienvenida a JC Envíos!\n\n" .
+                "Mira nuestro video tutorial para comenzar: " . $videoTutorialLink . "\n\n" .
+                "Siguiente paso: Recuerda que para poder realizar transacciones, debes verificar tu identidad subiendo tus documentos en tu perfil.\n\n" .
+                "Saludos,\nEl equipo de JC Envíos";
+
+            $mail->send();
+            $this->logService->logAction(null, 'Email Bienvenida Enviado', "Enviado a: {$email}");
+            return true;
+        } catch (PHPMailerException $e) {
+            error_log("PHPMailer Error: No se pudo enviar el email de bienvenida a {$email}. Error: {$mail->ErrorInfo}");
+            $this->logService->logAction(null, 'Error Email Bienvenida', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
+            return false;
+        } catch (Exception $e) {
+            error_log("Error General al enviar email de bienvenida a {$email}: {$e->getMessage()}");
+            $this->logService->logAction(null, 'Error Email Bienvenida', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
+            return false;
         }
     }
 }

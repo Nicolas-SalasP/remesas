@@ -65,36 +65,32 @@ class UserService
 
     public function registerUser(array $data): array
     {
-        // --- INICIO DE LA CORRECCIÓN ---
         $requiredFields = ['primerNombre', 'primerApellido', 'email', 'password', 'tipoDocumento', 'numeroDocumento', 'phoneNumber', 'tipoPersona'];
-        foreach($requiredFields as $field) {
+        foreach ($requiredFields as $field) {
             if (empty($data[$field])) {
-                 throw new Exception("El campo '$field' es obligatorio.", 400);
+                throw new Exception("El campo '$field' es obligatorio.", 400);
             }
         }
-        
-        // Combinar código y número
+
         $phoneCode = $data['phoneCode'] ?? '';
-        $phoneNumber = preg_replace('/\D/', '', $data['phoneNumber'] ?? ''); // Elimina NO números
+        $phoneNumber = preg_replace('/\D/', '', $data['phoneNumber'] ?? '');
         $data['telefono'] = $phoneCode . $phoneNumber;
 
         if (empty($data['telefono'])) {
             throw new Exception("El campo 'telefono' es obligatorio.", 400);
         }
-        
-        // Validar y obtener ID del Rol
+
         $rolID = $this->rolRepo->findIdByName($data['tipoPersona']);
         if (!$rolID || !in_array($data['tipoPersona'], ['Persona Natural', 'Empresa'])) {
             throw new Exception("El tipo de cuenta '{$data['tipoPersona']}' no es válido.", 400);
         }
         $data['rolID'] = $rolID;
-        // --- FIN DE LA CORRECCIÓN ---
 
         if (strlen($data['password']) < 6) {
             throw new Exception("La contraseña debe tener al menos 6 caracteres.", 400);
         }
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-             throw new Exception("El formato del correo electrónico no es válido.", 400);
+            throw new Exception("El formato del correo electrónico no es válido.", 400);
         }
 
         $data['passwordHash'] = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -104,9 +100,10 @@ class UserService
             throw new Exception("Tipo de documento '{$data['tipoDocumento']}' no válido.", 400);
         }
         $data['tipoDocumentoID'] = $tipoDocumentoID;
-        
+
         $estadoNoVerificadoID = $this->estadoVerificacionRepo->findIdByName('No Verificado');
-        if(!$estadoNoVerificadoID) throw new Exception("Rol 'No Verificado' no encontrado.", 500);
+        if (!$estadoNoVerificadoID)
+            throw new Exception("Rol 'No Verificado' no encontrado.", 500);
         $data['verificacionEstadoID'] = $estadoNoVerificadoID;
 
         $data['segundoNombre'] = $data['segundoNombre'] ?? null;
@@ -119,10 +116,18 @@ class UserService
             throw new Exception($e->getMessage(), $e->getCode() ?: 500);
         }
 
+        try {
+            $this->notificationService->sendWelcomeEmail($data['email'], $data['primerNombre']);
+        } catch (Exception $e) {
+            error_log("Fallo al enviar email de bienvenida para UserID {$userId}: " . $e->getMessage());
+            $this->notificationService->logAdminAction($userId, 'Error Email Bienvenida', "Fallo al enviar: " . $e->getMessage());
+        }
+
         $this->notificationService->logAdminAction($userId, 'Registro de Usuario', "Email: " . $data['email']);
 
         $newUser = $this->userRepository->findByEmail($data['email']);
-        if (!$newUser) throw new Exception("Error al obtener datos del usuario recién registrado.", 500);
+        if (!$newUser)
+            throw new Exception("Error al obtener datos del usuario recién registrado.", 500);
         return $newUser;
     }
 
@@ -137,10 +142,10 @@ class UserService
                 $this->notificationService->sendPasswordResetEmail($email, $token);
                 $this->notificationService->logAdminAction($user['UserID'], 'Solicitud Recuperación Contraseña', "Token generado para {$email}");
             } else {
-                 $this->notificationService->logAdminAction($user['UserID'], 'Error Recuperación Contraseña', "Fallo al crear token para {$email}");
+                $this->notificationService->logAdminAction($user['UserID'], 'Error Recuperación Contraseña', "Fallo al crear token para {$email}");
             }
         } else {
-             $this->notificationService->logAdminAction(null, 'Intento Recuperación Contraseña Fallido', "Email no encontrado: {$email}");
+            $this->notificationService->logAdminAction(null, 'Intento Recuperación Contraseña Fallido', "Email no encontrado: {$email}");
         }
     }
 
@@ -171,11 +176,11 @@ class UserService
         if (!$profile) {
             throw new Exception("Perfil de usuario no encontrado.", 404);
         }
-        
+
         unset($profile['PasswordHash']);
         unset($profile['twofa_secret']);
         unset($profile['twofa_backup_codes']);
-        
+
         return $profile;
     }
 
@@ -185,7 +190,7 @@ class UserService
         if (empty($telefono)) {
             throw new Exception("El número de teléfono no puede estar vacío.", 400);
         }
-        
+
         $user = $this->getUserProfile($userId);
         $fotoPerfilUrl = $user['FotoPerfilURL'] ?? null;
         $newPhotoPath = null;
@@ -197,18 +202,18 @@ class UserService
                 throw new Exception("Error al guardar la foto de perfil: " . $e->getMessage(), $e->getCode() ?: 500);
             }
         }
-        
+
         $success = $this->userRepository->updateProfileInfo($userId, $telefono, $newPhotoPath);
-        
+
         if (!$success && $newPhotoPath === null) {
             if ($this->userRepository->findUserById($userId)['Telefono'] == $telefono) {
                 return ['fotoPerfilUrl' => $fotoPerfilUrl, 'telefono' => $telefono];
             }
             throw new Exception("No se pudo actualizar la información del perfil.", 500);
         }
-        
+
         $this->notificationService->logAdminAction($userId, 'Perfil Actualizado', "Teléfono y/o foto actualizados.");
-        
+
         return ['fotoPerfilUrl' => $newPhotoPath ?? $fotoPerfilUrl, 'telefono' => $telefono];
     }
 
@@ -219,13 +224,14 @@ class UserService
         }
 
         $estadoPendienteID = $this->estadoVerificacionRepo->findIdByName('Pendiente');
-        if (!$estadoPendienteID) throw new Exception("Estado 'Pendiente' no encontrado en la base de datos.", 500);
+        if (!$estadoPendienteID)
+            throw new Exception("Estado 'Pendiente' no encontrado en la base de datos.", 500);
 
         try {
             $pathFrente = $this->fileHandler->saveVerificationFile($files['docFrente'], $userId, 'frente');
             $pathReverso = $this->fileHandler->saveVerificationFile($files['docReverso'], $userId, 'reverso');
         } catch (Exception $e) {
-             throw new Exception("Error al guardar archivos: " . $e->getMessage(), $e->getCode() ?: 500);
+            throw new Exception("Error al guardar archivos: " . $e->getMessage(), $e->getCode() ?: 500);
         }
 
 
@@ -240,32 +246,33 @@ class UserService
 
     public function updateVerificationStatus(int $adminId, int $userId, string $newStatusName): void
     {
-       if (!in_array($newStatusName, ['Verificado', 'Rechazado'])) {
-           throw new Exception("Estado de verificación no válido para esta acción: '{$newStatusName}'.", 400);
-       }
+        if (!in_array($newStatusName, ['Verificado', 'Rechazado'])) {
+            throw new Exception("Estado de verificación no válido para esta acción: '{$newStatusName}'.", 400);
+        }
 
-       $newStatusID = $this->estadoVerificacionRepo->findIdByName($newStatusName);
-       if (!$newStatusID) {
+        $newStatusID = $this->estadoVerificacionRepo->findIdByName($newStatusName);
+        if (!$newStatusID) {
             throw new Exception("Estado '{$newStatusName}' no encontrado.", 500);
-       }
+        }
 
         $estadoPendienteID = $this->estadoVerificacionRepo->findIdByName('Pendiente');
-       if (!$estadoPendienteID) throw new Exception("Estado 'Pendiente' no encontrado.", 500);
+        if (!$estadoPendienteID)
+            throw new Exception("Estado 'Pendiente' no encontrado.", 500);
 
-       $user = $this->userRepository->findUserById($userId);
-       if (!$user) {
-           throw new Exception("Usuario no encontrado.", 404);
-       }
-       if ($user['VerificacionEstadoID'] !== $estadoPendienteID) {
+        $user = $this->userRepository->findUserById($userId);
+        if (!$user) {
+            throw new Exception("Usuario no encontrado.", 404);
+        }
+        if ($user['VerificacionEstadoID'] !== $estadoPendienteID) {
             throw new Exception("Solo se puede aprobar o rechazar un usuario en estado 'Pendiente'. Estado actual: {$user['VerificacionEstado']}", 409);
-       }
+        }
 
 
-       if ($this->userRepository->updateVerificationStatus($userId, $newStatusID)) {
+        if ($this->userRepository->updateVerificationStatus($userId, $newStatusID)) {
             $this->notificationService->logAdminAction($adminId, 'Admin actualizó estado verificación', "Usuario ID: $userId, Nuevo Estado: $newStatusName (ID: $newStatusID)");
-       } else {
-           throw new Exception("No se pudo actualizar el estado de verificación.", 500);
-       }
+        } else {
+            throw new Exception("No se pudo actualizar el estado de verificación.", 500);
+        }
     }
 
     public function toggleUserBlock(int $adminId, int $userId, string $newStatus): void
@@ -278,7 +285,7 @@ class UserService
         }
 
         if (!in_array($newStatus, ['blocked', 'active'])) {
-             throw new Exception("Acción de bloqueo no válida: '{$newStatus}'.", 400);
+            throw new Exception("Acción de bloqueo no válida: '{$newStatus}'.", 400);
         }
 
         $lockoutUntil = ($newStatus === 'blocked')
@@ -289,7 +296,7 @@ class UserService
             $actionText = $newStatus === 'blocked' ? 'Bloqueado' : 'Desbloqueado';
             $this->notificationService->logAdminAction($adminId, "Admin cambió estado de usuario", "Usuario ID: $userId, Nuevo Estado: $actionText");
         } else {
-             throw new Exception("No se pudo actualizar el estado de bloqueo del usuario.", 500);
+            throw new Exception("No se pudo actualizar el estado de bloqueo del usuario.", 500);
         }
     }
 
@@ -301,9 +308,9 @@ class UserService
         if ($targetUserId === 1) {
             throw new Exception("No se puede cambiar el rol del administrador principal (ID 1).", 403);
         }
-        
+
         if ($this->userRepository->updateRole($targetUserId, $newRoleId)) {
-             $this->notificationService->logAdminAction($adminId, "Admin cambió rol de usuario", "Usuario ID: $targetUserId, Nuevo Rol ID: $newRoleId");
+            $this->notificationService->logAdminAction($adminId, "Admin cambió rol de usuario", "Usuario ID: $targetUserId, Nuevo Rol ID: $newRoleId");
         } else {
             throw new Exception("No se pudo actualizar el rol del usuario.", 500);
         }
@@ -317,15 +324,15 @@ class UserService
         if ($targetUserId === 1) {
             throw new Exception("No se puede eliminar al administrador principal (ID 1).", 403);
         }
-        
+
         $user = $this->userRepository->findUserById($targetUserId);
         if (!$user) {
-             throw new Exception("Usuario no encontrado.", 404);
+            throw new Exception("Usuario no encontrado.", 404);
         }
-        
+
         try {
             $this->toggleUserBlock($adminId, $targetUserId, 'blocked');
-            
+
             $this->notificationService->logAdminAction($adminId, "Admin DESACTIVÓ (eliminó lógicamente) usuario", "Usuario ID: $targetUserId, Email: " . $user['Email']);
         } catch (Exception $e) {
             throw new Exception("No se pudo desactivar al usuario: " . $e->getMessage(), 500);
@@ -334,34 +341,42 @@ class UserService
 
     // --- MÉTODOS 2FA ---
 
-    private function encryptData(string $data): string {
+    private function encryptData(string $data): string
+    {
         $ivLength = openssl_cipher_iv_length(self::ENCRYPTION_CIPHER);
-        if ($ivLength === false) throw new Exception("Cipher inválido para encriptación.");
+        if ($ivLength === false)
+            throw new Exception("Cipher inválido para encriptación.");
         $iv = openssl_random_pseudo_bytes($ivLength);
-        
+
         $encrypted = openssl_encrypt($data, self::ENCRYPTION_CIPHER, $this->encryptionKey, 0, $iv);
-        if ($encrypted === false) throw new Exception("Fallo en encriptación.");
-        
+        if ($encrypted === false)
+            throw new Exception("Fallo en encriptación.");
+
         return base64_encode($iv . $encrypted);
     }
 
-    private function decryptData(string $data): ?string {
+    private function decryptData(string $data): ?string
+    {
         $decoded = base64_decode($data);
-        if ($decoded === false) return null;
-        
+        if ($decoded === false)
+            return null;
+
         $ivLength = openssl_cipher_iv_length(self::ENCRYPTION_CIPHER);
-        if ($ivLength === false) return null;
-        if (strlen($decoded) < $ivLength) return null;
-        
+        if ($ivLength === false)
+            return null;
+        if (strlen($decoded) < $ivLength)
+            return null;
+
         $iv = substr($decoded, 0, $ivLength);
         $encrypted = substr($decoded, $ivLength);
-        
+
         $decrypted = openssl_decrypt($encrypted, self::ENCRYPTION_CIPHER, $this->encryptionKey, 0, $iv);
-        
+
         return $decrypted === false ? null : $decrypted;
     }
 
-     private function generateBackupCodes(int $count = 10, int $length = 8): array {
+    private function generateBackupCodes(int $count = 10, int $length = 8): array
+    {
         $codes = [];
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charLength = strlen($characters);
@@ -373,81 +388,100 @@ class UserService
             $codes[] = $code;
         }
         return $codes;
-     }
+    }
 
-     public function generateUser2FASecret(int $userId, string $userEmail, string $appName = 'JC Envíos'): array {
+    public function generateUser2FASecret(int $userId, string $userEmail, string $appName = 'JC Envíos'): array
+    {
         $google2fa = new Google2FA();
         $secretKey = $google2fa->generateSecretKey();
         $encryptedSecret = $this->encryptData($secretKey);
-        
-        $this->userRepository->update2FASecret($userId, $encryptedSecret);
-        
-        $qrCodeUrl = $google2fa->getQRCodeUrl($appName, $userEmail, $secretKey);
-        
-        return ['secret' => $secretKey, 'qrCodeUrl' => $qrCodeUrl];
-     }
 
-     public function verifyAndEnable2FA(int $userId, string $userProvidedCode): bool {
+        $this->userRepository->update2FASecret($userId, $encryptedSecret);
+
+        $qrCodeUrl = $google2fa->getQRCodeUrl($appName, $userEmail, $secretKey);
+
+        return ['secret' => $secretKey, 'qrCodeUrl' => $qrCodeUrl];
+    }
+
+    public function verifyAndEnable2FA(int $userId, string $userProvidedCode): bool
+    {
         $encryptedSecret = $this->userRepository->get2FASecret($userId);
         if (!$encryptedSecret) {
-             throw new Exception("No se encontró un secreto 2FA. Vuelve a generarlo.", 400);
+            throw new Exception("No se encontró un secreto 2FA. Vuelve a generarlo.", 400);
         }
-        
+
         $secretKey = $this->decryptData($encryptedSecret);
         if (!$secretKey) {
             throw new Exception("Error interno al desencriptar secreto 2FA.", 500);
         }
-        
+
         $google2fa = new Google2FA();
         $isValid = $google2fa->verifyKey($secretKey, $userProvidedCode);
-        
+
         if ($isValid) {
             $backupCodes = $this->generateBackupCodes();
             $encryptedBackupCodes = $this->encryptData(json_encode($backupCodes));
-            
+
             if ($this->userRepository->enable2FA($userId, $encryptedBackupCodes)) {
-                 $_SESSION['show_backup_codes'] = $backupCodes;
-                 $_SESSION['twofa_enabled'] = 1;
-                 
-                 $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
-                 return true;
+                $_SESSION['show_backup_codes'] = $backupCodes;
+                $_SESSION['twofa_enabled'] = 1;
+
+                $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
+
+                try {
+                    $user = $this->getUserProfile($userId);
+                    $this->notificationService->send2FABackupCodes($user['Email'], $secretKey, $backupCodes);
+                } catch (Exception $e) {
+                    error_log("Error al enviar email 2FA para UserID {$userId}: " . $e->getMessage());
+                    $this->notificationService->logAdminAction($userId, 'Error Email 2FA', "Fallo al enviar códigos de respaldo: " . $e->getMessage());
+                }
+
+                return true;
             } else {
-                 throw new Exception("No se pudo activar 2FA en la base de datos.", 500);
+                throw new Exception("No se pudo activar 2FA en la base de datos.", 500);
             }
         }
         return false;
-     }
-     
-    public function disable2FA(int $userId): bool {
+    }
+
+    public function disable2FA(int $userId): bool
+    {
         if ($this->userRepository->disable2FA($userId)) {
-             $_SESSION['twofa_enabled'] = 0;
-             $this->notificationService->logAdminAction($userId, '2FA Desactivado', "El usuario desactivó 2FA.");
-             return true;
+            $_SESSION['twofa_enabled'] = 0;
+            $this->notificationService->logAdminAction($userId, '2FA Desactivado', "El usuario desactivó 2FA.");
+            return true;
         }
         return false;
     }
 
 
-     public function verifyUser2FACode(int $userId, string $code): bool {
+    public function verifyUser2FACode(int $userId, string $code): bool
+    {
         $encryptedSecret = $this->userRepository->get2FASecret($userId);
-        if (!$encryptedSecret) return false;
-        
-        $secretKey = $this->decryptData($encryptedSecret);
-        if (!$secretKey) return false;
-        
-        $google2fa = new Google2FA();
-        return $google2fa->verifyKey($secretKey, $code, 0); 
-     }
+        if (!$encryptedSecret)
+            return false;
 
-     public function verifyBackupCode(int $userId, string $code): bool {
+        $secretKey = $this->decryptData($encryptedSecret);
+        if (!$secretKey)
+            return false;
+
+        $google2fa = new Google2FA();
+        return $google2fa->verifyKey($secretKey, $code, 0);
+    }
+
+    public function verifyBackupCode(int $userId, string $code): bool
+    {
         $encryptedBackupCodes = $this->userRepository->getBackupCodes($userId);
-        if (!$encryptedBackupCodes) return false;
-        
+        if (!$encryptedBackupCodes)
+            return false;
+
         $backupCodesJson = $this->decryptData($encryptedBackupCodes);
-        if (!$backupCodesJson) return false;
-        
+        if (!$backupCodesJson)
+            return false;
+
         $backupCodes = json_decode($backupCodesJson, true);
-        if (!is_array($backupCodes) || empty($backupCodes)) return false;
+        if (!is_array($backupCodes) || empty($backupCodes))
+            return false;
 
         $key = array_search($code, $backupCodes);
         if ($key !== false) {
@@ -458,5 +492,5 @@ class UserService
             return true;
         }
         return false;
-     }
+    }
 }
