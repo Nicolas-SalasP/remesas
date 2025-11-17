@@ -208,7 +208,7 @@
 <?php
 $jsUtilsPath = '/assets/js/utils/modalUtils.js';
 $jsUtilsFilePath = __DIR__ . '/../../../public_html' . $jsUtilsPath;
-$jsUtilsVersion = file_exists($jsUtilsFilePath) ? filemtime($jsUtilsFilePath) : '1.0.0';
+$jsUtilsVersion = file_exists($jsUtilsFilePath) ? hash_file('md5', $jsUtilsFilePath) : '1.0.0';
 ?>
 <script src="<?php echo BASE_URL . $jsUtilsPath; ?>?v=<?php echo $jsUtilsVersion; ?>" charset="UTF-8"></script>
 <?php ?>
@@ -229,7 +229,7 @@ if (!empty($baseUrlPhp)) {
   {
     $physicalPath = __DIR__ . '/../../../public_html' . $scriptPath;
     if (file_exists($physicalPath)) {
-      return filemtime($physicalPath);
+      return hash_file('md5', $physicalPath);
     }
     return '1.0.0';
   }

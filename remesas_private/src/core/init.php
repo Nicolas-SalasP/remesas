@@ -17,6 +17,40 @@ session_set_cookie_params([
     'samesite' => 'Lax'
 ]);
 
+header('X-Content-Type-Options: nosniff');
+
+$cspHost = '';
+if (defined('BASE_URL')) {
+    $parsedUrl = parse_url(BASE_URL);
+    if (isset($parsedUrl['host'])) {
+        $host = $parsedUrl['host'];
+        $scheme = $parsedUrl['scheme'] ?? 'https';
+        if (strpos($host, 'www.') === 0) {
+            $cspHost = $scheme . '://' . $host . ' ' . $scheme . '://' . substr($host, 4);
+        } else {
+            $cspHost = $scheme . '://' . $host . ' ' . $scheme . '://www.' . $host;
+        }
+    }
+}
+
+$cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'",
+    "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'",
+    "font-src 'self' https://cdn.jsdelivr.net",
+    "img-src 'self' data:",
+    "frame-src 'self' http://googleusercontent.com/maps/google.com https://www.google.com",
+    
+    "connect-src 'self' " . $cspHost . " https://cdn.jsdelivr.net",
+    
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "base-uri 'self'",
+    "form-action 'self'"
+];
+$cspHeader = "Content-Security-Policy: " . implode('; ', $cspDirectives);
+header($cspHeader);
+
 session_start();
 
 require_once __DIR__ . '/ErrorHandler.php';
@@ -49,7 +83,6 @@ $conexion->set_charset("utf8mb4");
 
 function logAction($conexion, $accion, $userId = null, $detalles = '') {
     $stmt = $conexion->prepare("INSERT INTO logs (UserID, Accion, Detalles) VALUES (?, ?, ?)");
-
     $stmt->bind_param("iss", $userId, $accion, $detalles);
     $stmt->execute();
     $stmt->close();

@@ -13,7 +13,7 @@
     
     <?php
     $cssFilePath = __DIR__ . '/../../../public_html/assets/css/style.css';
-    $cssVersion = file_exists($cssFilePath) ? filemtime($cssFilePath) : '1.0.0';
+    $cssVersion = file_exists($cssFilePath) ? hash_file('md5', $cssFilePath) : '1.0.0';
     ?>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo $cssVersion; ?>">
     
