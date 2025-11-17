@@ -48,7 +48,6 @@ $transacciones = $conexion->query("
                 <i class="bi bi-file-earmark-excel-fill"></i> Exportar a Excel
             </a>
             <a href="<?php echo BASE_URL; ?>/admin/pendientes.php" class="btn btn-primary">Ver Transacciones Pendientes</a>
-            <a href="<?php echo BASE_URL; ?>/admin/logs.php" class="btn btn-secondary">Ver Logs</a>
         </div>
     </div>
     <div class="table-responsive">

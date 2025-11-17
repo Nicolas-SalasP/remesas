@@ -61,7 +61,9 @@ try {
         
         $sheet->setCellValueExplicit('M' . $rowNumber, $row['BeneficiarioDocumento'], DataType::TYPE_STRING);
         $sheet->setCellValue('N' . $rowNumber, $row['BeneficiarioBanco']);
-        $sheet->setCellValueExplicit('O' . $rowNumber, $row['BeneficiarioCuenta'], DataType::TYPE_STRING);
+
+        $sheet->setCellValueExplicit('O' . $rowNumber, $row['BeneficiarioNumeroCuenta'], DataType::TYPE_STRING);
+
         
         $rowNumber++;
     }
