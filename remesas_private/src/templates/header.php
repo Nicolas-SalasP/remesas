@@ -4,20 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) . ' - JC Envios' : 'Tu Empresa de Remesas'; ?>
-    </title>
-
+    
+    <title><?php 
+        $defaultTitle = 'JC Envios | Envía Remesas Online Rápido y Seguro';
+        echo isset($pageTitle) ? htmlspecialchars($pageTitle) . ' | JC Envios' : $defaultTitle; 
+    ?></title>
+    
+    <meta name="description" content="Envía dinero a tus seres queridos de forma rápida, segura y confiable con JC Envios. Las mejores tasas del mercado para tus remesas.">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
+    
     <?php
     $cssFilePath = __DIR__ . '/../../../public_html/assets/css/style.css';
-    // Usamos hash_file() para el cache-busting (Solución Alerta 3)
     $cssVersion = file_exists($cssFilePath) ? hash_file('md5', $cssFilePath) : '1.0.0';
     ?>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo $cssVersion; ?>">
-
+    
     <link rel="icon" href="<?php echo BASE_URL; ?>/assets/img/SoloLogoNegroSinFondo.png">
 
     <?php if (isset($pageScript) && $pageScript === 'seguridad.js'): ?>
@@ -25,7 +29,9 @@
     <?php endif; ?>
 </head>
 
-<body class="d-flex flex-column min-vh-100 bg-light">
+<body class="d-flex flex-column min-vh-100 bg-light" 
+    data-base-url="<?php echo htmlspecialchars(BASE_URL); ?>" 
+    data-csrf-token="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
 
     <header class="main-header shadow-sm">
         <nav class="navbar navbar-expand-lg navbar-light bg-white">
@@ -42,7 +48,7 @@
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
 
                         <?php if (isset($_SESSION['user_id'])): ?>
-
+                            
                             <?php
                             $is_admin_or_operador = (isset($_SESSION['user_rol_name']) && ($_SESSION['user_rol_name'] === 'Admin' || $_SESSION['user_rol_name'] === 'Operador'));
                             $two_fa_enabled = (isset($_SESSION['twofa_enabled']) && $_SESSION['twofa_enabled'] == 1);
@@ -52,7 +58,7 @@
                                 <li class="nav-item"><a class="nav-link active fw-bold text-danger"
                                         href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Configurar Seguridad (2FA)</a>
                                 </li>
-
+                            
                             <?php else: ?>
                                 <?php if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin'): ?>
                                     <li class="nav-item"><a class="nav-link fw-bold text-danger"
@@ -90,7 +96,7 @@
                                     <li class="nav-item"><a class="nav-link"
                                             href="<?php echo BASE_URL; ?>/dashboard/seguridad.php">Seguridad</a></li>
                                 <?php endif; ?>
-
+                            
                             <?php endif; ?>
 
                         <?php else: ?>
@@ -110,7 +116,7 @@
 
                             $photoUrl = $defaultPhoto;
                             if ($photoPath) {
-                                $physicalPhotoPath = __DIR__ . '/../../uploads/' . $photoPath;
+                                $physicalPhotoPath = __DIR__ . '/../../../uploads/' . $photoPath;
                                 $photoVersion = file_exists($physicalPhotoPath) ? hash_file('md5', $physicalPhotoPath) : '1';
                                 $secureUrl = BASE_URL . '/admin/view_secure_file.php?file=' . urlencode($photoPath) . '&v=' . $photoVersion;
                                 $photoUrl = $secureUrl;

@@ -11,7 +11,7 @@ if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operado
 }
 
 
-$pageTitle = 'Inicio';
+$pageTitle = 'Envía Remesas Online | Rápido y Seguro';
 $pageScript = 'home.js';
 
 require_once __DIR__ . '/../remesas_private/src/templates/header.php';
@@ -85,8 +85,23 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
         </div>
     </section>
 
-</div>
-
-<?php
+    <section class="py-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <div class="row">
+                    <div class="col-lg-10 offset-lg-1">
+                        <h2 class="text-center fw-bold mb-4">Tu mejor opción para Remesas y Giros</h2>
+                        <p class="text-muted">
+                            En JC Envios, nos especializamos en facilitar tus <strong>envíos de dinero</strong> a destinos clave. Entendemos la importancia de cada remesa, por eso ofrecemos un servicio transparente y con las <strong>mejores tasas de cambio</strong> del mercado. 
+                        </p>
+                        <p class="text-muted">
+                            Ya sea que necesites enviar dinero a Venezuela, Colombia, Perú o cualquier otro destino, nuestra plataforma te permite hacerlo de forma segura. Olvídate de las complicaciones de los giros internacionales tradicionales; con nosotros, tu dinero llega rápido.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    </div> <?php
 require_once __DIR__ . '/../remesas_private/src/templates/footer.php';
 ?>
