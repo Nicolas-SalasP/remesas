@@ -21,13 +21,24 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                     <?php if ($tokenValido): ?>
                         <form id="reset-password-form">
                             <input type="hidden" id="token" value="<?php echo htmlspecialchars($token); ?>">
+                            
                             <div class="mb-3">
                                 <label for="new-password" class="form-label">Nueva Contraseña</label>
-                                <input type="password" class="form-control" id="new-password" required>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="new-password" required>
+                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                        <i class="bi bi-eye-slash-fill"></i>
+                                    </span>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="confirm-password" class="form-label">Confirmar Nueva Contraseña</label>
-                                <input type="password" class="form-control" id="confirm-password" required>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirm-password" required>
+                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                        <i class="bi bi-eye-slash-fill"></i>
+                                    </span>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Guardar Contraseña</button>
                         </form>

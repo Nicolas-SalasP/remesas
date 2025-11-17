@@ -46,10 +46,17 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                             <label for="login-email" class="form-label">Correo Electrónico</label>
                                             <input type="email" class="form-control" id="login-email" placeholder="Ingresa tu correo..." name="email" required>
                                         </div>
+                                        
                                         <div class="form-group mb-3">
                                             <label for="login-password" class="form-label">Contraseña</label>
-                                            <input type="password" class="form-control" id="login-password" placeholder="Contraseña" name="password" required>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="login-password" placeholder="Contraseña" name="password" required>
+                                                <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                                    <i class="bi bi-eye-slash-fill"></i>
+                                                </span>
+                                            </div>
                                         </div>
+
                                         <button type="submit" class="btn btn-primary btn-user w-100">
                                             Ingresar
                                         </button>
@@ -106,10 +113,9 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                         <div class="row">
                                             <div class="form-group col-sm-6 mb-3">
                                                 <label for="register-role" class="form-label">Tipo de Cuenta</label>
-                                                <select class="form-select" id="register-role" name="tipoPersona" required>
-                                                    <option value="">Cargando...</option>
-                                                </select>
+                                                <input type="text" class="form-control" id="register-role" name="tipoPersona" value="Persona Natural" readonly required style="background-color: #e9ecef;">
                                             </div>
+
                                             <div class="form-group col-sm-6 mb-3">
                                                 <label for="register-telefono" class="form-label">Teléfono</label>
                                                 <div class="input-group">
@@ -122,13 +128,24 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                         <div class="row">
                                             <div class="form-group col-sm-6 mb-3">
                                                 <label for="register-password" class="form-label">Contraseña</label>
-                                                <input type="password" class="form-control" id="register-password" placeholder="Contraseña" name="password" required>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" id="register-password" placeholder="Contraseña" name="password" required>
+                                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                                        <i class="bi bi-eye-slash-fill"></i>
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="form-group col-sm-6 mb-3">
                                                 <label for="register-password-repeat" class="form-label">Repetir Contraseña</label>
-                                                <input type="password" class="form-control" id="register-password-repeat" placeholder="Repetir Contraseña" name="passwordRepeat" required>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" id="register-password-repeat" placeholder="Repetir Contraseña" name="passwordRepeat" required>
+                                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                                        <i class="bi bi-eye-slash-fill"></i>
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
+
                                         <button type="submit" class="btn btn-primary btn-user w-100">
                                             Registrar Cuenta
                                         </button>

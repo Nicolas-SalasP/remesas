@@ -214,8 +214,8 @@ $jsUtilsVersion = file_exists($jsUtilsFilePath) ? hash_file('md5', $jsUtilsFileP
 <?php ?>
 
 <script>
-    const baseUrlJs = <?php echo defined('BASE_URL') ? json_encode(rtrim(BASE_URL, '/')) : '""'; ?>;
-    const CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
+  const baseUrlJs = <?php echo defined('BASE_URL') ? json_encode(rtrim(BASE_URL, '/')) : '""'; ?>;
+  const CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
 </script>
 <?php ?>
 
@@ -262,6 +262,25 @@ if (!empty($baseUrlPhp)) {
     if (e.target.tagName === 'IMG' &&
       (e.target.closest('#viewComprobanteModal') || e.target.closest('#userDetailsModal'))) {
       e.preventDefault();
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    const toggleBtn = e.target.closest('.toggle-password');
+    if (!toggleBtn) return;
+    const input = toggleBtn.previousElementSibling;
+    const icon = toggleBtn.querySelector('i');
+
+    if (input && input.tagName === 'INPUT' && icon) {
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye-slash-fill');
+        icon.classList.add('bi-eye-fill');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-fill');
+        icon.classList.add('bi-eye-slash-fill');
+      }
     }
   });
 </script>
