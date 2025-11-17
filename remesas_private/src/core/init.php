@@ -39,10 +39,8 @@ $cspDirectives = [
     "style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'",
     "font-src 'self' https://cdn.jsdelivr.net",
     "img-src 'self' data:",
-    "frame-src 'self' http://googleusercontent.com/maps/google.com https://www.google.com",
-    
+    "frame-src 'self' http://googleusercontent.com/maps.google.com/ https://www.google.com/",
     "connect-src 'self' " . $cspHost . " https://cdn.jsdelivr.net",
-    
     "object-src 'none'",
     "frame-ancestors 'self'",
     "base-uri 'self'",
@@ -56,9 +54,10 @@ session_start();
 require_once __DIR__ . '/ErrorHandler.php';
 set_exception_handler('App\\Core\\exception_handler');
 
-$tiempo_limite = $session_lifetime; // 4 horas
+$tiempo_limite = $session_lifetime;
 
 if (isset($_SESSION['user_id'])) {
+    
     if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_actividad'] > $tiempo_limite)) {
         session_unset();
         session_destroy();
@@ -66,6 +65,29 @@ if (isset($_SESSION['user_id'])) {
         exit();
     }
     $_SESSION['ultima_actividad'] = time();
+
+    $is_admin_or_operador = (isset($_SESSION['user_rol_name']) && ($_SESSION['user_rol_name'] === 'Admin' || $_SESSION['user_rol_name'] === 'Operador'));
+    $two_fa_enabled = (isset($_SESSION['twofa_enabled']) && $_SESSION['twofa_enabled'] == 1);
+
+    if ($is_admin_or_operador && $two_fa_enabled) {
+        
+        $two_fa_grace_period = $tiempo_limite; 
+        
+        $current_page = basename($_SERVER['SCRIPT_NAME']);
+        $is_on_auth_page = in_array($current_page, ['verify-2fa.php', 'logout.php']);
+        $is_api_call = (strpos($_SERVER['REQUEST_URI'], '/api/') !== false);
+
+        if (isset($_SESSION['2fa_verified_at']) && (time() - $_SESSION['2fa_verified_at'] < $two_fa_grace_period)) {
+        } else {
+            $_SESSION['2fa_user_id'] = $_SESSION['user_id'];
+            unset($_SESSION['user_id']);
+            
+            if (!$is_api_call && !$is_on_auth_page) {
+                header('Location: ' . BASE_URL . '/verify-2fa.php?grace_expired=1');
+                exit();
+            }
+        }
+    }
 }
 
 $conexion = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);

@@ -126,8 +126,8 @@ class AuthController extends BaseController
 
         if ($isValid) {
             unset($_SESSION['2fa_user_id']);
-            session_regenerate_id(true);
 
+            $_SESSION['2fa_verified_at'] = time();
             $user = $this->userService->getUserProfile($userId);
 
             $_SESSION['user_id'] = $user['UserID'];
@@ -137,6 +137,8 @@ class AuthController extends BaseController
             $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
             $_SESSION['user_photo_url'] = $user['FotoPerfilURL'] ?? null;
             $_SESSION['ultima_actividad'] = time();
+
+            session_regenerate_id(true); 
 
             $redirectUrl = BASE_URL . '/dashboard/';
 
