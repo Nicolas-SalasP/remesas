@@ -6,7 +6,7 @@ use App\Services\PricingService;
 use App\Services\DashboardService;
 use App\Services\UserService;
 use App\Repositories\RolRepository;
-use App\Database\Database;
+use App\Repositories\CuentasAdminRepository;
 use Exception;
 
 class AdminController extends BaseController
@@ -16,19 +16,22 @@ class AdminController extends BaseController
     private UserService $userService;
     private DashboardService $dashboardService;
     private RolRepository $rolRepo;
+    private CuentasAdminRepository $cuentasAdminRepo;
 
     public function __construct(
         TransactionService $txService,
         PricingService $pricingService,
         UserService $userService,
         DashboardService $dashboardService,
-        RolRepository $rolRepo 
+        RolRepository $rolRepo,
+        CuentasAdminRepository $cuentasAdminRepo
     ) {
         $this->txService = $txService;
         $this->pricingService = $pricingService;
         $this->userService = $userService;
         $this->dashboardService = $dashboardService;
         $this->rolRepo = $rolRepo;
+        $this->cuentasAdminRepo = $cuentasAdminRepo;
         $this->ensureAdmin();
     }
 
@@ -36,9 +39,7 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        
         $resultData = $this->pricingService->adminUpsertRate($adminId, $data);
-        
         $this->sendJsonResponse(['success' => true, 'newTasaId' => $resultData['TasaID']]);
     }
 
@@ -46,12 +47,7 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $this->pricingService->adminAddCountry(
-            $adminId,
-            $data['nombrePais'] ?? '',
-            $data['codigoMoneda'] ?? '',
-            $data['rol'] ?? ''
-        );
+        $this->pricingService->adminAddCountry($adminId, $data['nombrePais'] ?? '', $data['codigoMoneda'] ?? '', $data['rol'] ?? '');
         $this->sendJsonResponse(['success' => true], 201);
     }
 
@@ -59,12 +55,7 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $this->pricingService->adminUpdateCountry(
-            $adminId,
-            (int)($data['paisId'] ?? 0),
-            $data['nombrePais'] ?? '',
-            $data['codigoMoneda'] ?? ''
-        );
+        $this->pricingService->adminUpdateCountry($adminId, (int) ($data['paisId'] ?? 0), $data['nombrePais'] ?? '', $data['codigoMoneda'] ?? '');
         $this->sendJsonResponse(['success' => true]);
     }
 
@@ -72,11 +63,7 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $this->pricingService->adminUpdateCountryRole(
-            $adminId,
-            (int)($data['paisId'] ?? 0),
-            $data['newRole'] ?? ''
-        );
+        $this->pricingService->adminUpdateCountryRole($adminId, (int) ($data['paisId'] ?? 0), $data['newRole'] ?? '');
         $this->sendJsonResponse(['success' => true]);
     }
 
@@ -84,8 +71,8 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $newStatus = (bool)($data['newStatus'] ?? false);
-        $this->pricingService->adminToggleCountryStatus($adminId, (int)($data['paisId'] ?? 0), $newStatus);
+        $newStatus = (bool) ($data['newStatus'] ?? false);
+        $this->pricingService->adminToggleCountryStatus($adminId, (int) ($data['paisId'] ?? 0), $newStatus);
         $this->sendJsonResponse(['success' => true]);
     }
 
@@ -93,7 +80,7 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $this->txService->adminConfirmPayment($adminId, (int)($data['transactionId'] ?? 0));
+        $this->txService->adminConfirmPayment($adminId, (int) ($data['transactionId'] ?? 0));
         $this->sendJsonResponse(['success' => true]);
     }
 
@@ -101,16 +88,16 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $this->txService->adminRejectPayment($adminId, (int)($data['transactionId'] ?? 0));
+        $this->txService->adminRejectPayment($adminId, (int) ($data['transactionId'] ?? 0));
         $this->sendJsonResponse(['success' => true]);
     }
 
     public function adminUploadProof(): void
     {
         $adminId = $this->ensureLoggedIn();
-        $transactionId = (int)($_POST['transactionId'] ?? 0);
+        $transactionId = (int) ($_POST['transactionId'] ?? 0);
         $fileData = $_FILES['receiptFile'] ?? null;
-        $comisionDestino = isset($_POST['comisionDestino']) ? (float)$_POST['comisionDestino'] : 0.00;
+        $comisionDestino = isset($_POST['comisionDestino']) ? (float) $_POST['comisionDestino'] : 0.00;
 
         if ($transactionId <= 0 || $fileData === null) {
             $this->sendJsonResponse(['success' => false, 'error' => 'ID de transacción inválido o archivo no recibido.'], 400);
@@ -129,17 +116,15 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        
-        $targetUserId = (int)($data['userId'] ?? 0);
-        $newStatusName = (string)($data['newStatus'] ?? '');
+        $targetUserId = (int) ($data['userId'] ?? 0);
+        $newStatusName = (string) ($data['newStatus'] ?? '');
 
         if ($targetUserId <= 0 || empty($newStatusName)) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o estado inválidos.'], 400);
-             return;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Datos inválidos.'], 400);
+            return;
         }
-        
         $this->userService->updateVerificationStatus($adminId, $targetUserId, $newStatusName);
-        $this->sendJsonResponse(['success' => true, 'message' => 'Estado de verificación actualizado.']);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Estado actualizado.']);
     }
 
     public function getDashboardStats(): void
@@ -147,37 +132,65 @@ class AdminController extends BaseController
         $stats = $this->dashboardService->getAdminDashboardStats();
         $this->sendJsonResponse(['success' => true, 'stats' => $stats]);
     }
-    
+
     public function updateUserRole(): void
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        
-        $targetUserId = (int)($data['userId'] ?? 0);
-        $newRoleId = (int)($data['newRoleId'] ?? 0);
+        $targetUserId = (int) ($data['userId'] ?? 0);
+        $newRoleId = (int) ($data['newRoleId'] ?? 0);
 
         if ($targetUserId <= 0 || $newRoleId <= 0) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o rol inválidos.'], 400);
-             return;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Datos inválidos.'], 400);
+            return;
         }
-        
         $this->userService->adminUpdateUserRole($adminId, $targetUserId, $newRoleId);
-        $this->sendJsonResponse(['success' => true, 'message' => 'Rol actualizado correctamente.']);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Rol actualizado.']);
     }
 
     public function deleteUser(): void
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        
-        $targetUserId = (int)($data['userId'] ?? 0);
-        
+        $targetUserId = (int) ($data['userId'] ?? 0);
+
         if ($targetUserId <= 0) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'ID de usuario inválido.'], 400);
-             return;
+            $this->sendJsonResponse(['success' => false, 'error' => 'ID de usuario inválido.'], 400);
+            return;
         }
-        
         $this->userService->adminDeleteUser($adminId, $targetUserId);
-        $this->sendJsonResponse(['success' => true, 'message' => 'Usuario eliminado correctamente.']);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Usuario eliminado.']);
+    }
+
+    // --- MÉTODOS PARA CUENTAS BANCARIAS ADMIN ---
+    public function getCuentasAdmin(): void
+    {
+        $cuentas = $this->cuentasAdminRepo->findAll();
+        $this->sendJsonResponse(['success' => true, 'cuentas' => $cuentas]);
+    }
+
+    public function saveCuentaAdmin(): void
+    {
+        $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+
+        if (empty($data['banco']) || empty($data['titular']) || empty($data['numeroCuenta']) || empty($data['rut'])) {
+            throw new Exception("Faltan campos obligatorios.", 400);
+        }
+
+        if (isset($data['id']) && $data['id'] > 0) {
+            $this->cuentasAdminRepo->update((int) $data['id'], $data);
+        } else {
+            $this->cuentasAdminRepo->create($data);
+        }
+        $this->sendJsonResponse(['success' => true]);
+    }
+
+    public function deleteCuentaAdmin(): void
+    {
+        $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        $this->cuentasAdminRepo->delete((int) $data['id']);
+        $this->sendJsonResponse(['success' => true]);
     }
 }
