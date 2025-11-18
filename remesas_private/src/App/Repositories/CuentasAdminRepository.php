@@ -15,10 +15,11 @@ class CuentasAdminRepository
 
     public function findAll(): array
     {
-        $sql = "SELECT c.*, f.Nombre as FormaPagoNombre 
+        $sql = "SELECT c.*, f.Nombre as FormaPagoNombre, p.NombrePais 
                 FROM cuentas_bancarias_admin c
                 JOIN formas_pago f ON c.FormaPagoID = f.FormaPagoID
-                ORDER BY f.Nombre, c.Banco";
+                JOIN paises p ON c.PaisID = p.PaisID
+                ORDER BY p.NombrePais, f.Nombre";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -26,11 +27,11 @@ class CuentasAdminRepository
         return $result;
     }
 
-    public function findByFormaPagoId(int $formaPagoId): ?array
+    public function findByFormaPagoAndPais(int $formaPagoId, int $paisId): ?array
     {
-        $sql = "SELECT * FROM cuentas_bancarias_admin WHERE FormaPagoID = ? AND Activo = 1 LIMIT 1";
+        $sql = "SELECT * FROM cuentas_bancarias_admin WHERE FormaPagoID = ? AND PaisID = ? AND Activo = 1 LIMIT 1";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("i", $formaPagoId);
+        $stmt->bind_param("ii", $formaPagoId, $paisId);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -39,19 +40,11 @@ class CuentasAdminRepository
 
     public function create(array $data): bool
     {
-        $sql = "INSERT INTO cuentas_bancarias_admin (FormaPagoID, Banco, Titular, TipoCuenta, NumeroCuenta, RUT, Email, Instrucciones, ColorHex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO cuentas_bancarias_admin (FormaPagoID, PaisID, Banco, Titular, TipoCuenta, NumeroCuenta, RUT, Email, Instrucciones, ColorHex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param(
-            "issssssss",
-            $data['formaPagoId'],
-            $data['banco'],
-            $data['titular'],
-            $data['tipoCuenta'],
-            $data['numeroCuenta'],
-            $data['rut'],
-            $data['email'],
-            $data['instrucciones'],
-            $data['colorHex']
+        $stmt->bind_param("iissssssss", 
+            $data['formaPagoId'], $data['paisId'], $data['banco'], $data['titular'], $data['tipoCuenta'], 
+            $data['numeroCuenta'], $data['rut'], $data['email'], $data['instrucciones'], $data['colorHex']
         );
         $success = $stmt->execute();
         $stmt->close();
@@ -60,22 +53,13 @@ class CuentasAdminRepository
 
     public function update(int $id, array $data): bool
     {
-        $sql = "UPDATE cuentas_bancarias_admin SET FormaPagoID=?, Banco=?, Titular=?, TipoCuenta=?, NumeroCuenta=?, RUT=?, Email=?, Instrucciones=?, ColorHex=?, Activo=? WHERE CuentaAdminID=?";
+        $sql = "UPDATE cuentas_bancarias_admin SET FormaPagoID=?, PaisID=?, Banco=?, Titular=?, TipoCuenta=?, NumeroCuenta=?, RUT=?, Email=?, Instrucciones=?, ColorHex=?, Activo=? WHERE CuentaAdminID=?";
         $stmt = $this->db->prepare($sql);
-        $activoInt = (int) $data['activo'];
-        $stmt->bind_param(
-            "issssssssii",
-            $data['formaPagoId'],
-            $data['banco'],
-            $data['titular'],
-            $data['tipoCuenta'],
-            $data['numeroCuenta'],
-            $data['rut'],
-            $data['email'],
-            $data['instrucciones'],
-            $data['colorHex'],
-            $activoInt,
-            $id
+        $activoInt = (int)$data['activo'];
+        $stmt->bind_param("iissssssssii", 
+            $data['formaPagoId'], $data['paisId'], $data['banco'], $data['titular'], $data['tipoCuenta'], 
+            $data['numeroCuenta'], $data['rut'], $data['email'], $data['instrucciones'], 
+            $data['colorHex'], $activoInt, $id
         );
         $success = $stmt->execute();
         $stmt->close();

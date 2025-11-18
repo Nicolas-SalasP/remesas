@@ -10,6 +10,7 @@ $pageScript = 'admin-cuentas.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
 $formasPago = $conexion->query("SELECT FormaPagoID, Nombre FROM formas_pago WHERE Activo = 1")->fetch_all(MYSQLI_ASSOC);
+$paises = $conexion->query("SELECT PaisID, NombrePais FROM paises WHERE Activo = 1 ORDER BY NombrePais")->fetch_all(MYSQLI_ASSOC);
 ?>
 
 <div class="container mt-4">
@@ -26,6 +27,7 @@ $formasPago = $conexion->query("SELECT FormaPagoID, Nombre FROM formas_pago WHER
                 <table class="table table-hover align-middle" id="cuentas-table">
                     <thead class="table-light">
                         <tr>
+                            <th>País (Origen)</th>
                             <th>Forma de Pago</th>
                             <th>Banco / Titular</th>
                             <th>Datos de Cuenta</th>
@@ -55,6 +57,14 @@ $formasPago = $conexion->query("SELECT FormaPagoID, Nombre FROM formas_pago WHER
 
                     <div class="row mb-3">
                         <div class="col-md-6">
+                            <label class="form-label">País de Origen (Donde recibe el dinero)</label>
+                            <select class="form-select" id="pais-id" name="paisId" required>
+                                <?php foreach ($paises as $pais): ?>
+                                    <option value="<?= $pais['PaisID'] ?>"><?= $pais['NombrePais'] ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Asignar a Forma de Pago</label>
                             <select class="form-select" id="forma-pago-id" name="formaPagoId" required>
                                 <?php foreach ($formasPago as $fp): ?>
@@ -62,37 +72,41 @@ $formasPago = $conexion->query("SELECT FormaPagoID, Nombre FROM formas_pago WHER
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Banco</label>
-                            <input type="text" class="form-control" id="banco" name="banco" required>
-                        </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Titular</label>
-                            <input type="text" class="form-control" id="titular" name="titular" required>
+                            <label class="form-label">Banco (o Plataforma)</label>
+                            <input type="text" class="form-control" id="banco" name="banco" required
+                                placeholder="Ej: Banco Santander o Zelle">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">RUT</label>
-                            <input type="text" class="form-control" id="rut" name="rut" required>
+                            <label class="form-label">Titular (o Email Zelle)</label>
+                            <input type="text" class="form-control" id="titular" name="titular" required>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Tipo de Cuenta</label>
-                            <input type="text" class="form-control" id="tipo-cuenta" name="tipoCuenta" required>
+                            <input type="text" class="form-control" id="tipo-cuenta" name="tipoCuenta" required
+                                placeholder="Ej: Cta Corriente o Correo">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Número de Cuenta</label>
+                            <label class="form-label">Número de Cuenta (o Teléfono)</label>
                             <input type="text" class="form-control" id="numero-cuenta" name="numeroCuenta" required>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Email (Opcional)</label>
-                        <input type="email" class="form-control" id="email" name="email">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">RUT / ID / DNI</label>
+                            <input type="text" class="form-control" id="rut" name="rut" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email de Notificación (Opcional)</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                        </div>
                     </div>
 
                     <div class="row mb-3">
@@ -112,7 +126,8 @@ $formasPago = $conexion->query("SELECT FormaPagoID, Nombre FROM formas_pago WHER
 
                     <div class="mb-3">
                         <label class="form-label">Instrucciones Adicionales (PDF)</label>
-                        <textarea class="form-control" id="instrucciones" name="instrucciones" rows="3"></textarea>
+                        <textarea class="form-control" id="instrucciones" name="instrucciones" rows="3"
+                            placeholder="Ej: Notas importantes, referencia de pago, etc."></textarea>
                     </div>
 
                     <div class="d-grid">

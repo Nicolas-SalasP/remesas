@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cuentasData.forEach(c => {
             const row = `
                 <tr>
+                    <td><strong>${c.NombrePais}</strong></td>
                     <td><span class="badge bg-info text-dark">${c.FormaPagoNombre}</span></td>
                     <td>
                         <strong>${c.Banco}</strong><br>
@@ -55,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cuenta-id').value = '';
         document.getElementById('cuentaModalLabel').textContent = 'Nueva Cuenta Bancaria';
         document.getElementById('color-hex').value = '#000000';
+        // Pre-seleccionar Chile por defecto si existe
+        const paisSelect = document.getElementById('pais-id');
+        if (paisSelect.options.length > 0) paisSelect.selectedIndex = 0;
     });
 
     tableBody.addEventListener('click', async (e) => {
@@ -66,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cuenta = cuentasData.find(c => c.CuentaAdminID == id);
             if (cuenta) {
                 document.getElementById('cuenta-id').value = cuenta.CuentaAdminID;
+                document.getElementById('pais-id').value = cuenta.PaisID; // Cargar país
                 document.getElementById('forma-pago-id').value = cuenta.FormaPagoID;
                 document.getElementById('banco').value = cuenta.Banco;
                 document.getElementById('titular').value = cuenta.Titular;

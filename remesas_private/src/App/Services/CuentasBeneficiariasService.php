@@ -32,6 +32,7 @@ class CuentasBeneficiariasService
 
         if ($paisId !== null) {
             $cuentas = array_filter($cuentas, fn($cuenta) => isset($cuenta['PaisID']) && $cuenta['PaisID'] == $paisId);
+            $cuentas = array_values($cuentas);
         }
 
         return $cuentas;
@@ -49,8 +50,15 @@ class CuentasBeneficiariasService
     private function validateAndPrepareBeneficiaryData(array $data): array
     {
         $requiredFields = [
-            'alias', 'tipoBeneficiario', 'primerNombre', 'primerApellido',
-            'tipoDocumento', 'numeroDocumento', 'nombreBanco', 'numeroCuenta', 'numeroTelefono'
+            'alias',
+            'tipoBeneficiario',
+            'primerNombre',
+            'primerApellido',
+            'tipoDocumento',
+            'numeroDocumento',
+            'nombreBanco',
+            'numeroCuenta',
+            'numeroTelefono'
         ];
 
         foreach ($requiredFields as $field) {
@@ -75,7 +83,7 @@ class CuentasBeneficiariasService
 
         $data['segundoNombre'] = isset($data['segundoNombre']) && trim($data['segundoNombre']) !== '' ? trim($data['segundoNombre']) : null;
         $data['segundoApellido'] = isset($data['segundoApellido']) && trim($data['segundoApellido']) !== '' ? trim($data['segundoApellido']) : null;
-        
+
         return $data;
     }
 
@@ -83,7 +91,7 @@ class CuentasBeneficiariasService
     {
         $data = $this->validateAndPrepareBeneficiaryData($data);
         $data['UserID'] = $userId;
-        
+
         if (!isset($data['paisID']) || empty($data['paisID'])) {
             throw new Exception("El campo 'paisID' es obligatorio.", 400);
         }
@@ -94,26 +102,26 @@ class CuentasBeneficiariasService
             $this->notificationService->logAdminAction($userId, 'Usuario añadió cuenta beneficiaria', "Alias: {$logAlias} - ID: {$newId}");
             return $newId;
         } catch (Exception $e) {
-             error_log("Error al crear cuenta beneficiaria en CuentasBeneficiariasRepository: " . $e->getMessage());
+            error_log("Error al crear cuenta beneficiaria en CuentasBeneficiariasRepository: " . $e->getMessage());
             throw new Exception("Error al guardar la cuenta del beneficiario en la base de datos.", $e->getCode() ?: 500);
         }
     }
-    
+
     public function updateAccount(int $userId, int $cuentaId, array $data): bool
     {
         $data = $this->validateAndPrepareBeneficiaryData($data);
-        
+
         try {
             $success = $this->cuentasBeneficiariasRepository->update($cuentaId, $userId, $data);
             $logAlias = $data['alias'] ?? 'N/A';
             $this->notificationService->logAdminAction($userId, 'Usuario actualizó beneficiario', "Alias: {$logAlias} - ID: {$cuentaId}");
             return $success;
         } catch (Exception $e) {
-             error_log("Error al actualizar cuenta beneficiaria: " . $e->getMessage());
+            error_log("Error al actualizar cuenta beneficiaria: " . $e->getMessage());
             throw new Exception("Error al actualizar la cuenta del beneficiario.", $e->getCode() ?: 500);
         }
     }
-    
+
     public function deleteAccount(int $userId, int $cuentaId): bool
     {
         try {
@@ -123,7 +131,7 @@ class CuentasBeneficiariasService
             }
             return $success;
         } catch (Exception $e) {
-             error_log("Error al eliminar cuenta beneficiaria: " . $e->getMessage());
+            error_log("Error al eliminar cuenta beneficiaria: " . $e->getMessage());
             throw new Exception($e->getMessage(), $e->getCode() ?: 500);
         }
     }

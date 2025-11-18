@@ -28,7 +28,8 @@ $sql = "SELECT
             TS.ValorTasa,
             ET.NombreEstado AS Estado,
             FP.Nombre AS FormaPago,
-            T.FormaPagoID
+            T.FormaPagoID,
+            TS.PaisOrigenID
         FROM transacciones AS T
         JOIN usuarios AS U ON T.UserID = U.UserID
         LEFT JOIN tasas AS TS ON T.TasaID_Al_Momento = TS.TasaID
@@ -63,13 +64,12 @@ if (!$tx) {
     die("Transacción no encontrada o no tienes permiso para verla.");
 }
 
-// --- NUEVA LÓGICA: Obtener datos de cuenta bancaria de la BD ---
 $cuentaAdmin = null;
-if (!empty($tx['FormaPagoID'])) {
-    $sqlCuenta = "SELECT * FROM cuentas_bancarias_admin WHERE FormaPagoID = ? AND Activo = 1 LIMIT 1";
+if (!empty($tx['FormaPagoID']) && !empty($tx['PaisOrigenID'])) {
+    $sqlCuenta = "SELECT * FROM cuentas_bancarias_admin WHERE FormaPagoID = ? AND PaisID = ? AND Activo = 1 LIMIT 1";
     $stmtC = $conexion->prepare($sqlCuenta);
     if ($stmtC) {
-        $stmtC->bind_param("i", $tx['FormaPagoID']);
+        $stmtC->bind_param("ii", $tx['FormaPagoID'], $tx['PaisOrigenID']);
         $stmtC->execute();
         $cuentaAdmin = $stmtC->get_result()->fetch_assoc();
         $stmtC->close();
