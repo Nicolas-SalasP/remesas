@@ -35,6 +35,24 @@ class AdminController extends BaseController
         $this->ensureAdmin();
     }
 
+    public function rejectTransaction(): void
+    {
+        $adminId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+
+        $txId = (int) ($data['transactionId'] ?? 0);
+        $reason = $data['reason'] ?? '';
+        $actionType = $data['actionType'] ?? 'cancel';
+
+        if ($txId <= 0) {
+            $this->sendJsonResponse(['success' => false, 'error' => 'ID de transacción inválido.'], 400);
+            return;
+        }
+
+        $this->txService->adminRejectPayment($adminId, $txId, $reason, $actionType === 'retry');
+        $this->sendJsonResponse(['success' => true]);
+    }
+
     public function upsertRate(): void
     {
         $adminId = $this->ensureLoggedIn();
@@ -81,14 +99,6 @@ class AdminController extends BaseController
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
         $this->txService->adminConfirmPayment($adminId, (int) ($data['transactionId'] ?? 0));
-        $this->sendJsonResponse(['success' => true]);
-    }
-
-    public function rejectTransaction(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        $this->txService->adminRejectPayment($adminId, (int) ($data['transactionId'] ?? 0));
         $this->sendJsonResponse(['success' => true]);
     }
 
@@ -162,7 +172,6 @@ class AdminController extends BaseController
         $this->sendJsonResponse(['success' => true, 'message' => 'Usuario eliminado.']);
     }
 
-    // --- MÉTODOS PARA CUENTAS BANCARIAS ADMIN ---
     public function getCuentasAdmin(): void
     {
         $cuentas = $this->cuentasAdminRepo->findAll();
