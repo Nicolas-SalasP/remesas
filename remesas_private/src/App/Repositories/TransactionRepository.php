@@ -332,4 +332,49 @@ class TransactionRepository
         $stmt->close();
         return $result;
     }
+public function findPendingByAmount(float $monto, int $horasTolerancia): array
+    {
+        $sql = "SELECT TransaccionID, UserID, MontoOrigen, Email, PrimerNombre, Telefono 
+                FROM transacciones t
+                JOIN usuarios u ON t.UserID = u.UserID
+                WHERE t.MontoOrigen = ? 
+                AND t.EstadoID IN (1, 2) 
+                AND t.FechaTransaccion >= DATE_SUB(NOW(), INTERVAL ? HOUR)";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("di", $monto, $horasTolerancia);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $result;
+    }
+
+    public function isEmailProcessed(string $messageId): bool
+    {
+        $sql = "SELECT TransaccionID FROM transacciones WHERE EmailMessageID = ? LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("s", $messageId);
+        $stmt->execute();
+        $stmt->store_result();
+        $exists = $stmt->num_rows > 0;
+        $stmt->close();
+        return $exists;
+    }
+
+    public function updateStatusToProcessingWithProof(int $txId, int $newStatusId, string $proofPath, string $messageId): bool
+    {
+        $sql = "UPDATE transacciones 
+                SET EstadoID = ?, 
+                    ComprobanteBancoURL = ?, 
+                    EmailMessageID = ?,
+                    ComprobanteURL = IF(ComprobanteURL IS NULL OR ComprobanteURL = '', ?, ComprobanteURL),
+                    FechaSubidaComprobante = NOW()
+                WHERE TransaccionID = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("isssi", $newStatusId, $proofPath, $messageId, $proofPath, $txId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
 }
