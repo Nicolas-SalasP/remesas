@@ -78,6 +78,10 @@ class TransactionService
             }
         }
 
+        if ($data['montoOrigen'] <= 0) {
+            throw new Exception("El monto debe ser mayor a cero.", 400);
+        }
+
         $beneficiario = $this->cuentasRepo->findByIdAndUserId((int) $data['cuentaID'], (int) $data['userID']);
         if (!$beneficiario) {
             throw new Exception("Beneficiario no encontrado o no te pertenece.", 404);
@@ -89,6 +93,7 @@ class TransactionService
             $beneficiario['TitularPrimerApellido'],
             $beneficiario['TitularSegundoApellido']
         ]));
+
         $data['beneficiarioDocumento'] = $beneficiario['TitularNumeroDocumento'];
         $data['beneficiarioBanco'] = $beneficiario['NombreBanco'];
         $data['beneficiarioNumeroCuenta'] = $beneficiario['NumeroCuenta'];
@@ -112,10 +117,7 @@ class TransactionService
             $pdfContent = $this->pdfService->generateOrder($txData);
             $pdfUrl = $this->fileHandler->savePdfTemporarily($pdfContent, $transactionId);
 
-            // Notificación WhatsApp
             $whatsappSent = $this->notificationService->sendOrderToClientWhatsApp($txData, $pdfUrl);
-
-            // Notificación Email
             $this->notificationService->sendNewOrderEmail($txData, $pdfContent);
 
             $logDetail = "TX ID: $transactionId - Notificación WhatsApp: " . ($whatsappSent ? 'Éxito' : 'Fallo');

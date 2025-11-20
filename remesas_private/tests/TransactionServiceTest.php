@@ -48,4 +48,54 @@ class TransactionServiceTest extends TestCase
             'montoOrigen' => 50000
         ]);
     }
+
+    public function testNoSePuedeCrearTransaccionConMontoNegativo()
+    {
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findUserById')->willReturn([
+            'UserID' => 1, 
+            'VerificacionEstado' => 'Verificado',
+            'Telefono' => '+5690000000'
+        ]);
+
+        $txRepo = $this->createMock(TransactionRepository::class);
+        $cuentasRepo = $this->createMock(CuentasBeneficiariasRepository::class);
+        $cuentasRepo->method('findByIdAndUserId')->willReturn([
+            'CuentaID' => 5,
+            'TitularPrimerNombre' => 'Juan',
+            'TitularPrimerApellido' => 'Perez',
+            'NombreBanco' => 'Banco Test',
+            'NumeroCuenta' => '123',
+            'TitularNumeroDocumento' => '111',
+            'NumeroTelefono' => '555'
+        ]);
+        
+        $formaPagoRepo = $this->createMock(FormaPagoRepository::class);
+        $formaPagoRepo->method('findIdByName')->willReturn(1);
+        $notifService = $this->createMock(NotificationService::class);
+        $pdfService = $this->createMock(PDFService::class);
+        $fileHandler = $this->createMock(FileHandlerService::class);
+        $estadoTxRepo = $this->createMock(EstadoTransaccionRepository::class);
+        $contabService = $this->createMock(ContabilidadService::class);
+
+        $service = new TransactionService(
+            $txRepo, $userRepo, $notifService, $pdfService, 
+            $fileHandler, $estadoTxRepo, $formaPagoRepo, 
+            $contabService, $cuentasRepo
+        );
+
+        $this->expectException(Exception::class);
+        $this->expectExceptionMessage("monto debe ser mayor a cero");
+
+        $service->createTransaction([
+            'userID' => 1,
+            'cuentaID' => 5,
+            'tasaID' => 1,
+            'montoOrigen' => -100,
+            'monedaOrigen' => 'CLP',
+            'montoDestino' => 0,
+            'monedaDestino' => 'VES',
+            'formaDePago' => 'Transferencia'
+        ]);
+    }
 }
