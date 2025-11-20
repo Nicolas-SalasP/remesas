@@ -1,0 +1,7 @@
+id,archivo,linea,tipo,prioridad,descripcion,fix_suggested
+1,Database.php,15,Code Quality,High,Uso de @ para suprimir errores de conexión,Usar try-catch y logs
+2,NotificationService.php,12,Security,High,Número de WhatsApp hardcodeado,Mover a config/env
+3,EmailReconciliationService.php,35,Code Quality,Medium,Uso de @imap_open,Manejar errores de conexión IMAP
+4,fpdf (folder),-,Maintainability,Medium,Librería incluida en código fuente,Usar composer require
+5,TransactionRepository.php,Local,Security,High,Validación de unicidad de hash de archivo,Ya implementada (buena práctica)
+6,login.js,8,Code Quality,Low,Lista de países hardcodeada en JS,Cargar dinámicamente desde API
