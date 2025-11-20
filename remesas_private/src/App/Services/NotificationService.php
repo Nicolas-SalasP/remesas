@@ -10,8 +10,6 @@ use Twilio\Rest\Client as TwilioClient;
 class NotificationService
 {
     private LogService $logService;
-    private const PROVEEDOR_WHATSAPP_NUMBER = '+56912345678';
-    private const ADMIN_EMAIL_ADDRESS = 'nicolas.salas.1200@gmail.com';
 
     public function __construct(LogService $logService)
     {
@@ -201,7 +199,7 @@ class NotificationService
         $mail = new PHPMailer(true);
         try {
             $this->configureSMTP($mail);
-            $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
+            $mail->addAddress(ADMIN_EMAIL);
             $mail->addReplyTo($fromEmail, $name);
             $mail->Subject = "Contacto: " . $subject;
             $mail->Body = "

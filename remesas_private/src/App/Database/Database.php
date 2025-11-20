@@ -12,16 +12,14 @@ class Database
     private function __construct()
     {
         try {
-            $this->connection = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            $this->connection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
             if ($this->connection->connect_error) {
-                throw new Exception("Error de conexión a la base de datos: " . $this->connection->connect_error);
+                throw new Exception("Error de conexión: " . $this->connection->connect_error);
             }
-            $this->connection->set_charset("utf8mb4");
-
-        } catch (Exception $e) {
-            error_log($e->getMessage());
-            die("Error interno del servidor al conectar con la base de datos. Contacte al soporte.");
+        } catch (\Throwable $e) {
+            error_log("DB Connection Error: " . $e->getMessage());
+            throw new Exception("Error interno de conexión a base de datos.");
         }
     }
 
@@ -38,15 +36,19 @@ class Database
         return $this->connection;
     }
 
-    public function __clone() {}
+    public function __clone()
+    {
+    }
 
-    public function __wakeup() {}
+    public function __wakeup()
+    {
+    }
 
     public function prepare(string $sql): \mysqli_stmt
     {
         $stmt = $this->connection->prepare($sql);
         if ($stmt === false) {
-             throw new Exception("Error al preparar la consulta: " . $this->connection->error);
+            throw new Exception("Error al preparar la consulta: " . $this->connection->error);
         }
         return $stmt;
     }

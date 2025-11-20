@@ -1,0 +1,1 @@
+{"version":2,"defects":[],"times":{"PricingServiceTest::testGetCurrentRateCalculaCorrectamente":0.038,"PricingServiceTest::testErrorSiOrigenYDestinoSonIguales":0.001,"TransactionServiceTest::testNoSePuedeCrearTransaccionSiUsuarioNoVerificado":0.01}}
