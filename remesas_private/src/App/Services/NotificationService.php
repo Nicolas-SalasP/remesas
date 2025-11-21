@@ -10,9 +10,6 @@ use Twilio\Rest\Client as TwilioClient;
 class NotificationService
 {
     private LogService $logService;
-    private const PROVEEDOR_WHATSAPP_NUMBER = '+56912345678';
-    private const WHATSAPP_API_URL = 'https://api.whatsapp-provider.com/send';
-    private const ADMIN_EMAIL_ADDRESS = 'nicolas.salas.1200@gmail.com';
 
     public function __construct(LogService $logService)
     {
@@ -229,36 +226,18 @@ class NotificationService
 
         $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
+            $this->configureSMTP($mail);
+            $mail->addAddress(ADMIN_EMAIL);
+            $mail->addReplyTo($fromEmail, $name);
+            $mail->Subject = "Contacto: " . $subject;
+            $mail->Body = "
+            <html>
+            <body>
+                <p><strong>Mensaje de:</strong> $name ($fromEmail)</p>
+                <p>" . nl2br(htmlspecialchars($message)) . "</p>
+            </body>
+            </html>";
             
-            $mail->setFrom('no-responder@jcenvios.cl', 'Formulario de Contacto (JC Envíos)');
-            $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
-            $mail->addReplyTo($safeFromEmail, $safeName);
-            $mail->isHTML(true);
-            $mail->Subject = "Nuevo Mensaje de Contacto: " . $safeSubject;
-
-            $mail->Body = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:<br><br>" .
-                "<strong>Nombre:</strong> {$safeName}<br>" .
-                "<strong>Correo:</strong> {$safeFromEmail}<br>" .
-                "<strong>Asunto:</strong> {$safeSubject}<br>" .
-                "<strong>Mensaje:</strong><br><blockquote style='border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px;'>" .
-                $safeMessageHtml .
-                "</blockquote>";
-            
-            $mail->AltBody = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:\n\n" .
-                "Nombre: {$safeName}\n" .
-                "Correo: {$safeFromEmail}\n" .
-                "Asunto: {$safeSubject}\n" .
-                "Mensaje:\n" .
-                $safeMessageText;
-
             $mail->send();
             $this->logService->logAction(null, 'Formulario Contacto Enviado', "Enviado por: {$safeFromEmail}");
             return true;

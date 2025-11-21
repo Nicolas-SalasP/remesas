@@ -45,10 +45,6 @@ abstract class BaseController
             $this->sendJsonResponse(['success' => false, 'error' => 'Acceso denegado. Se requiere iniciar sesión.'], 401);
             exit();
         }
-        if (isset($_SESSION['2fa_user_id'])) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'Verificación 2FA pendiente.'], 403);
-             exit();
-        }
         return (int)$_SESSION['user_id'];
     }
 

@@ -1,0 +1,26 @@
+@startuml
+actor "Usuario Verificado" as User
+participant "Frontend (JS)" as UI
+participant "ClientController" as Ctrl
+participant "TransactionService" as Svc
+participant "PricingService" as Price
+database "MySQL" as DB
+participant "FileHandler" as Files
+
+User -> UI: Solicita crear remesa
+UI -> Ctrl: POST /api/?accion=createTransaccion
+Ctrl -> Svc: createTransaction(data)
+Svc -> DB: findUserById(userID)
+alt Usuario NO Verificado
+    Svc --> Ctrl: Exception (403)
+    Ctrl --> UI: Error "Debe verificarse"
+end
+
+Svc -> Price: Validar Tasa (Opcional/Recomendado)
+Svc -> DB: Insertar Transacción (Estado: Pendiente)
+Svc -> Files: Generar PDF Temporal
+Svc -> User: Enviar Email/WhatsApp
+Svc --> Ctrl: ID Transacción
+Ctrl --> UI: JSON { success: true, id: 123 }
+UI -> User: Muestra confirmación
+@enduml
