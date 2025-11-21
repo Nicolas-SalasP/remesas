@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Carpetas privadas que no deben ser indexadas
+Disallow: /admin/
+Disallow: /operador/
+Disallow: /dashboard/
+Disallow: /api/
+
+# Archivos privados que no deben ser indexados
+Disallow: /generar-factura.php
+Disallow: /logout.php
+Disallow: /verify-2fa.php
+Disallow: /public_html/admin/view_secure_file.php
+Disallow: /public_html/dashboard/ver-comprobantes.php
+
+# Ubicación del mapa del sitio
+Sitemap: https://jcenvios.cl/sitemap.xml

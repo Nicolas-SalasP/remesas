@@ -72,7 +72,7 @@ $rolesDisponibles = $conexion->query("SELECT RolID, NombreRol FROM roles ORDER B
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Estado Verificacion</th>
-                    <th>Rol</th>
+                    <th style="min-width: 150px;">Rol</th>
                     <th style="min-width: 220px;">Acciones</th> <?php ?>
                 </tr>
             </thead>
@@ -102,7 +102,6 @@ $rolesDisponibles = $conexion->query("SELECT RolID, NombreRol FROM roles ORDER B
                                         aria-label="Seleccionar rol de usuario"
                                         <?php echo $isPrincipalAdmin ? 'disabled' : ''; ?>>
                                     
-                                    <option value="">Seleccionar...</option>
                                     <?php foreach ($rolesDisponibles as $rol): ?>
                                         <option value="<?php echo $rol['RolID']; ?>" <?php echo ($usuario['RolID'] == $rol['RolID']) ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($rol['NombreRol']); ?>

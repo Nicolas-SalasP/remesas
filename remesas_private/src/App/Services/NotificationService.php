@@ -11,7 +11,6 @@ class NotificationService
 {
     private LogService $logService;
     private const PROVEEDOR_WHATSAPP_NUMBER = '+56912345678';
-    private const WHATSAPP_API_URL = 'https://api.whatsapp-provider.com/send';
     private const ADMIN_EMAIL_ADDRESS = 'nicolas.salas.1200@gmail.com';
 
     public function __construct(LogService $logService)
@@ -24,18 +23,15 @@ class NotificationService
         $this->logService->logAction($userId, $action, $details);
     }
 
-    // MÉTODOS DE NOTIFICACIÓN WHATSAPP 
+    // --- MÉTODOS DE NOTIFICACIÓN WHATSAPP ---
 
     public function sendOrderToClientWhatsApp(array $txData, string $pdfUrl): bool
     {
         if (!defined('TWILIO_ACCOUNT_SID') || !defined('TWILIO_AUTH_TOKEN') || !defined('TWILIO_WHATSAPP_NUMBER') || empty(TWILIO_ACCOUNT_SID)) {
-            error_log("Error crítico: Credenciales de Twilio no configuradas en config.php");
-            $this->logService->logAction($txData['UserID'] ?? null, 'Error Notificación WhatsApp', "Credenciales Twilio no configuradas. TX ID: {$txData['TransaccionID']}");
             return false;
         }
+
         if (empty($txData['TelefonoCliente'])) {
-            error_log("Error Notificación WhatsApp: No se encontró teléfono para el UserID: {$txData['UserID']}. TX ID: {$txData['TransaccionID']}");
-            $this->logService->logAction($txData['UserID'], 'Error Notificación WhatsApp', "Teléfono de cliente no encontrado. TX ID: {$txData['TransaccionID']}");
             return false;
         }
 
@@ -45,12 +41,10 @@ class NotificationService
         }
         $formattedClientNumber = 'whatsapp:' . $clientPhoneNumber;
 
-
         $mensaje = "¡Hola {$txData['PrimerNombre']}! 👋\n\nTu orden de envío *#{$txData['TransaccionID']}* ha sido registrada con éxito en JCenvios.cl.\n\nAdjuntamos el detalle de tu orden en PDF.\n\nPor favor, realiza el pago según las instrucciones y sube tu comprobante en la sección 'Mi Historial' de nuestra web.\n\n¡Gracias por tu confianza!";
 
         try {
             $twilio = new TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-
             $message = $twilio->messages->create(
                 $formattedClientNumber,
                 [
@@ -59,13 +53,11 @@ class NotificationService
                     'mediaUrl' => [$pdfUrl]
                 ]
             );
-
             $this->logService->logAction($txData['UserID'], 'Notificación WhatsApp Enviada', "Orden #{$txData['TransaccionID']} enviada. SID: " . $message->sid);
             return true;
-
         } catch (Exception $e) {
-            error_log("Error de Twilio al enviar WhatsApp a {$formattedClientNumber} para TX ID {$txData['TransaccionID']}: " . $e->getMessage());
-            $this->logService->logAction($txData['UserID'], 'Error Notificación WhatsApp', "Fallo al enviar orden #{$txData['TransaccionID']}. Error Twilio: " . $e->getMessage());
+            error_log("Error Twilio: " . $e->getMessage());
+            $this->logService->logAction($txData['UserID'], 'Error Notificación WhatsApp', "Fallo al enviar orden #{$txData['TransaccionID']}. Error: " . $e->getMessage());
             return false;
         }
     }
@@ -79,8 +71,9 @@ class NotificationService
 
     public function sendPaymentConfirmationToClientWhatsApp(array $txData): bool
     {
+        if (!defined('TWILIO_ACCOUNT_SID') || empty(TWILIO_ACCOUNT_SID)) return false;
+
         if (empty($txData['TelefonoCliente'])) {
-            error_log("Error Notificación WhatsApp: No se encontró teléfono para el UserID: {$txData['UserID']}. TX ID: {$txData['TransaccionID']}");
             $this->logService->logAction($txData['UserID'], 'Error Notificación WhatsApp', "Confirmación Pago: Teléfono no encontrado. TX ID: {$txData['TransaccionID']}");
             return false;
         }
@@ -95,7 +88,6 @@ class NotificationService
 
         try {
             $twilio = new TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-
             $message = $twilio->messages->create(
                 $formattedClientNumber,
                 [
@@ -103,13 +95,43 @@ class NotificationService
                     'body' => $mensaje,
                 ]
             );
-
-            $this->logService->logAction($txData['UserID'], 'Notificación WhatsApp Confirmación Pago', "Orden #{$txData['TransaccionID']} notificada. SID: " . $message->sid);
+            $this->logService->logAction($txData['UserID'], 'WhatsApp Confirmación Pago', "Orden #{$txData['TransaccionID']} notificada.");
             return true;
-
         } catch (Exception $e) {
-            error_log("Error de Twilio al enviar confirmación de pago a {$formattedClientNumber} para TX ID {$txData['TransaccionID']}: " . $e->getMessage());
-            $this->logService->logAction($txData['UserID'], 'Error Notificación WhatsApp', "Fallo al confirmar pago orden #{$txData['TransaccionID']}. Error Twilio: " . $e->getMessage());
+            error_log("Error Twilio Pago: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // --- MÉTODOS DE EMAIL ---
+
+    public function sendWelcomeEmail(string $email, string $nombre): bool
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $this->configureSMTP($mail);
+            $mail->addAddress($email, $nombre);
+            $mail->Subject = "¡Bienvenido a JC Envíos!";
+
+            $videoTutorialLink = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+            $mail->Body = "
+            <html>
+            <body>
+                <p>Hola " . htmlspecialchars($nombre) . ",</p>
+                <p>¡Te damos la bienvenida a <strong>JC Envíos</strong>! Estamos felices de tenerte con nosotros.</p>
+                <p>Para ayudarte a comenzar, hemos preparado un breve video tutorial:</p>
+                <p><a href='" . $videoTutorialLink . "'>Ver Video Tutorial</a></p>
+                <p>Recuerda verificar tu identidad para comenzar a operar.</p>
+                <p>Gracias por tu confianza,<br>El equipo de JC Envíos</p>
+            </body>
+            </html>";
+
+            $mail->send();
+            $this->logService->logAction(null, 'Email Bienvenida Enviado', "Enviado a: {$email}");
+            return true;
+        } catch (Exception $e) {
+            error_log("Error envío email bienvenida: " . $e->getMessage());
             return false;
         }
     }
@@ -118,45 +140,27 @@ class NotificationService
     {
         $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
-
-            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Recuperación');
+            $this->configureSMTP($mail);
             $mail->addAddress($email);
-            $mail->isHTML(true);
             $mail->Subject = "Restablece tu Contraseña en JC Envíos";
 
             $resetLink = BASE_URL . "/reset-password.php?token=" . urlencode($token);
-            $mail->Body = "Hola,<br><br>Recibimos una solicitud para restablecer tu contraseña en JCenvios.cl.<br><br>" .
-                "Haz clic en el siguiente enlace para crear una nueva contraseña:<br>" .
-                "<a href=\"{$resetLink}\">Restablecer Contraseña</a><br><br>" .
-                "Si no solicitaste esto, puedes ignorar este correo.<br><br>" .
-                "Saludos,<br>El equipo de JC Envíos";
-            $mail->AltBody = "Hola,\n\nRecibimos una solicitud para restablecer tu contraseña en JCenvios.cl.\n\n" .
-                "Copia y pega el siguiente enlace en tu navegador para crear una nueva contraseña:\n" .
-                $resetLink . "\n\n" .
-                "Si no solicitaste esto, puedes ignorar este correo.\n\n" .
-                "Saludos,\nEl equipo de JC Envíos";
-
+            $mail->Body = "
+            <html>
+            <body>
+                <p>Hola,</p>
+                <p>Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+                <p><a href=\"{$resetLink}\">Restablecer Contraseña</a></p>
+                <p>Si no solicitaste esto, ignora este correo.</p>
+                <p>Saludos,<br>El equipo de JC Envíos</p>
+            </body>
+            </html>";
 
             $mail->send();
             $this->logService->logAction(null, 'Email Recuperación Enviado', "Enviado a: {$email}");
             return true;
-
-        } catch (PHPMailerException $e) {
-            error_log("PHPMailer Error: No se pudo enviar el email de recuperación a {$email}. Error: {$mail->ErrorInfo}");
-            $this->logService->logAction(null, 'Error Email Recuperación', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
-            throw $e;
         } catch (Exception $e) {
-            error_log("Error General al enviar email de recuperación a {$email}: {$e->getMessage()}");
-            $this->logService->logAction(null, 'Error Email Recuperación', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
-            throw $e;
+            return false;
         }
     }
 
@@ -164,220 +168,183 @@ class NotificationService
     {
         $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
-            
-            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Seguridad');
+            $this->configureSMTP($mail);
             $mail->addAddress($email);
-            $mail->isHTML(true);
-            $mail->Subject = "¡IMPORTANTE! Tus Códigos de Respaldo 2FA de JC Envíos";
+            $mail->Subject = "Tus Códigos de Respaldo 2FA - JC Envíos";
 
-            $codesList = "<ul style='font-family: monospace; font-size: 1.2em; line-height: 1.6;'>";
+            $codesList = "<ul>";
             foreach ($backupCodes as $code) {
                 $codesList .= "<li>" . htmlspecialchars($code) . "</li>";
             }
             $codesList .= "</ul>";
 
-            $mail->Body = "Hola,<br><br>¡Has activado exitosamente la <strong>Autenticación de Dos Factores (2FA)</strong> en tu cuenta de JC Envíos!<br><br>" .
-                "<p style='color: red; font-weight: bold;'>Por favor, guarda estos códigos de respaldo en un lugar seguro (como un gestor de contraseñas). Los necesitarás para acceder a tu cuenta si pierdes tu dispositivo de autenticación.</p>" .
-                "<h3>Tus Códigos de Respaldo:</h3>" .
-                $codesList .
-                "<p>Cada código solo puede ser usado una vez.</p>" .
-                "<hr>" .
-                "<p><strong>Clave Secreta (para configuración manual):</strong><br>" .
-                "<code style='font-family: monospace; font-size: 1.2em; background: #f4f4f4; padding: 5px; border-radius: 4px;'>" . htmlspecialchars($secretKey) . "</code></p>" .
-                "<br><p>Si no reconoces esta actividad, por favor contacta a soporte inmediatamente.</p>" .
-                "Saludos,<br>El equipo de JC Envíos";
-
-            $mail->AltBody = "Hola,\n\n¡Has activado exitosamente la Autenticación de Dos Factores (2FA) en tu cuenta de JC Envíos!\n\n" .
-                "IMPORTANTE: Guarda estos códigos de respaldo en un lugar seguro. Los necesitarás para acceder a tu cuenta si pierdes tu dispositivo de autenticación.\n\n" .
-                "Tus Códigos de Respaldo:\n" .
-                implode("\n", $backupCodes) .
-                "\n\nClave Secreta (para configuración manual):\n" .
-                $secretKey .
-                "\n\nSi no reconoces esta actividad, por favor contacta a soporte inmediatamente.\n" .
-                "Saludos,\nEl equipo de JC Envíos";
+            $mail->Body = "
+            <html>
+            <body>
+                <p>Hola,</p>
+                <p>Has activado 2FA. Guarda estos códigos de respaldo:</p>
+                {$codesList}
+                <p>Clave Secreta: " . htmlspecialchars($secretKey) . "</p>
+            </body>
+            </html>";
 
             $mail->send();
             $this->logService->logAction(null, 'Email Códigos 2FA Enviado', "Enviado a: {$email}");
             return true;
-        } catch (PHPMailerException $e) {
-            error_log("PHPMailer Error: No se pudo enviar el email de códigos 2FA a {$email}. Error: {$mail->ErrorInfo}");
-            $this->logService->logAction(null, 'Error Email 2FA', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
-            throw $e;
         } catch (Exception $e) {
-            error_log("Error General al enviar email de códigos 2FA a {$email}: {$e->getMessage()}");
-            $this->logService->logAction(null, 'Error Email 2FA', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
-            throw $e;
+            return false;
         }
     }
-    
+
     public function sendContactFormEmail(string $name, string $fromEmail, string $subject, string $message): bool
     {
-        $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
-        $safeFromEmail = htmlspecialchars($fromEmail, ENT_QUOTES, 'UTF-8');
-        $safeSubject = htmlspecialchars($subject, ENT_QUOTES, 'UTF-8');
-        $safeMessageHtml = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
-        $safeMessageText = htmlspecialchars_decode($safeMessageHtml, ENT_QUOTES);
-
-
         $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
-            
-            $mail->setFrom('no-responder@jcenvios.cl', 'Formulario de Contacto (JC Envíos)');
+            $this->configureSMTP($mail);
             $mail->addAddress(self::ADMIN_EMAIL_ADDRESS);
-            $mail->addReplyTo($safeFromEmail, $safeName);
-            $mail->isHTML(true);
-            $mail->Subject = "Nuevo Mensaje de Contacto: " . $safeSubject;
-
-            $mail->Body = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:<br><br>" .
-                "<strong>Nombre:</strong> {$safeName}<br>" .
-                "<strong>Correo:</strong> {$safeFromEmail}<br>" .
-                "<strong>Asunto:</strong> {$safeSubject}<br>" .
-                "<strong>Mensaje:</strong><br><blockquote style='border-left: 2px solid #ccc; padding-left: 10px; margin-left: 5px;'>" .
-                $safeMessageHtml .
-                "</blockquote>";
+            $mail->addReplyTo($fromEmail, $name);
+            $mail->Subject = "Contacto: " . $subject;
+            $mail->Body = "
+            <html>
+            <body>
+                <p><strong>Mensaje de:</strong> $name ($fromEmail)</p>
+                <p>" . nl2br(htmlspecialchars($message)) . "</p>
+            </body>
+            </html>";
             
-            $mail->AltBody = "Has recibido un nuevo mensaje desde el formulario de contacto de JCenvios.cl:\n\n" .
-                "Nombre: {$safeName}\n" .
-                "Correo: {$safeFromEmail}\n" .
-                "Asunto: {$safeSubject}\n" .
-                "Mensaje:\n" .
-                $safeMessageText;
-
             $mail->send();
-            $this->logService->logAction(null, 'Formulario Contacto Enviado', "Enviado por: {$safeFromEmail}");
+            $this->logService->logAction(null, 'Formulario Contacto Enviado', "Enviado por: {$fromEmail}");
             return true;
-        } catch (PHPMailerException $e) {
-            error_log("PHPMailer Error: No se pudo enviar el email de contacto de {$fromEmail}. Error: {$mail->ErrorInfo}");
-            $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error: {$mail->ErrorInfo}");
-            throw $e;
         } catch (Exception $e) {
-            error_log("Error General al enviar email de contacto de {$fromEmail}: {$e->getMessage()}");
-            $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error General: {$e->getMessage()}");
-            throw $e;
+            return false;
         }
     }
 
     public function sendNewOrderEmail(array $txData, string $pdfContent): bool
     {
         $mail = new PHPMailer(true);
-        try {     
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
-
-            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Órdenes');
-            $mail->addAddress($txData['Email'], $txData['PrimerNombre'] . ' ' . $txData['PrimerApellido']);
-            $mail->isHTML(true);
-            $mail->Subject = "Confirmación de tu Orden de Envío #" . $txData['TransaccionID'];
-
-            $montoOrigenF = number_format($txData['MontoOrigen'], 2, ',', '.');
-            $montoDestinoF = number_format($txData['MontoDestino'], 2, ',', '.');
-
-            $mail->Body = "Hola " . htmlspecialchars($txData['PrimerNombre']) . ",<br><br>" .
-                "Hemos recibido tu orden de envío <strong>#" . $txData['TransaccionID'] . "</strong>. Adjuntamos el comprobante de la orden en formato PDF.<br><br>" .
-                "<strong>Resumen de tu orden:</strong><br>" .
-                "<ul>" .
-                "<li><strong>Monto a Enviar:</strong> " . $montoOrigenF . " " . htmlspecialchars($txData['MonedaOrigen']) . "</li>" .
-                "<li><strong>Monto a Recibir:</strong> " . $montoDestinoF . " " . htmlspecialchars($txData['MonedaDestino']) . "</li>" .
-                "<li><strong>Beneficiario:</strong> " . htmlspecialchars($txData['BeneficiarioNombre']) . "</li>" .
-                "</ul>" .
-                "Por favor, realiza el pago correspondiente y sube tu comprobante en la sección 'Mi Historial' de nuestra plataforma para que podamos procesar tu envío.<br><br>" .
-                "Gracias por confiar en JC Envíos.";
-
-            $mail->AltBody = "Hola " . $txData['PrimerNombre'] . ",\n\n" .
-                "Hemos recibido tu orden de envío #" . $txData['TransaccionID'] . ". Adjuntamos el comprobante de la orden en formato PDF.\n\n" .
-                "Resumen de tu orden:\n" .
-                "- Monto a Enviar: " . $montoOrigenF . " " . $txData['MonedaOrigen'] . "\n" .
-                "- Monto a Recibir: " . $montoDestinoF . " " . $txData['MonedaDestino'] . "\n" .
-                "- Beneficiario: " . $txData['BeneficiarioNombre'] . "\n\n" .
-                "Por favor, realiza el pago correspondiente y sube tu comprobante en la sección 'Mi Historial' de nuestra plataforma para que podamos procesar tu envío.\n\n" .
-                "Gracias por confiar en JC Envíos.";
-
+        try {
+            $this->configureSMTP($mail);
+            $mail->addAddress($txData['Email'], $txData['PrimerNombre']);
+            $mail->Subject = "Orden de Envío #" . $txData['TransaccionID'];
+            
+            $mail->Body = "
+            <html>
+            <body>
+                <p>Hola {$txData['PrimerNombre']},</p>
+                <p>Tu orden <strong>#{$txData['TransaccionID']}</strong> ha sido creada.</p>
+                <p>Adjuntamos el comprobante. Por favor realiza el pago y sube el comprobante en la web.</p>
+            </body>
+            </html>";
+            
             $mail->addStringAttachment($pdfContent, 'orden-'.$txData['TransaccionID'].'.pdf', 'base64', 'application/pdf');
-
             $mail->send();
-            $this->logService->logAction($txData['UserID'], 'Email Orden Creada', "Enviado a: " . $txData['Email'] . " (TX ID: " . $txData['TransaccionID'] . ")");
+            $this->logService->logAction($txData['UserID'], 'Email Orden Creada', "Enviado a: " . $txData['Email']);
             return true;
-        } catch (PHPMailerException $e) {
-            error_log("PHPMailer Error: No se pudo enviar el email de orden a " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
-            $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
-            
-            throw $e;
-
         } catch (Exception $e) {
-            error_log("Error General al enviar email de orden a " . $txData['Email'] . ": {$e->getMessage()}");
-            $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error General: {$e->getMessage()}");
-            
-            throw $e;
+            error_log("Error enviando email orden: " . $e->getMessage());
+            return false;
         }
     }
 
-    public function sendWelcomeEmail(string $email, string $nombre): bool
+    // --- MÉTODOS OPTIMIZADOS DE RECHAZO Y CORRECCIÓN ---
+
+    public function sendCorrectionRequestEmail(string $email, string $nombre, int $txId, string $motivo): bool
     {
         $mail = new PHPMailer(true);
         try {
-            $mail->isSMTP();
-            $mail->Host = SMTP_HOST;
-            $mail->SMTPAuth = true;
-            $mail->Username = SMTP_USER;
-            $mail->Password = SMTP_PASS;
-            $mail->SMTPSecure = SMTP_SECURE;
-            $mail->Port = SMTP_PORT;
-            $mail->CharSet = 'UTF-8';
-
-            $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos - Bienvenido');
+            $this->configureSMTP($mail);
             $mail->addAddress($email, $nombre);
-            $mail->isHTML(true);
-            $mail->Subject = "¡Bienvenido a JC Envíos!";
+        
+            $mail->Subject = "Informacion sobre tu Orden #{$txId}";
 
-            $videoTutorialLink = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; // ¡OJO! Enlace de placeholder
+            $mail->Body = "
+            <html>
+            <head>
+                <style>
+                    .alert-box { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba; margin: 20px 0; }
+                    .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+                </style>
+            </head>
+            <body>
+                <p>Hola " . htmlspecialchars($nombre) . ",</p>
+                <p>Hemos revisado tu comprobante de pago para la orden <strong>#{$txId}</strong> y detectamos un problema:</p>
+                
+                <div style='background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; border: 1px solid #ffeeba; margin: 15px 0;'>
+                    <strong>Motivo:</strong> " . htmlspecialchars($motivo) . "
+                </div>
 
-            $mail->Body = "Hola " . htmlspecialchars($nombre) . ",<br><br>" .
-                "¡Te damos la bienvenida a <strong>JC Envíos</strong>! Estamos felices de tenerte con nosotros.<br><br>" .
-                "Para ayudarte a comenzar y realizar tu primer envío de forma fácil y segura, hemos preparado un breve video tutorial para ti:<br><br>" .
-                "<a href='" . $videoTutorialLink . "' style='display: inline-block; padding: 12px 20px; font-size: 16px; color: #ffffff; background-color: #0d6efd; text-decoration: none; border-radius: 5px;'>Ver Video Tutorial</a><br><br>" .
-                "<strong>Siguiente paso:</strong><br>" .
-                "Recuerda que para poder realizar transacciones, debes verificar tu identidad. Puedes hacerlo subiendo tus documentos directamente desde tu perfil.<br><br>" .
-                "Gracias por tu confianza,<br>El equipo de JC Envíos";
+                <p><strong>Tienes 48 horas para realizar esta correccion</strong>, de lo contrario la orden sera cancelada automáticamente.</p>
+                
+                <p>
+                    <a href='" . BASE_URL . "/dashboard/historial.php' style='background-color: #007bff; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Subir nuevo comprobante</a>
+                </p>
+                
+                <br>
+                <p>Saludos,<br>El equipo de JC Envios</p>
+            </body>
+            </html>";
 
-            $mail->AltBody = "Hola " . $nombre . ",\n\n" .
-                "¡Te damos la bienvenida a JC Envíos!\n\n" .
-                "Mira nuestro video tutorial para comenzar: " . $videoTutorialLink . "\n\n" .
-                "Siguiente paso: Recuerda que para poder realizar transacciones, debes verificar tu identidad subiendo tus documentos en tu perfil.\n\n" .
-                "Saludos,\nEl equipo de JC Envíos";
+            $mail->AltBody = "Hola $nombre. Hay un problema con tu orden #$txId. Motivo: $motivo. Por favor sube el comprobante correcto en tu historial en las próximas 48 horas.";
 
             $mail->send();
-            $this->logService->logAction(null, 'Email Bienvenida Enviado', "Enviado a: {$email}");
+            $this->logService->logAction(null, 'Email Corrección Enviado', "Enviado a: {$email} (TX: {$txId})");
             return true;
-        } catch (PHPMailerException $e) {
-            error_log("PHPMailer Error: No se pudo enviar el email de bienvenida a {$email}. Error: {$mail->ErrorInfo}");
-            $this->logService->logAction(null, 'Error Email Bienvenida', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
-            throw $e; // Lanzamos la excepción
         } catch (Exception $e) {
-            error_log("Error General al enviar email de bienvenida a {$email}: {$e->getMessage()}");
-            $this->logService->logAction(null, 'Error Email Bienvenida', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
-            throw $e; // Lanzamos la excepción
+            error_log("Error enviando email corrección: " . $e->getMessage());
+            return false;
         }
+    }
+
+    public function sendCancellationEmail(string $email, string $nombre, int $txId, string $motivo): bool
+    {
+        $mail = new PHPMailer(true);
+        try {
+            $this->configureSMTP($mail);
+            $mail->addAddress($email, $nombre);
+            $mail->Subject = "Cancelación de Orden #{$txId}";
+
+            $mail->Body = "
+            <html>
+            <body>
+                <p>Hola " . htmlspecialchars($nombre) . ",</p>
+                <p>Te informamos que tu orden <strong>#{$txId}</strong> ha sido <strong>CANCELADA</strong>.</p>
+                
+                <div style='background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; border: 1px solid #f5c6cb; margin: 15px 0;'>
+                    <strong>Motivo:</strong> " . htmlspecialchars($motivo) . "
+                </div>
+
+                <p>Si crees que es un error, contáctanos respondiendo este correo.</p>
+                <br>
+                <p>Saludos,<br>El equipo de JC Envíos</p>
+            </body>
+            </html>";
+
+            $mail->AltBody = "Hola $nombre. Tu orden #$txId ha sido cancelada. Motivo: $motivo.";
+
+            $mail->send();
+            $this->logService->logAction(null, 'Email Cancelación Enviado', "Enviado a: {$email} (TX: {$txId})");
+            return true;
+        } catch (Exception $e) {
+            error_log("Error enviando email cancelación: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function configureSMTP(PHPMailer $mail): void
+    {
+        $mail->isSMTP();
+        $mail->Host = SMTP_HOST;
+        $mail->SMTPAuth = true;
+        $mail->Username = SMTP_USER;
+        $mail->Password = SMTP_PASS;
+        $mail->SMTPSecure = SMTP_SECURE;
+        $mail->Port = SMTP_PORT;
+        
+        $mail->CharSet = 'UTF-8';
+        $mail->Encoding = 'base64'; 
+        
+        $mail->setFrom('no-responder@jcenvios.cl', 'JC Envíos');
+        $mail->isHTML(true);
     }
 }

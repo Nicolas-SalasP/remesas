@@ -1,28 +1,14 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
-if (isset($_SERVER['HTTP_REFERER'])) {
-    $refererHost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
-    $serverHost = $_SERVER['HTTP_HOST'];
-
-    if (substr($refererHost, -strlen($serverHost)) !== $serverHost && $refererHost !== $serverHost) {
-        http_response_code(403);
-        die("Acceso denegado (hotlinking).");
-    }
-} elseif (php_sapi_name() !== 'cli' && empty($_SERVER['HTTP_REFERER'])) {
-    http_response_code(403);
-    die("Acceso denegado.");
-}
-
 if (!isset($_SESSION['user_id'])) {
     http_response_code(403);
     die('Acceso denegado. Debes iniciar sesión.');
 }
 
-if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') {
-    http_response_code(403);
-    die('Acceso denegado. Se requiere rol de administrador.');
-}
+$loggedInUserId = (int)$_SESSION['user_id'];
+$isAdmin = (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Admin');
+$userPhotoPath = $_SESSION['user_photo_url'] ?? '';
 
 if (!isset($_GET['file']) || empty($_GET['file'])) {
     http_response_code(400);
@@ -30,6 +16,12 @@ if (!isset($_GET['file']) || empty($_GET['file'])) {
 }
 
 $filePath = $_GET['file'];
+$isProfilePic = strpos($filePath, 'profile_pics/') === 0;
+
+if (!$isAdmin && $filePath !== $userPhotoPath) {
+    http_response_code(403);
+    die('Acceso denegado. No tienes permiso para ver este archivo.');
+}
 
 $baseUploadPath = realpath(__DIR__ . '/../../remesas_private/uploads');
 if (!$baseUploadPath) {
@@ -39,7 +31,6 @@ if (!$baseUploadPath) {
 }
 
 $filePath = ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $filePath), DIRECTORY_SEPARATOR);
-
 $fullPathAttempt = $baseUploadPath . DIRECTORY_SEPARATOR . $filePath;
 $realFullPath = realpath($fullPathAttempt);
 
@@ -71,7 +62,6 @@ if (!in_array($mimeType, $allowedMimeTypes)) {
 header('Content-Type: ' . $mimeType);
 header('Content-Length: ' . filesize($realFullPath));
 header('Content-Disposition: inline; filename="' . basename($realFullPath) . '"');
-header('X-Content-Type-Options: nosniff');
 
 if (ob_get_level()) {
     ob_end_clean();

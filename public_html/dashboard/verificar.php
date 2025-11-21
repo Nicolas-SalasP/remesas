@@ -6,10 +6,6 @@ if (!isset($_SESSION['user_id'])) {
     exit(); 
 }
 
-if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
-    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
-    exit();
-}
 
 if (isset($_SESSION['verification_status']) && in_array($_SESSION['verification_status'], ['Verificado', 'Pendiente'])) {
     header('Location: ' . BASE_URL . '/dashboard/');
