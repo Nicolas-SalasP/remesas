@@ -15,8 +15,7 @@ use App\Repositories\{
     FormaPagoRepository,
     TipoBeneficiarioRepository,
     ContabilidadRepository,
-    TasasHistoricoRepository,
-    CuentasAdminRepository
+    TasasHistoricoRepository // Para el gráfico
 };
 use App\Services\{
     LogService,
@@ -74,7 +73,6 @@ class Container {
             TipoBeneficiarioRepository::class => new TipoBeneficiarioRepository($this->getDb()),
             ContabilidadRepository::class => new ContabilidadRepository($this->getDb()),
             TasasHistoricoRepository::class => new TasasHistoricoRepository($this->getDb()),
-            CuentasAdminRepository::class => new CuentasAdminRepository($this->getDb()), // <-- NUEVO
 
             // Services
             LogService::class => new LogService($this->getDb()),
@@ -117,7 +115,7 @@ class Container {
                 $this->get(ContabilidadService::class),
                 $this->get(CuentasBeneficiariasRepository::class)
             ),
-            DashboardService::class => new DashboardService(
+             DashboardService::class => new DashboardService(
                 $this->get(TransactionRepository::class),
                 $this->get(UserRepository::class),
                 $this->get(RateRepository::class),
@@ -144,8 +142,7 @@ class Container {
                 $this->get(PricingService::class),
                 $this->get(UserService::class),
                 $this->get(DashboardService::class),
-                $this->get(RolRepository::class),
-                $this->get(CuentasAdminRepository::class)
+                $this->get(RolRepository::class)
             ),
             DashboardController::class => new DashboardController(
                 $this->get(DashboardService::class),
@@ -209,9 +206,6 @@ try {
         'getDashboardStats'     => [AdminController::class, 'getDashboardStats', 'GET'],
         'updateUserRole'        => [AdminController::class, 'updateUserRole', 'POST'],
         'deleteUser'            => [AdminController::class, 'deleteUser', 'POST'],
-        'getCuentasAdmin'       => [AdminController::class, 'getCuentasAdmin', 'GET'],
-        'saveCuentaAdmin'       => [AdminController::class, 'saveCuentaAdmin', 'POST'],
-        'deleteCuentaAdmin'     => [AdminController::class, 'deleteCuentaAdmin', 'POST'],
 
         'getSaldosContables'    => [ContabilidadController::class, 'getSaldos', 'GET'],
         'agregarFondos'         => [ContabilidadController::class, 'agregarFondos', 'POST'],

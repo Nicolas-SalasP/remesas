@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../remesas_private/src/core/init.php';
 $token = $_GET['token'] ?? '';
-$stmt = $conexion->prepare("SELECT * FROM passwordresets WHERE Token = ? AND Used = FALSE AND ExpiresAt > NOW()");
+$stmt = $conexion->prepare("SELECT * FROM PasswordResets WHERE Token = ? AND Used = FALSE AND ExpiresAt > NOW()");
 $stmt->bind_param("s", $token);
 $stmt->execute();
 $resultado = $stmt->get_result();
@@ -23,21 +23,11 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                             <input type="hidden" id="token" value="<?php echo htmlspecialchars($token); ?>">
                             <div class="mb-3">
                                 <label for="new-password" class="form-label">Nueva Contraseña</label>
-                                <div class="input-group">
-                                    <input type="password" class="form-control" id="new-password" required>
-                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
-                                        <i class="bi bi-eye-slash-fill"></i>
-                                    </span>
-                                </div>
+                                <input type="password" class="form-control" id="new-password" required>
                             </div>
                             <div class="mb-3">
                                 <label for="confirm-password" class="form-label">Confirmar Nueva Contraseña</label>
-                                <div class="input-group">
-                                    <input type="password" class="form-control" id="confirm-password" required>
-                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
-                                        <i class="bi bi-eye-slash-fill"></i>
-                                    </span>
-                                </div>
+                                <input type="password" class="form-control" id="confirm-password" required>
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Guardar Contraseña</button>
                         </form>

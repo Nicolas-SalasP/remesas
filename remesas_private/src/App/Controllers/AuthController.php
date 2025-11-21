@@ -38,20 +38,11 @@ class AuthController extends BaseController
             $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
             $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
             $_SESSION['ultima_actividad'] = time();
-
-            $redirectUrl = BASE_URL . '/dashboard/';
-            $userRol = $result['Rol'];
-
-            if ($userRol === 'Admin' || $userRol === 'Operador') {
-                $redirectUrl = BASE_URL . '/dashboard/seguridad.php';
-            } elseif ($result['VerificacionEstado'] !== 'Verificado') {
-                $redirectUrl = BASE_URL . '/dashboard/verificar.php';
-            }
             
             $this->sendJsonResponse([
                 'success' => true,
                 'twofa_required' => false,
-                'redirect' => $redirectUrl,
+                'redirect' => BASE_URL . '/dashboard/seguridad.php',
                 'verificationStatus' => $result['VerificacionEstado']
             ]);
 
@@ -117,16 +108,11 @@ class AuthController extends BaseController
 
         $userId = $_SESSION['2fa_user_id'];
         $data = $this->getJsonInput();
-        $code = trim($data['code'] ?? '');
+        $code = $data['code'] ?? '';
+
         $isValid = false;
-
         if (!empty($code)) {
-            try {
-                $isValid = $this->userService->verifyUser2FACode($userId, $code);
-            } catch (Exception $e) {
-                $isValid = false;
-            }
-
+            $isValid = $this->userService->verifyUser2FACode($userId, $code);
             if (!$isValid) {
                 $isValid = $this->userService->verifyBackupCode($userId, $code);
             }
@@ -134,8 +120,8 @@ class AuthController extends BaseController
 
         if ($isValid) {
             unset($_SESSION['2fa_user_id']);
+            session_regenerate_id(true);
 
-            $_SESSION['2fa_verified_at'] = time();
             $user = $this->userService->getUserProfile($userId);
 
             $_SESSION['user_id'] = $user['UserID'];
@@ -145,8 +131,6 @@ class AuthController extends BaseController
             $_SESSION['twofa_enabled'] = $user['twofa_enabled'];
             $_SESSION['user_photo_url'] = $user['FotoPerfilURL'] ?? null;
             $_SESSION['ultima_actividad'] = time();
-
-            session_regenerate_id(true); 
 
             $redirectUrl = BASE_URL . '/dashboard/';
 
