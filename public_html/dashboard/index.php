@@ -15,6 +15,11 @@ if (isset($_SESSION['user_rol_name']) && $_SESSION['user_rol_name'] === 'Operado
     exit();
 }
 
+if (!isset($_SESSION['twofa_enabled']) || $_SESSION['twofa_enabled'] === false) {
+    header('Location: ' . BASE_URL . '/dashboard/seguridad.php');
+    exit();
+}
+
 $estadosBloqueados = ['No Verificado', 'Rechazado'];
 if (!isset($_SESSION['verification_status']) || in_array($_SESSION['verification_status'], $estadosBloqueados)) {
     header('Location: ' . BASE_URL . '/dashboard/verificar.php'); 
@@ -93,13 +98,13 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 </div>
 
 <div class="modal fade" id="addAccountModal" tabindex="-1" aria-labelledby="addAccountModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
-        <div class="modal-header">
+      <div class="modal-header">
         <h5 class="modal-title" id="addAccountModalLabel">Registrar Nueva Cuenta de Beneficiario</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
+      </div>
+      <div class="modal-body">
         <form id="add-beneficiary-form">
             <input type="hidden" id="benef-pais-id" name="paisID">
             
@@ -125,7 +130,7 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
             </div>
             
             <div class="row">
-                <div class="col-md-6 mb-3"><label for="benef-bank" class="form-label">Nombre del Banco</label><input type="text" class="form-control" id="benef-bank" name="nombreBanco" required></div>
+                 <div class="col-md-6 mb-3"><label for="benef-bank" class="form-label">Nombre del Banco</label><input type="text" class="form-control" id="benef-bank" name="nombreBanco" required></div>
                 <div class="col-md-6 mb-3"><label for="benef-account-num" class="form-label">Número de Cuenta</label><input type="text" class="form-control" id="benef-account-num" name="numeroCuenta" required></div>
             </div>
             <div class="mb-3">
@@ -136,13 +141,13 @@ require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
                 </div>
             </div>
             </form>
-        </div>
-    <div class="modal-footer">
+      </div>
+      <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
         <button type="submit" class="btn btn-primary" form="add-beneficiary-form">Guardar Cuenta</button>
+      </div>
     </div>
-    </div>
-</div>
+  </div>
 </div>
 <?php ?>
 

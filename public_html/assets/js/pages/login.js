@@ -8,41 +8,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const registerPhoneCode = document.getElementById('register-phone-code');
     const registerTelefono = document.getElementById('register-telefono');
-    const registerRoleInput = document.getElementById('register-role'); 
+    const registerRoleSelect = document.getElementById('register-role');
 
     const countryPhoneCodes = [
-        { code: '+54', name: 'Argentina', flag: '\uD83C\uDDE6\uD83C\uDDF7' },
-        { code: '+591', name: 'Bolivia', flag: '\uD83C\uDDE7\uD83C\uDDF4' },
-        { code: '+55', name: 'Brasil', flag: '\uD83C\uDDE7\uD83C\uDDF7' },
-        { code: '+56', name: 'Chile', flag: '\uD83C\uDDE8\uD83C\uDDF1' },
-        { code: '+57', name: 'Colombia', flag: '\uD83C\uDDE8\uD83C\uDDF4' },
-        { code: '+506', name: 'Costa Rica', flag: '\uD83C\uDDE8\uD83C\uDDF7' },
-        { code: '+53', name: 'Cuba', flag: '\uD83C\uDDE8\uD83C\uDDFA' },
-        { code: '+593', name: 'Ecuador', flag: '\uD83C\uDDEA\uD83C\uDDE8' },
-        { code: '+503', name: 'El Salvador', flag: '\uD83C\uDDF8\uD83C\uDDFB' },
-        { code: '+502', name: 'Guatemala', flag: '\uD83C\uDDEC\uD83C\uDDF9' },
-        { code: '+504', name: 'Honduras', flag: '\uD83C\uDDED\uD83C\uDDF3' },
-        { code: '+52', name: 'M\u00E9xico', flag: '\uD83C\uDDF2\uD83C\uDDFD' },
-        { code: '+505', name: 'Nicaragua', flag: '\uD83C\uDDF3\uD83C\uDDEE' },
-        { code: '+507', name: 'Panam\u00E1', flag: '\uD83C\uDDF5\uD83C\uDDE6' },
-        { code: '+595', name: 'Paraguay', flag: '\uD83C\uDDF5\uD83C\uDDFE' },
-        { code: '+51', name: 'Per\u00FA', flag: '\uD83C\uDDF5\uD83C\uDDEA' },
-        { code: '+1', name: 'Puerto Rico', flag: '\uD83C\uDDF5\uD83C\uDDF7' },
-        { code: '+1', name: 'Rep. Dominicana', flag: '\uD83C\uDDE9\uD83C\uDDF4' },
-        { code: '+598', name: 'Uruguay', flag: '\uD83C\uDDFA\uD83C\uDDFE' },
-        { code: '+58', name: 'Venezuela', flag: '\uD83C\uDDFB\uD83C\uDDEA' },
-        { code: '+1', name: 'EE.UU.', flag: '\uD83C\uDDFA\uD83C\uDDF8' }
+        { code: '+54', name: 'Argentina' },
+        { code: '+591', name: 'Bolivia' },
+        { code: '+55', name: 'Brasil' },
+        { code: '+56', name: 'Chile' },
+        { code: '+57', name: 'Colombia' },
+        { code: '+506', name: 'Costa Rica' },
+        { code: '+53', name: 'Cuba' },
+        { code: '+593', name: 'Ecuador' },
+        { code: '+503', name: 'El Salvador' },
+        { code: '+502', name: 'Guatemala' },
+        { code: '+504', name: 'Honduras' },
+        { code: '+52', name: 'M\u00e9xico' },
+        { code: '+505', name: 'Nicaragua' },
+        { code: '+507', name: 'Panam\u00e1' },
+        { code: '+595', name: 'Paraguay' },
+        { code: '+51', name: 'Per\u00fa' },
+        { code: '+1', name: 'Puerto Rico' },
+        { code: '+1', name: 'Rep. Dominicana' },
+        { code: '+598', name: 'Uruguay' },
+        { code: '+58', name: 'Venezuela' },
+        { code: '+1', name: 'EE.UU.' }
     ];
 
     const loadPhoneCodes = (selectElement) => {
         if (!selectElement) return;
 
         countryPhoneCodes.sort((a, b) => a.name.localeCompare(b.name));
-        
-        selectElement.innerHTML = '<option value="">C\u00F3digo...</option>'; // Corregido 'Código'
+        selectElement.innerHTML = '<option value="">C\u00f3digo...</option>';
         countryPhoneCodes.forEach(country => {
             if (country.code) {
-                selectElement.innerHTML += `<option value="${country.code}">${country.flag} ${country.code}</option>`;
+                selectElement.innerHTML += `<option value="${country.code}">${country.code} (${country.name})</option>`;
             }
         });
     };
@@ -68,6 +67,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Cargar los roles de "Tipo de Cuenta"
+    const loadAssignableRoles = async () => {
+        if (!registerRoleSelect) return;
+        try {
+            const response = await fetch('api/?accion=getAssignableRoles');
+            if (!response.ok) throw new Error('Error al cargar tipos de cuenta');
+            const roles = await response.json();
+
+            registerRoleSelect.innerHTML = '<option value="">Selecciona...</option>';
+            roles.forEach(rol => {
+                registerRoleSelect.innerHTML += `<option value="${rol.NombreRol}">${rol.NombreRol}</option>`;
+            });
+        } catch (error) {
+            console.error(error);
+            registerRoleSelect.innerHTML = '<option value="">Error al cargar</option>';
+        }
+    };
+
+    // Validar RUT Chileno
     docTypeSelect?.addEventListener('change', () => {
         docNumInput.removeAttribute('pattern');
         docNumInput.classList.remove('is-invalid', 'is-valid');
@@ -81,14 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
             docNumInput.dataset.validateRut = 'false';
             docNumInput.maxLength = 20;
             docNumInput.placeholder = 'Nro. Documento';
-        }
-
-        if (registerRoleInput) {
-            if (docTypeSelect.value === 'RIF') {
-                registerRoleInput.value = 'Empresa';
-            } else {
-                registerRoleInput.value = 'Persona Natural';
-            }
         }
     });
 
@@ -116,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
+    // Formulario de Login
     loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         loginFeedback.textContent = '';
@@ -141,15 +152,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (error) {
-            const errorMsg = 'Error de conexi\u00F3n. Int\u00E9ntalo de nuevo.';
+            const errorMsg = 'Error de conexión. Inténtalo de nuevo.';
             if (window.showInfoModal) {
-                window.showInfoModal('Error de Conexi\u00F3n', errorMsg, false);
+                window.showInfoModal('Error de Conexión', errorMsg, false);
             } else {
                 loginFeedback.textContent = errorMsg;
             }
         }
     });
 
+    // Formulario de Registro
     registerForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         registerFeedback.textContent = '';
@@ -162,36 +174,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const passwordRepeat = registerForm.passwordRepeat.value;
 
         if (password !== passwordRepeat) {
-            registerFeedback.textContent = 'Las contrase\u00F1as no coinciden.';
+            registerFeedback.textContent = 'Las contraseñas no coinciden.';
             submitButton.disabled = false;
             submitButton.textContent = 'Registrar Cuenta';
             return;
         }
 
         if (password.length < 6) {
-            registerFeedback.textContent = 'La contrase\u00F1a debe tener al menos 6 caracteres.';
+            registerFeedback.textContent = 'La contraseña debe tener al menos 6 caracteres.';
             submitButton.disabled = false;
             submitButton.textContent = 'Registrar Cuenta';
             return;
         }
 
         if (docNumInput.dataset.validateRut === 'true' && (typeof validateRut !== 'function' || !validateRut(cleanRut(docNumInput.value)))) {
-            registerFeedback.textContent = 'El RUT ingresado no es v\u00E1lido.';
+            registerFeedback.textContent = 'El RUT ingresado no es válido.';
             submitButton.disabled = false;
             submitButton.textContent = 'Registrar Cuenta';
             return;
         }
-        
-        const wasReadOnly = registerRoleInput.readOnly;
-        if (wasReadOnly) {
-            registerRoleInput.readOnly = false;
-        }
 
         const formData = new FormData(registerForm);
-
-        if (wasReadOnly) {
-            registerRoleInput.readOnly = true;
-        }
 
         if (docNumInput.dataset.validateRut === 'true' && typeof cleanRut === 'function') {
             formData.set('numeroDocumento', cleanRut(docNumInput.value));
@@ -220,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } catch (error) {
-            const errorMsg = 'Error de conexi\u00F3n. Int\u00E9ntalo de nuevo.';
+            const errorMsg = 'Error de conexión. Inténtalo de nuevo.';
             if (window.showInfoModal) {
                 window.showInfoModal('Error de Red', errorMsg, false);
             } else {
@@ -238,5 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (registerPhoneCode) {
         loadPhoneCodes(registerPhoneCode);
+    }
+    if (registerRoleSelect) {
+        loadAssignableRoles();
     }
 });

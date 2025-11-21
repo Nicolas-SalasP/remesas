@@ -13,21 +13,21 @@ class FileHandlerService
     {
         $this->baseUploadPath = realpath(__DIR__ . '/../../../uploads');
         if ($this->baseUploadPath === false || !is_dir($this->baseUploadPath)) {
-            @mkdir(__DIR__ . '/../../../uploads', 0755, true);
-            $this->baseUploadPath = realpath(__DIR__ . '/../../../uploads');
-            if ($this->baseUploadPath === false) {
-                error_log("Error crítico: El directorio base de uploads no existe y no se pudo crear: " . __DIR__ . '/../../../uploads');
-                throw new Exception("Error interno del servidor [FH01].", 500);
-            }
+             @mkdir(__DIR__ . '/../../../uploads', 0755, true);
+             $this->baseUploadPath = realpath(__DIR__ . '/../../../uploads');
+             if ($this->baseUploadPath === false) {
+                 error_log("Error crítico: El directorio base de uploads no existe y no se pudo crear: " . __DIR__ . '/../../../uploads');
+                 throw new Exception("Error interno del servidor [FH01].", 500);
+             }
         }
 
         $this->publicTempDir = realpath(__DIR__ . '/../../../public_html/temp_orders');
         if ($this->publicTempDir === false || !is_dir($this->publicTempDir)) {
-            if (!@mkdir(__DIR__ . '/../../../public_html/temp_orders', 0755, true)) {
-                error_log("Error crítico: No se pudo crear el directorio público temporal: " . __DIR__ . '/../../../public_html/temp_orders');
-                throw new Exception("Error interno del servidor [FH02].", 500);
-            }
-            $this->publicTempDir = realpath(__DIR__ . '/../../../public_html/temp_orders');
+             if (!@mkdir(__DIR__ . '/../../../public_html/temp_orders', 0755, true)) {
+                 error_log("Error crítico: No se pudo crear el directorio público temporal: " . __DIR__ . '/../../../public_html/temp_orders');
+                 throw new Exception("Error interno del servidor [FH02].", 500);
+             }
+             $this->publicTempDir = realpath(__DIR__ . '/../../../public_html/temp_orders');
         }
         $this->publicTempUrlBase = rtrim(BASE_URL, '/') . '/temp_orders/';
 
@@ -40,16 +40,16 @@ class FileHandlerService
 
     private function ensureDirectoryIsWritable(string $dir): void
     {
-        if (!is_dir($dir)) {
-            if (!@mkdir($dir, 0755, true)) {
-                error_log("Error al crear directorio: {$dir}");
-                throw new Exception("Error interno del servidor [FH03].", 500);
-            }
-        }
-        if (!is_writable($dir)) {
-            error_log("Error de permisos en directorio: {$dir}");
-            throw new Exception("Error interno del servidor [FH04].", 500);
-        }
+         if (!is_dir($dir)) {
+             if (!@mkdir($dir, 0755, true)) {
+                 error_log("Error al crear directorio: {$dir}");
+                 throw new Exception("Error interno del servidor [FH03].", 500);
+             }
+         }
+         if (!is_writable($dir)) {
+             error_log("Error de permisos en directorio: {$dir}");
+             throw new Exception("Error interno del servidor [FH04].", 500);
+         }
     }
 
     public function savePdfTemporarily(string $pdfContent, int $transactionId): string
@@ -69,30 +69,30 @@ class FileHandlerService
         $allowedTypes = ['image/jpeg', 'image/png'];
         $maxSize = 5 * 1024 * 1024;
         $savedFilename = $this->handleUpload($fileData, $targetDir, $prefix . '_' . $userId, $allowedTypes, $maxSize);
-
+        
         return 'verifications' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
     public function saveReceiptFile(array $fileData, int $transactionId): string
     {
-        $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'receipts';
-        $allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        $maxSize = 5 * 1024 * 1024;
-        $filenamePrefix = 'tx_recibo_' . $transactionId;
-        $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
-
-        return 'receipts' . DIRECTORY_SEPARATOR . $savedFilename;
+         $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'receipts';
+         $allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+         $maxSize = 5 * 1024 * 1024;
+         $filenamePrefix = 'tx_recibo_' . $transactionId;
+         $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
+         
+         return 'receipts' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
     public function saveAdminProofFile(array $fileData, int $transactionId): string
     {
-        $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'proof_of_sending';
-        $allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        $maxSize = 5 * 1024 * 1024;
-        $filenamePrefix = 'tx_envio_' . $transactionId;
-        $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
+         $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'proof_of_sending';
+         $allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+         $maxSize = 5 * 1024 * 1024;
+         $filenamePrefix = 'tx_envio_' . $transactionId;
+         $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
 
-        return 'proof_of_sending' . DIRECTORY_SEPARATOR . $savedFilename;
+         return 'proof_of_sending' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
     public function saveProfilePicture(array $fileData, int $userId): string
@@ -102,7 +102,7 @@ class FileHandlerService
         $maxSize = 2 * 1024 * 1024;
         $filenamePrefix = 'user_profile_' . $userId;
         $savedFilename = $this->handleUpload($fileData, $targetDir, $filenamePrefix, $allowedTypes, $maxSize);
-
+        
         return 'profile_pics' . DIRECTORY_SEPARATOR . $savedFilename;
     }
 
@@ -128,7 +128,7 @@ class FileHandlerService
             throw new Exception("El archivo es demasiado grande (máx " . ($maxFileSize / 1024 / 1024) . "MB).", 400);
         }
         if (empty($fileData['tmp_name']) || !is_uploaded_file($fileData['tmp_name'])) {
-            throw new Exception("Archivo subido inválido.", 400);
+             throw new Exception("Archivo subido inválido.", 400);
         }
 
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -140,13 +140,13 @@ class FileHandlerService
         }
 
         $extensionMap = [
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
+            'image/jpeg' => 'jpg', 
+            'image/png' => 'png', 
             'application/pdf' => 'pdf',
             'image/webp' => 'webp'
         ];
         $extension = $extensionMap[$fileType] ?? 'tmp';
-
+        
         $safeFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filenamePrefix);
         $newFilename = $safeFilename . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
         $destination = $targetDirectory . DIRECTORY_SEPARATOR . $newFilename;
@@ -178,43 +178,5 @@ class FileHandlerService
             default:
                 return 'Error desconocido durante la subida del archivo.';
         }
-    }
-
-    public function saveEmailAsReceipt(string $htmlContent, int $transactionId): string
-    {
-        $targetDir = $this->baseUploadPath . DIRECTORY_SEPARATOR . 'receipts';
-
-        if (!is_dir($targetDir)) {
-            @mkdir($targetDir, 0755, true);
-        }
-
-        $filename = 'banco_email_tx_' . $transactionId . '_' . time() . '.html';
-        $fullPath = $targetDir . DIRECTORY_SEPARATOR . $filename;
-
-        $htmlFull = "<!DOCTYPE html>
-        <html lang='es'>
-        <head>
-            <meta charset='UTF-8'>
-            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-            <title>Comprobante Banco - TX #$transactionId</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; color: #333; } 
-                .container { background: white; padding: 30px; border-radius: 8px; max-width: 800px; margin: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-                .header { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; color: #0056b3; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'><h3>Comprobante Automático (Email Banco)</h3></div>
-                <div>$htmlContent</div>
-            </div>
-        </body>
-        </html>";
-
-        if (file_put_contents($fullPath, $htmlFull) === false) {
-            throw new Exception("No se pudo guardar el comprobante del correo en disco.");
-        }
-
-        return 'receipts' . DIRECTORY_SEPARATOR . $filename;
     }
 }
