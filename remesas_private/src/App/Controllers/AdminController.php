@@ -124,14 +124,14 @@ class AdminController extends BaseController
             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() >= 400 ? $e->getCode() : 500);
         }
     }
-
+    
     public function updateVerificationStatus(): void
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
         
         $targetUserId = (int)($data['userId'] ?? 0);
-        $newStatusName = (string)($data['newStatus'] ?? '');
+        $newStatusName = (string)($data['newStatus'] ?? ''); // Ej: "Verificado" o "Rechazado"
 
         if ($targetUserId <= 0 || empty($newStatusName)) {
              $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o estado inválidos.'], 400);
@@ -142,6 +142,22 @@ class AdminController extends BaseController
         $this->sendJsonResponse(['success' => true, 'message' => 'Estado de verificación actualizado.']);
     }
 
+    public function toggleUserBlock(): void
+    {
+        $adminId = $this->ensureLoggedIn();
+        $data = $this->getJsonInput();
+        
+        $targetUserId = (int)($data['userId'] ?? 0);
+        $newStatus = (string)($data['newStatus'] ?? ''); 
+
+        if ($targetUserId <= 0 || empty($newStatus)) {
+             $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o estado inválidos.'], 400);
+             return;
+        }
+        
+        $this->userService->toggleUserBlock($adminId, $targetUserId, $newStatus);
+        $this->sendJsonResponse(['success' => true, 'message' => 'Estado de bloqueo actualizado.']);
+    }
     public function getDashboardStats(): void
     {
         $stats = $this->dashboardService->getAdminDashboardStats();

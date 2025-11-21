@@ -148,14 +148,15 @@ class NotificationService
             $mail->send();
             $this->logService->logAction(null, 'Email Recuperación Enviado', "Enviado a: {$email}");
             return true;
+
         } catch (PHPMailerException $e) {
             error_log("PHPMailer Error: No se pudo enviar el email de recuperación a {$email}. Error: {$mail->ErrorInfo}");
             $this->logService->logAction(null, 'Error Email Recuperación', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
-            return false;
+            throw $e;
         } catch (Exception $e) {
             error_log("Error General al enviar email de recuperación a {$email}: {$e->getMessage()}");
             $this->logService->logAction(null, 'Error Email Recuperación', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
-            return false;
+            throw $e;
         }
     }
 
@@ -209,11 +210,11 @@ class NotificationService
         } catch (PHPMailerException $e) {
             error_log("PHPMailer Error: No se pudo enviar el email de códigos 2FA a {$email}. Error: {$mail->ErrorInfo}");
             $this->logService->logAction(null, 'Error Email 2FA', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
-            return false;
+            throw $e;
         } catch (Exception $e) {
             error_log("Error General al enviar email de códigos 2FA a {$email}: {$e->getMessage()}");
             $this->logService->logAction(null, 'Error Email 2FA', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
-            return false;
+            throw $e;
         }
     }
     
@@ -264,18 +265,18 @@ class NotificationService
         } catch (PHPMailerException $e) {
             error_log("PHPMailer Error: No se pudo enviar el email de contacto de {$fromEmail}. Error: {$mail->ErrorInfo}");
             $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error: {$mail->ErrorInfo}");
-            return false;
+            throw $e;
         } catch (Exception $e) {
             error_log("Error General al enviar email de contacto de {$fromEmail}: {$e->getMessage()}");
             $this->logService->logAction(null, 'Error Email Contacto', "Fallo al enviar de: {$fromEmail}. Error General: {$e->getMessage()}");
-            return false;
+            throw $e;
         }
     }
 
     public function sendNewOrderEmail(array $txData, string $pdfContent): bool
     {
         $mail = new PHPMailer(true);
-        try {
+        try {     
             $mail->isSMTP();
             $mail->Host = SMTP_HOST;
             $mail->SMTPAuth = true;
@@ -321,12 +322,13 @@ class NotificationService
         } catch (PHPMailerException $e) {
             error_log("PHPMailer Error: No se pudo enviar el email de orden a " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
             $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error: {$mail->ErrorInfo}");
-
+            
             throw $e;
 
         } catch (Exception $e) {
             error_log("Error General al enviar email de orden a " . $txData['Email'] . ": {$e->getMessage()}");
             $this->logService->logAction($txData['UserID'], 'Error Email Orden Creada', "Fallo al enviar a: " . $txData['Email'] . ". Error General: {$e->getMessage()}");
+            
             throw $e;
         }
     }
@@ -349,8 +351,7 @@ class NotificationService
             $mail->isHTML(true);
             $mail->Subject = "¡Bienvenido a JC Envíos!";
 
-            // --- ENLACE DE VIDEO ---
-            $videoTutorialLink = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+            $videoTutorialLink = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; // ¡OJO! Enlace de placeholder
 
             $mail->Body = "Hola " . htmlspecialchars($nombre) . ",<br><br>" .
                 "¡Te damos la bienvenida a <strong>JC Envíos</strong>! Estamos felices de tenerte con nosotros.<br><br>" .
@@ -372,11 +373,11 @@ class NotificationService
         } catch (PHPMailerException $e) {
             error_log("PHPMailer Error: No se pudo enviar el email de bienvenida a {$email}. Error: {$mail->ErrorInfo}");
             $this->logService->logAction(null, 'Error Email Bienvenida', "Fallo al enviar a: {$email}. Error: {$mail->ErrorInfo}");
-            return false;
+            throw $e; // Lanzamos la excepción
         } catch (Exception $e) {
             error_log("Error General al enviar email de bienvenida a {$email}: {$e->getMessage()}");
             $this->logService->logAction(null, 'Error Email Bienvenida', "Fallo al enviar a: {$email}. Error General: {$e->getMessage()}");
-            return false;
+            throw $e; // Lanzamos la excepción
         }
     }
 }

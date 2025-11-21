@@ -20,17 +20,17 @@ class AuthController extends BaseController
             $result = $this->userService->loginUser($data['email'] ?? '', $data['password'] ?? '');
 
             if ($result['twofa_enabled']) {
-                $_SESSION['2fa_user_id'] = $result['UserID'];
-                unset($_SESSION['user_id']);
-                unset($_SESSION['user_rol_name']);
-                $this->sendJsonResponse([
-                    'success' => true,
-                    'twofa_required' => true,
-                    'redirect' => BASE_URL . '/verify-2fa.php'
-                ]);
-                return;
+                 $_SESSION['2fa_user_id'] = $result['UserID'];
+                 unset($_SESSION['user_id']);
+                 unset($_SESSION['user_rol_name']);
+                 $this->sendJsonResponse([
+                     'success' => true,
+                     'twofa_required' => true,
+                     'redirect' => BASE_URL . '/verify-2fa.php'
+                 ]);
+                 return;
             }
-
+            
             $_SESSION['user_id'] = $result['UserID'];
             $_SESSION['user_name'] = $result['PrimerNombre'];
             $_SESSION['user_rol_name'] = $result['Rol'];
@@ -38,7 +38,7 @@ class AuthController extends BaseController
             $_SESSION['twofa_enabled'] = $result['twofa_enabled'];
             $_SESSION['user_photo_url'] = $result['FotoPerfilURL'] ?? null;
             $_SESSION['ultima_actividad'] = time();
-
+            
             $this->sendJsonResponse([
                 'success' => true,
                 'twofa_required' => false,
@@ -72,16 +72,24 @@ class AuthController extends BaseController
             $this->sendJsonResponse(['success' => true, 'redirect' => $redirectUrl], 201);
 
         } catch (Exception $e) {
-            $statusCode = $e->getCode() >= 400 ? $e->getCode() : 400;
+            $statusCode = $e->getCode() >= 400 ? $e->getCode() : 400; 
             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $statusCode);
         }
     }
 
     public function requestPasswordReset(): void
     {
-        $data = $this->getJsonInput();
-        $this->userService->requestPasswordReset($data['email'] ?? '');
-        $this->sendJsonResponse(['success' => true, 'message' => 'Si tu correo está en nuestro sistema, recibirás un enlace para restablecer tu contraseña.']);
+        try {
+            $data = $this->getJsonInput();
+            $this->userService->requestPasswordReset($data['email'] ?? '');
+            $this->sendJsonResponse(['success' => true, 'message' => 'Si tu correo está en nuestro sistema, recibirás un enlace para restablecer tu contraseña.']);
+        
+        } catch (Exception $e) {
+            $this->sendJsonResponse([
+                'success' => false, 
+                'error' => 'No se pudo enviar el correo de recuperación en este momento. Por favor, contacta a soporte. (Error: ' . $e->getMessage() . ')'
+            ], 500);
+        }
     }
 
     public function performPasswordReset(): void

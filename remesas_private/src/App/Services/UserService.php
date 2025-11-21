@@ -49,8 +49,25 @@ class UserService
         $user = $this->userRepository->findByEmail($email);
 
         if (!$user || !password_verify($password, $user['PasswordHash'])) {
-            if ($user) {
+
+            if ($user && $user['LockoutUntil'] === null) {
+                $attempts = (int)$user['FailedLoginAttempts'] + 1;
+                $lockoutUntil = null;
+                $max_attempts = 5; 
+                $lockout_time = '+15 minutes'; 
+
+                if ($attempts >= $max_attempts) {
+                    $lockoutUntil = date('Y-m-d H:i:s', strtotime($lockout_time));
+                    $this->notificationService->logAdminAction($user['UserID'], 'Cuenta Bloqueada (Login)', "Cuenta bloqueada por $lockout_time tras $attempts intentos fallidos.");
+                }
+                
+                $this->userRepository->updateLoginAttempts($user['UserID'], $attempts, $lockoutUntil);
+
+                if ($lockoutUntil) {
+                    throw new Exception("Cuenta bloqueada temporalmente por demasiados intentos fallidos.", 403);
+                }
             }
+            
             throw new Exception("Correo electrónico o contraseña no válidos.", 401);
         }
         if ($user['LockoutUntil'] && strtotime($user['LockoutUntil']) > time()) {
@@ -71,15 +88,15 @@ class UserService
                 throw new Exception("El campo '$field' es obligatorio.", 400);
             }
         }
-
+        
         $phoneCode = $data['phoneCode'] ?? '';
-        $phoneNumber = preg_replace('/\D/', '', $data['phoneNumber'] ?? '');
+        $phoneNumber = preg_replace('/\D/', '', $data['phoneNumber'] ?? ''); 
         $data['telefono'] = $phoneCode . $phoneNumber;
 
         if (empty($data['telefono'])) {
             throw new Exception("El campo 'telefono' es obligatorio.", 400);
         }
-
+        
         $rolID = $this->rolRepo->findIdByName($data['tipoPersona']);
         if (!$rolID || !in_array($data['tipoPersona'], ['Persona Natural', 'Empresa'])) {
             throw new Exception("El tipo de cuenta '{$data['tipoPersona']}' no es válido.", 400);
@@ -423,20 +440,20 @@ class UserService
             $encryptedBackupCodes = $this->encryptData(json_encode($backupCodes));
 
             if ($this->userRepository->enable2FA($userId, $encryptedBackupCodes)) {
-                $_SESSION['show_backup_codes'] = $backupCodes;
-                $_SESSION['twofa_enabled'] = 1;
+                 $_SESSION['show_backup_codes'] = $backupCodes;
+                 $_SESSION['twofa_enabled'] = 1;
+                 
+                 $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
 
-                $this->notificationService->logAdminAction($userId, '2FA Activado', "El usuario activó 2FA.");
-
-                try {
+                 try {
                     $user = $this->getUserProfile($userId);
                     $this->notificationService->send2FABackupCodes($user['Email'], $secretKey, $backupCodes);
-                } catch (Exception $e) {
+                 } catch (Exception $e) {
                     error_log("Error al enviar email 2FA para UserID {$userId}: " . $e->getMessage());
                     $this->notificationService->logAdminAction($userId, 'Error Email 2FA', "Fallo al enviar códigos de respaldo: " . $e->getMessage());
-                }
-
-                return true;
+                 }
+                 
+                 return true;
             } else {
                 throw new Exception("No se pudo activar 2FA en la base de datos.", 500);
             }
