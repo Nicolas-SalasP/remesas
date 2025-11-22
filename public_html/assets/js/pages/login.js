@@ -8,40 +8,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const registerPhoneCode = document.getElementById('register-phone-code');
     const registerTelefono = document.getElementById('register-telefono');
-    const registerRoleSelect = document.getElementById('register-role');
+    const registerRoleInput = document.getElementById('register-role'); 
+    
+    const toggleInputVisibility = (toggleId, containerId, inputId) => {
+        const toggle = document.getElementById(toggleId);
+        const container = document.getElementById(containerId);
+        const input = document.getElementById(inputId);
+
+        if (toggle && container && input) {
+            toggle.addEventListener('change', () => {
+                if (toggle.checked) {
+                    container.classList.remove('d-none');
+                    input.required = true;
+                    input.focus();
+                } else {
+                    container.classList.add('d-none');
+                    input.required = false;
+                    input.value = '';
+                }
+            });
+        }
+    };
+
+    toggleInputVisibility('toggle-segundo-nombre', 'container-segundo-nombre', 'register-segundo-nombre');
+    toggleInputVisibility('toggle-segundo-apellido', 'container-segundo-apellido', 'register-segundo-apellido');
 
     const countryPhoneCodes = [
-        { code: '+54', name: 'Argentina' },
-        { code: '+591', name: 'Bolivia' },
-        { code: '+55', name: 'Brasil' },
-        { code: '+56', name: 'Chile' },
-        { code: '+57', name: 'Colombia' },
-        { code: '+506', name: 'Costa Rica' },
-        { code: '+53', name: 'Cuba' },
-        { code: '+593', name: 'Ecuador' },
-        { code: '+503', name: 'El Salvador' },
-        { code: '+502', name: 'Guatemala' },
-        { code: '+504', name: 'Honduras' },
-        { code: '+52', name: 'M\u00e9xico' },
-        { code: '+505', name: 'Nicaragua' },
-        { code: '+507', name: 'Panam\u00e1' },
-        { code: '+595', name: 'Paraguay' },
-        { code: '+51', name: 'Per\u00fa' },
-        { code: '+1', name: 'Puerto Rico' },
-        { code: '+1', name: 'Rep. Dominicana' },
-        { code: '+598', name: 'Uruguay' },
-        { code: '+58', name: 'Venezuela' },
-        { code: '+1', name: 'EE.UU.' }
+        { code: '+54', name: 'Argentina', flag: '\uD83C\uDDE6\uD83C\uDDF7' },
+        { code: '+591', name: 'Bolivia', flag: '🇧🇴' },
+        { code: '+55', name: 'Brasil', flag: '🇧🇷' },
+        { code: '+56', name: 'Chile', flag: '🇨🇱' },
+        { code: '+57', name: 'Colombia', flag: '🇨🇴' },
+        { code: '+506', name: 'Costa Rica', flag: '🇨🇷' },
+        { code: '+53', name: 'Cuba', flag: '🇨🇺' },
+        { code: '+593', name: 'Ecuador', flag: '🇪🇨' },
+        { code: '+503', name: 'El Salvador', flag: '🇸🇻' },
+        { code: '+502', name: 'Guatemala', flag: '🇬🇹' },
+        { code: '+504', name: 'Honduras', flag: '🇭🇳' },
+        { code: '+52', name: 'México', flag: '🇲🇽' },
+        { code: '+505', name: 'Nicaragua', flag: '🇳🇮' },
+        { code: '+507', name: 'Panamá', flag: '🇵🇦' },
+        { code: '+595', name: 'Paraguay', flag: '🇵🇾' },
+        { code: '+51', name: 'Perú', flag: '🇵🇪' },
+        { code: '+1', name: 'Puerto Rico', flag: '🇵🇷' },
+        { code: '+1', name: 'Rep. Dominicana', flag: '🇩🇴' },
+        { code: '+598', name: 'Uruguay', flag: '🇺🇾' },
+        { code: '+58', name: 'Venezuela', flag: '🇻🇪' },
+        { code: '+1', name: 'EE.UU.', flag: '🇺🇸' }
     ];
 
     const loadPhoneCodes = (selectElement) => {
         if (!selectElement) return;
 
         countryPhoneCodes.sort((a, b) => a.name.localeCompare(b.name));
-        selectElement.innerHTML = '<option value="">C\u00f3digo...</option>';
+        
+        selectElement.innerHTML = '<option value="">Código...</option>';
         countryPhoneCodes.forEach(country => {
             if (country.code) {
-                selectElement.innerHTML += `<option value="${country.code}">${country.code} (${country.name})</option>`;
+                selectElement.innerHTML += `<option value="${country.code}">${country.flag} ${country.code}</option>`;
             }
         });
     };
@@ -67,25 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Cargar los roles de "Tipo de Cuenta"
-    const loadAssignableRoles = async () => {
-        if (!registerRoleSelect) return;
-        try {
-            const response = await fetch('api/?accion=getAssignableRoles');
-            if (!response.ok) throw new Error('Error al cargar tipos de cuenta');
-            const roles = await response.json();
-
-            registerRoleSelect.innerHTML = '<option value="">Selecciona...</option>';
-            roles.forEach(rol => {
-                registerRoleSelect.innerHTML += `<option value="${rol.NombreRol}">${rol.NombreRol}</option>`;
-            });
-        } catch (error) {
-            console.error(error);
-            registerRoleSelect.innerHTML = '<option value="">Error al cargar</option>';
-        }
-    };
-
-    // Validar RUT Chileno
     docTypeSelect?.addEventListener('change', () => {
         docNumInput.removeAttribute('pattern');
         docNumInput.classList.remove('is-invalid', 'is-valid');
@@ -99,6 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
             docNumInput.dataset.validateRut = 'false';
             docNumInput.maxLength = 20;
             docNumInput.placeholder = 'Nro. Documento';
+        }
+
+        if (registerRoleInput) {
+            if (docTypeSelect.value === 'RIF') {
+                registerRoleInput.value = 'Empresa';
+            } else {
+                registerRoleInput.value = 'Persona Natural';
+            }
         }
     });
 
@@ -126,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // Formulario de Login
     loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         loginFeedback.textContent = '';
@@ -161,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Formulario de Registro
     registerForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         registerFeedback.textContent = '';
@@ -193,8 +204,17 @@ document.addEventListener('DOMContentLoaded', () => {
             submitButton.textContent = 'Registrar Cuenta';
             return;
         }
+        
+        const wasReadOnly = registerRoleInput.readOnly;
+        if (wasReadOnly) {
+            registerRoleInput.readOnly = false;
+        }
 
         const formData = new FormData(registerForm);
+
+        if (wasReadOnly) {
+            registerRoleInput.readOnly = true;
+        }
 
         if (docNumInput.dataset.validateRut === 'true' && typeof cleanRut === 'function') {
             formData.set('numeroDocumento', cleanRut(docNumInput.value));
@@ -241,8 +261,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (registerPhoneCode) {
         loadPhoneCodes(registerPhoneCode);
-    }
-    if (registerRoleSelect) {
-        loadAssignableRoles();
     }
 });

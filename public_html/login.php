@@ -46,10 +46,17 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                             <label for="login-email" class="form-label">Correo Electrónico</label>
                                             <input type="email" class="form-control" id="login-email" placeholder="Ingresa tu correo..." name="email" required>
                                         </div>
+                                        
                                         <div class="form-group mb-3">
                                             <label for="login-password" class="form-label">Contraseña</label>
-                                            <input type="password" class="form-control" id="login-password" placeholder="Contraseña" name="password" required>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control" id="login-password" placeholder="Contraseña" name="password" required>
+                                                <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                                    <i class="bi bi-eye-slash-fill"></i>
+                                                </span>
+                                            </div>
                                         </div>
+
                                         <button type="submit" class="btn btn-primary btn-user w-100">
                                             Ingresar
                                         </button>
@@ -67,38 +74,56 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                     </div>
                                     <form id="register-form" novalidate>
                                         <div class="row">
-                                            <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-nombre" class="form-label">Primer Nombre</label>
+                                            <div class="form-group col-sm-12 mb-3">
+                                                <label for="register-nombre" class="form-label">Primer Nombre <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="register-nombre" placeholder="Primer Nombre" name="primerNombre" required>
                                             </div>
-                                            <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-segundo-nombre" class="form-label">Segundo Nombre</label>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" id="toggle-segundo-nombre">
+                                            <label class="form-check-label small" for="toggle-segundo-nombre">¿Tienes segundo nombre?</label>
+                                        </div>
+
+                                        <div class="row d-none" id="container-segundo-nombre">
+                                            <div class="form-group col-sm-12 mb-3">
+                                                <label for="register-segundo-nombre" class="form-label">Segundo Nombre <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="register-segundo-nombre" placeholder="Segundo Nombre" name="segundoNombre">
                                             </div>
                                         </div>
+
                                         <div class="row">
-                                            <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-apellido" class="form-label">Primer Apellido</label>
+                                            <div class="form-group col-sm-12 mb-3">
+                                                <label for="register-apellido" class="form-label">Primer Apellido <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="register-apellido" placeholder="Primer Apellido" name="primerApellido" required>
                                             </div>
-                                            <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-segundo-apellido" class="form-label">Segundo Apellido</label>
+                                        </div>
+
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" id="toggle-segundo-apellido">
+                                            <label class="form-check-label small" for="toggle-segundo-apellido">¿Tienes segundo apellido?</label>
+                                        </div>
+
+                                        <div class="row d-none" id="container-segundo-apellido">
+                                            <div class="form-group col-sm-12 mb-3">
+                                                <label for="register-segundo-apellido" class="form-label">Segundo Apellido <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="register-segundo-apellido" placeholder="Segundo Apellido" name="segundoApellido">
                                             </div>
                                         </div>
+
                                         <div class="form-group mb-3">
-                                            <label for="register-email" class="form-label">Correo Electrónico</label>
+                                            <label for="register-email" class="form-label">Correo Electrónico <span class="text-danger">*</span></label>
                                             <input type="email" class="form-control" id="register-email" placeholder="Correo Electrónico" name="email" required>
                                         </div>
                                         <div class="row">
                                             <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-doc-type" class="form-label">Tipo de Documento</label>
+                                                <label for="register-doc-type" class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
                                                 <select class="form-select" id="register-doc-type" name="tipoDocumento" required>
                                                     <option value="">Cargando...</option>
                                                 </select>
                                             </div>
                                             <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-doc-num" class="form-label">Nro. Documento</label>
+                                                <label for="register-doc-num" class="form-label">Nro. Documento <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="register-doc-num" placeholder="Nro. Documento" name="numeroDocumento" required>
                                             </div>
                                         </div>
@@ -106,12 +131,11 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                         <div class="row">
                                             <div class="form-group col-sm-6 mb-3">
                                                 <label for="register-role" class="form-label">Tipo de Cuenta</label>
-                                                <select class="form-select" id="register-role" name="tipoPersona" required>
-                                                    <option value="">Cargando...</option>
-                                                </select>
+                                                <input type="text" class="form-control" id="register-role" name="tipoPersona" value="Persona Natural" readonly required style="background-color: #e9ecef;">
                                             </div>
+
                                             <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-telefono" class="form-label">Teléfono</label>
+                                                <label for="register-telefono" class="form-label">Teléfono <span class="text-danger">*</span></label>
                                                 <div class="input-group">
                                                     <select class="form-select" id="register-phone-code" name="phoneCode" style="max-width: 130px;"></select>
                                                     <input type="tel" class="form-control" id="register-telefono" placeholder="Número" name="phoneNumber" required>
@@ -121,14 +145,25 @@ require_once __DIR__ . '/../remesas_private/src/templates/header.php';
                                         
                                         <div class="row">
                                             <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-password" class="form-label">Contraseña</label>
-                                                <input type="password" class="form-control" id="register-password" placeholder="Contraseña" name="password" required>
+                                                <label for="register-password" class="form-label">Contraseña <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" id="register-password" placeholder="Contraseña" name="password" required>
+                                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                                        <i class="bi bi-eye-slash-fill"></i>
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="form-group col-sm-6 mb-3">
-                                                <label for="register-password-repeat" class="form-label">Repetir Contraseña</label>
-                                                <input type="password" class="form-control" id="register-password-repeat" placeholder="Repetir Contraseña" name="passwordRepeat" required>
+                                                <label for="register-password-repeat" class="form-label">Repetir Contraseña <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <input type="password" class="form-control" id="register-password-repeat" placeholder="Repetir Contraseña" name="passwordRepeat" required>
+                                                    <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                                        <i class="bi bi-eye-slash-fill"></i>
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
+
                                         <button type="submit" class="btn btn-primary btn-user w-100">
                                             Registrar Cuenta
                                         </button>
