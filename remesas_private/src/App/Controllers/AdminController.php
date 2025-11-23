@@ -32,12 +32,16 @@ class AdminController extends BaseController
         $this->dashboardService = $dashboardService;
         $this->rolRepo = $rolRepo;
         $this->cuentasAdminRepo = $cuentasAdminRepo;
-        $this->ensureAdmin();
+        
+        // ELIMINADO: $this->ensureAdmin(); 
+        // Ahora validamos en cada método individualmente
     }
+
+    // --- MÉTODOS PARA ADMIN Y OPERADORES (Gestión de Órdenes) ---
 
     public function rejectTransaction(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureAdminOrOperator(); // Permite Operador
         $data = $this->getJsonInput();
 
         $txId = (int) ($data['transactionId'] ?? 0);
@@ -53,77 +57,9 @@ class AdminController extends BaseController
         $this->sendJsonResponse(['success' => true]);
     }
 
-    public function upsertRate(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        try {
-            $resultData = $this->pricingService->adminUpsertRate($adminId, $data);
-            $this->sendJsonResponse(['success' => true, 'newTasaId' => $resultData['TasaID']]);
-        } catch (Exception $e) {
-            $code = $e->getCode() ?: 400;
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $code);
-        }
-    }
-
-    public function deleteRate(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        $tasaId = (int)($data['tasaId'] ?? 0);
-        
-        try {
-            $this->pricingService->adminDeleteRate($adminId, $tasaId);
-            $this->sendJsonResponse(['success' => true, 'message' => 'Tasa eliminada correctamente.']);
-        } catch (Exception $e) {
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function addPais(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        try {
-            $this->pricingService->adminAddCountry($adminId, $data['nombrePais'] ?? '', $data['codigoMoneda'] ?? '', $data['rol'] ?? '');
-            $this->sendJsonResponse(['success' => true], 201);
-        } catch (Exception $e) {
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 400);
-        }
-    }
-
-    public function updatePais(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        try {
-            $this->pricingService->adminUpdateCountry($adminId, (int) ($data['paisId'] ?? 0), $data['nombrePais'] ?? '', $data['codigoMoneda'] ?? '');
-            $this->sendJsonResponse(['success' => true]);
-        } catch (Exception $e) {
-            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 400);
-        }
-    }
-
-    public function updatePaisRol(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        $this->pricingService->adminUpdateCountryRole($adminId, (int) ($data['paisId'] ?? 0), $data['newRole'] ?? '');
-        $this->sendJsonResponse(['success' => true]);
-    }
-
-    public function togglePaisStatus(): void
-    {
-        $adminId = $this->ensureLoggedIn();
-        $data = $this->getJsonInput();
-        $newStatus = (bool) ($data['newStatus'] ?? false);
-        $this->pricingService->adminToggleCountryStatus($adminId, (int) ($data['paisId'] ?? 0), $newStatus);
-        $this->sendJsonResponse(['success' => true]);
-    }
-
     public function processTransaction(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureAdminOrOperator(); // Permite Operador
         $data = $this->getJsonInput();
         $this->txService->adminConfirmPayment($adminId, (int) ($data['transactionId'] ?? 0));
         $this->sendJsonResponse(['success' => true]);
@@ -131,7 +67,7 @@ class AdminController extends BaseController
 
     public function adminUploadProof(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureAdminOrOperator(); // Permite Operador
         $transactionId = (int) ($_POST['transactionId'] ?? 0);
         $fileData = $_FILES['receiptFile'] ?? null;
         $comisionDestino = isset($_POST['comisionDestino']) ? (float) $_POST['comisionDestino'] : 0.00;
@@ -148,10 +84,81 @@ class AdminController extends BaseController
             $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $e->getCode() >= 400 ? $e->getCode() : 500);
         }
     }
+    
+    // --- MÉTODOS SOLO PARA ADMIN (Configuración y Usuarios) ---
+
+    public function upsertRate(): void
+    {
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin(); // Solo Admin
+        $data = $this->getJsonInput();
+
+        try {
+            $resultData = $this->pricingService->adminUpsertRate($adminId, $data);
+            $this->sendJsonResponse(['success' => true, 'newTasaId' => $resultData['TasaID']]);
+        } catch (Exception $e) {
+            $code = $e->getCode() ?: 400;
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $code);
+        }
+    }
+
+    public function deleteRate(): void
+    {
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin(); // Solo Admin
+        $data = $this->getJsonInput();
+        $tasaId = (int)($data['tasaId'] ?? 0);
+        
+        try {
+            $this->pricingService->adminDeleteRate($adminId, $tasaId);
+            $this->sendJsonResponse(['success' => true, 'message' => 'Tasa eliminada correctamente.']);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function addPais(): void
+    {
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin();
+        $data = $this->getJsonInput();
+        try {
+            $this->pricingService->adminAddCountry($adminId, $data['nombrePais'] ?? '', $data['codigoMoneda'] ?? '', $data['rol'] ?? '');
+            $this->sendJsonResponse(['success' => true], 201);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function updatePais(): void
+    {
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin();
+        $data = $this->getJsonInput();
+        try {
+            $this->pricingService->adminUpdateCountry($adminId, (int) ($data['paisId'] ?? 0), $data['nombrePais'] ?? '', $data['codigoMoneda'] ?? '');
+            $this->sendJsonResponse(['success' => true]);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function updatePaisRol(): void
+    {
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin();
+        $data = $this->getJsonInput();
+        $this->pricingService->adminUpdateCountryRole($adminId, (int) ($data['paisId'] ?? 0), $data['newRole'] ?? '');
+        $this->sendJsonResponse(['success' => true]);
+    }
+
+    public function togglePaisStatus(): void
+    {
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin();
+        $data = $this->getJsonInput();
+        $newStatus = (bool) ($data['newStatus'] ?? false);
+        $this->pricingService->adminToggleCountryStatus($adminId, (int) ($data['paisId'] ?? 0), $newStatus);
+        $this->sendJsonResponse(['success' => true]);
+    }
 
     public function updateVerificationStatus(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin(); // Solo Admin verifica identidad (o podrías cambiarlo a Operator si quieres)
         $data = $this->getJsonInput();
         $targetUserId = (int) ($data['userId'] ?? 0);
         $newStatusName = (string) ($data['newStatus'] ?? '');
@@ -166,13 +173,14 @@ class AdminController extends BaseController
 
     public function getDashboardStats(): void
     {
+        $this->ensureAdmin(); // Solo Admin ve estadísticas globales
         $stats = $this->dashboardService->getAdminDashboardStats();
         $this->sendJsonResponse(['success' => true, 'stats' => $stats]);
     }
 
     public function updateUserRole(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin(); // Solo Admin cambia roles
         $data = $this->getJsonInput();
         $targetUserId = (int) ($data['userId'] ?? 0);
         $newRoleId = (int) ($data['newRoleId'] ?? 0);
@@ -193,7 +201,7 @@ class AdminController extends BaseController
 
     public function deleteUser(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin();
         $data = $this->getJsonInput();
         $targetUserId = (int) ($data['userId'] ?? 0);
 
@@ -207,13 +215,14 @@ class AdminController extends BaseController
 
     public function getCuentasAdmin(): void
     {
+        $this->ensureAdmin();
         $cuentas = $this->cuentasAdminRepo->findAll();
         $this->sendJsonResponse(['success' => true, 'cuentas' => $cuentas]);
     }
 
     public function saveCuentaAdmin(): void
     {
-        $this->ensureLoggedIn();
+        $this->ensureLoggedIn(); $this->ensureAdmin();
         $data = $this->getJsonInput();
 
         if (empty($data['banco']) || empty($data['titular']) || empty($data['numeroCuenta']) || empty($data['rut'])) {
@@ -230,7 +239,7 @@ class AdminController extends BaseController
 
     public function deleteCuentaAdmin(): void
     {
-        $this->ensureLoggedIn();
+        $this->ensureLoggedIn(); $this->ensureAdmin();
         $data = $this->getJsonInput();
         $this->cuentasAdminRepo->delete((int) $data['id']);
         $this->sendJsonResponse(['success' => true]);
@@ -238,7 +247,7 @@ class AdminController extends BaseController
     
     public function toggleUserBlock(): void
     {
-        $adminId = $this->ensureLoggedIn();
+        $adminId = $this->ensureLoggedIn(); $this->ensureAdmin();
         $data = $this->getJsonInput();
         $targetUserId = (int) ($data['userId'] ?? 0);
         $newStatus = $data['newStatus'] ?? '';

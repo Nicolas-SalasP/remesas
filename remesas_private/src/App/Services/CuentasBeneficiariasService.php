@@ -1,130 +1,135 @@
 <?php
-namespace App\Services;
+namespace App\Repositories;
 
-use App\Repositories\CuentasBeneficiariasRepository;
-use App\Repositories\TipoBeneficiarioRepository;
-use App\Repositories\TipoDocumentoRepository;
-use App\Services\NotificationService;
+use App\Database\Database;
 use Exception;
 
-class CuentasBeneficiariasService
+class CuentasBeneficiariasRepository
 {
-    private CuentasBeneficiariasRepository $cuentasBeneficiariasRepository;
-    private NotificationService $notificationService;
-    private TipoBeneficiarioRepository $tipoBeneficiarioRepo;
-    private TipoDocumentoRepository $tipoDocumentoRepo;
+    private Database $db;
 
-    public function __construct(
-        CuentasBeneficiariasRepository $cuentasBeneficiariasRepository,
-        NotificationService $notificationService,
-        TipoBeneficiarioRepository $tipoBeneficiarioRepo,
-        TipoDocumentoRepository $tipoDocumentoRepo
-    ) {
-        $this->cuentasBeneficiariasRepository = $cuentasBeneficiariasRepository;
-        $this->notificationService = $notificationService;
-        $this->tipoBeneficiarioRepo = $tipoBeneficiarioRepo;
-        $this->tipoDocumentoRepo = $tipoDocumentoRepo;
+    public function __construct(Database $db)
+    {
+        $this->db = $db;
     }
 
-    public function getAccountsByUser(int $userId, ?int $paisId = null): array
+    public function findByUserId(int $userId): array
     {
-        $cuentas = $this->cuentasBeneficiariasRepository->findByUserId($userId);
+        $sql = "SELECT
+                    cb.CuentaID, cb.Alias, cb.UserID, cb.PaisID,
+                    p.NombrePais,
+                    tb.TipoBeneficiarioID, tb.Nombre AS TipoBeneficiarioNombre,
+                    cb.TitularPrimerNombre, cb.TitularSegundoNombre,
+                    cb.TitularPrimerApellido, cb.TitularSegundoApellido,
+                    td.TipoDocumentoID AS TitularTipoDocumentoID, td.NombreDocumento AS TitularTipoDocumentoNombre,
+                    cb.TitularNumeroDocumento, cb.NombreBanco, cb.NumeroCuenta,
+                    cb.NumeroTelefono, cb.FechaCreacion
+                FROM cuentas_beneficiarias cb 
+                JOIN paises p ON cb.PaisID = p.PaisID
+                LEFT JOIN tipos_beneficiario tb ON cb.TipoBeneficiarioID = tb.TipoBeneficiarioID
+                LEFT JOIN tipos_documento td ON cb.TitularTipoDocumentoID = td.TipoDocumentoID
+                WHERE cb.UserID = ? AND cb.Activo = 1";
 
-        if ($paisId !== null) {
-            $cuentas = array_filter($cuentas, fn($cuenta) => isset($cuenta['PaisID']) && $cuenta['PaisID'] == $paisId);
-        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
 
-        return $cuentas;
+        $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        return $result;
     }
 
-    public function getAccountDetails(int $userId, int $cuentaId): ?array
+    public function findByIdAndUserId(int $cuentaId, int $userId): ?array
     {
-        $cuenta = $this->cuentasBeneficiariasRepository->findByIdAndUserId($cuentaId, $userId);
-        if (!$cuenta) {
-            throw new Exception("Cuenta no encontrada o no te pertenece.", 404);
-        }
-        return $cuenta;
+         $sql = "SELECT cb.*, 
+                        td.NombreDocumento AS TitularTipoDocumentoNombre, 
+                        tb.Nombre AS TipoBeneficiarioNombre
+                 FROM cuentas_beneficiarias cb 
+                 LEFT JOIN tipos_documento td ON cb.TitularTipoDocumentoID = td.TipoDocumentoID
+                 LEFT JOIN tipos_beneficiario tb ON cb.TipoBeneficiarioID = tb.TipoBeneficiarioID
+                 WHERE cb.CuentaID = ? AND cb.UserID = ?";
+         $stmt = $this->db->prepare($sql);
+         $stmt->bind_param("ii", $cuentaId, $userId);
+         $stmt->execute();
+         $result = $stmt->get_result()->fetch_assoc();
+         $stmt->close();
+         return $result;
     }
 
-    private function validateAndPrepareBeneficiaryData(array $data): array
+    public function create(array $data): int
     {
-        $requiredFields = [
-            'alias', 'tipoBeneficiario', 'primerNombre', 'primerApellido',
-            'tipoDocumento', 'numeroDocumento', 'nombreBanco', 'numeroCuenta', 'numeroTelefono'
-        ];
+        $sql = "INSERT INTO cuentas_beneficiarias (UserID, PaisID, Alias, TipoBeneficiarioID, TitularPrimerNombre, TitularSegundoNombre, TitularPrimerApellido, TitularSegundoApellido, TitularTipoDocumentoID, TitularNumeroDocumento, NombreBanco, NumeroCuenta, NumeroTelefono)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        foreach ($requiredFields as $field) {
-            if (!isset($data[$field]) || trim($data[$field]) === '') {
-                throw new Exception("El campo '$field' es obligatorio y no puede estar vacío.", 400);
-            }
+        $stmt = $this->db->prepare($sql);
+
+        $stmt->bind_param("iissssssissss", 
+            $data['UserID'],
+            $data['paisID'],
+            $data['alias'],
+            $data['tipoBeneficiarioID'], 
+            $data['primerNombre'],
+            $data['segundoNombre'],
+            $data['primerApellido'],
+            $data['segundoApellido'],
+            $data['titularTipoDocumentoID'], 
+            $data['numeroDocumento'],
+            $data['nombreBanco'],
+            $data['numeroCuenta'],
+            $data['numeroTelefono']
+        );
+
+        if (!$stmt->execute()) {
+             error_log("Error al registrar cuenta beneficiaria: " . $stmt->error . " - Data: " . print_r($data, true));
+             throw new Exception("Error al registrar la cuenta del beneficiario. Verifica los datos e intenta nuevamente."); 
         }
+        $newId = $stmt->insert_id;
+        $stmt->close();
+        return $newId;
+    }
 
-        $tipoBeneficiarioID = $this->tipoBeneficiarioRepo->findIdByName($data['tipoBeneficiario']);
-        if (!$tipoBeneficiarioID) {
-            error_log("TipoBeneficiario no encontrado en BD: " . $data['tipoBeneficiario']);
-            throw new Exception("Tipo de beneficiario '{$data['tipoBeneficiario']}' no válido.", 400);
-        }
-        $data['tipoBeneficiarioID'] = $tipoBeneficiarioID;
-
-        $tipoDocumentoID = $this->tipoDocumentoRepo->findIdByName($data['tipoDocumento']);
-        if (!$tipoDocumentoID) {
-            error_log("TipoDocumento no encontrado en BD: '" . $data['tipoDocumento'] . "'");
-            throw new Exception("El tipo de documento seleccionado ('{$data['tipoDocumento']}') no es válido.", 400);
-        }
-        $data['titularTipoDocumentoID'] = $tipoDocumentoID;
-
-        $data['segundoNombre'] = isset($data['segundoNombre']) && trim($data['segundoNombre']) !== '' ? trim($data['segundoNombre']) : null;
-        $data['segundoApellido'] = isset($data['segundoApellido']) && trim($data['segundoApellido']) !== '' ? trim($data['segundoApellido']) : null;
+    public function update(int $cuentaId, int $userId, array $data): bool
+    {
+        $sql = "UPDATE cuentas_beneficiarias SET
+                    Alias = ?, TipoBeneficiarioID = ?, 
+                    TitularPrimerNombre = ?, TitularSegundoNombre = ?, 
+                    TitularPrimerApellido = ?, TitularSegundoApellido = ?, 
+                    TitularTipoDocumentoID = ?, TitularNumeroDocumento = ?, 
+                    NombreBanco = ?, NumeroCuenta = ?, NumeroTelefono = ?
+                WHERE CuentaID = ? AND UserID = ?";
         
-        return $data;
-    }
-
-    public function addAccount(int $userId, array $data): int
-    {
-        $data = $this->validateAndPrepareBeneficiaryData($data);
-        $data['UserID'] = $userId;
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("sisssssssssii",
+            $data['alias'], $data['tipoBeneficiarioID'],
+            $data['primerNombre'], $data['segundoNombre'],
+            $data['primerApellido'], $data['segundoApellido'],
+            $data['titularTipoDocumentoID'], $data['numeroDocumento'],
+            $data['nombreBanco'], $data['numeroCuenta'], $data['numeroTelefono'],
+            $cuentaId, $userId
+        );
         
-        if (!isset($data['paisID']) || empty($data['paisID'])) {
-            throw new Exception("El campo 'paisID' es obligatorio.", 400);
+        if (!$stmt->execute()) {
+             error_log("Error al actualizar cuenta beneficiaria: " . $stmt->error);
+             throw new Exception("Error al actualizar la cuenta del beneficiario."); 
         }
-
-        try {
-            $newId = $this->cuentasBeneficiariasRepository->create($data);
-            $logAlias = $data['alias'] ?? 'N/A';
-            $this->notificationService->logAdminAction($userId, 'Usuario añadió cuenta beneficiaria', "Alias: {$logAlias} - ID: {$newId}");
-            return $newId;
-        } catch (Exception $e) {
-             error_log("Error al crear cuenta beneficiaria en CuentasBeneficiariasRepository: " . $e->getMessage());
-            throw new Exception("Error al guardar la cuenta del beneficiario en la base de datos.", $e->getCode() ?: 500);
-        }
+        $success = $stmt->affected_rows > 0;
+        $stmt->close();
+        return $success;
     }
     
-    public function updateAccount(int $userId, int $cuentaId, array $data): bool
+    public function delete(int $cuentaId, int $userId): bool
     {
-        $data = $this->validateAndPrepareBeneficiaryData($data);
+        $sql = "UPDATE cuentas_beneficiarias SET Activo = 0 WHERE CuentaID = ? AND UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ii", $cuentaId, $userId);
         
-        try {
-            $success = $this->cuentasBeneficiariasRepository->update($cuentaId, $userId, $data);
-            $logAlias = $data['alias'] ?? 'N/A';
-            $this->notificationService->logAdminAction($userId, 'Usuario actualizó beneficiario', "Alias: {$logAlias} - ID: {$cuentaId}");
-            return $success;
-        } catch (Exception $e) {
-             error_log("Error al actualizar cuenta beneficiaria: " . $e->getMessage());
-            throw new Exception("Error al actualizar la cuenta del beneficiario.", $e->getCode() ?: 500);
+        if (!$stmt->execute()) {
+             error_log("Error al eliminar (soft) cuenta beneficiaria: " . $stmt->error);
+             throw new Exception("Error al eliminar el beneficiario."); 
         }
-    }
-    
-    public function deleteAccount(int $userId, int $cuentaId): bool
-    {
-        try {
-            $success = $this->cuentasBeneficiariasRepository->delete($cuentaId, $userId);
-            if ($success) {
-                $this->notificationService->logAdminAction($userId, 'Usuario eliminó beneficiario', "ID: {$cuentaId}");
-            }
-            return $success;
-        } catch (Exception $e) {
-             error_log("Error al eliminar cuenta beneficiaria: " . $e->getMessage());
-            throw new Exception($e->getMessage(), $e->getCode() ?: 500);
-        }
+        
+        $stmt->close();
+        return true; 
     }
 }

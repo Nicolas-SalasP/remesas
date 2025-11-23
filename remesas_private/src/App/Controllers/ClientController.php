@@ -132,12 +132,19 @@ class ClientController extends BaseController
     {
         $userId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        $cuentaId = (int)($data['id'] ?? 0);
+        $cuentaId = (int) ($data['id'] ?? 0);
+        
         if ($cuentaId <= 0) {
-            throw new Exception("ID de cuenta inválido", 400);
+            $this->sendJsonResponse(['success' => false, 'error' => 'ID de cuenta inválido'], 400);
+            return;
         }
-        $this->cuentasBeneficiariasService->deleteAccount($userId, $cuentaId);
-        $this->sendJsonResponse(['success' => true, 'message' => 'Beneficiario eliminado con éxito']);
+
+        try {
+            $this->cuentasBeneficiariasService->deleteAccount($userId, $cuentaId);
+            $this->sendJsonResponse(['success' => true, 'message' => 'Beneficiario eliminado con éxito']);
+        } catch (Exception $e) {
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function createTransaccion(): void

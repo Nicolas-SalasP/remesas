@@ -56,4 +56,16 @@ abstract class BaseController
             exit();
         }
     }
+
+    protected function ensureAdminOrOperator(): int
+    {
+        $userId = $this->ensureLoggedIn();
+        if (!isset($_SESSION['user_rol_name']) || 
+            ($_SESSION['user_rol_name'] !== 'Admin' && $_SESSION['user_rol_name'] !== 'Operador')) {
+            
+            $this->sendJsonResponse(['success' => false, 'error' => 'Acceso denegado. Se requiere rol de Admin u Operador.'], 403);
+            exit();
+        }
+        return $userId;
+    }
 }
