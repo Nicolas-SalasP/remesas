@@ -1,158 +1,129 @@
 <?php
 require_once __DIR__ . '/../../remesas_private/src/core/init.php';
 
-if (!isset($_SESSION['user_rol_name']) || $_SESSION['user_rol_name'] !== 'Admin') {
-    die("Acceso denegado.");
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ' . BASE_URL . '/login.php');
+    exit();
 }
 
-$pageTitle = 'Gestionar Usuarios';
-$pageScript = 'admin.js';
+
+$pageTitle = 'Seguridad de la Cuenta';
+$pageScript = 'seguridad.js';
 require_once __DIR__ . '/../../remesas_private/src/templates/header.php';
 
-$adminID = (int)$_SESSION['user_id'];
-$mostrarInactivos = isset($_GET['mostrar_inactivos']) && $_GET['mostrar_inactivos'] == '1';
-
-global $conexion;
-$params = [$adminID];
-$types = 'i';
-
-$sqlWhere = "WHERE U.UserID != ?";
-if (!$mostrarInactivos) {
-    $sqlWhere .= " AND (U.LockoutUntil IS NULL OR U.LockoutUntil <= NOW())";
-}
-
-$sql = "
-    SELECT
-        U.UserID, U.PrimerNombre, U.SegundoNombre, U.PrimerApellido, U.SegundoApellido, 
-        U.Email, U.Telefono, U.LockoutUntil, U.RolID, U.FechaRegistro, U.twofa_enabled,
-        U.DocumentoImagenURL_Frente, U.DocumentoImagenURL_Reverso,
-        EV.NombreEstado AS VerificacionEstadoNombre,
-        R.NombreRol
-    FROM usuarios U
-    LEFT JOIN estados_verificacion EV ON U.VerificacionEstadoID = EV.EstadoID
-    LEFT JOIN roles R ON U.RolID = R.RolID
-    $sqlWhere
-    ORDER BY U.FechaRegistro DESC
-";
-
-$stmt = $conexion->prepare($sql);
-
-if ($stmt) {
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-    $usuarios = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-} else {
-    error_log("Error al preparar la consulta de usuarios: " . $conexion->error);
-    $usuarios = [];
-}
-
-$rolesDisponibles = $conexion->query("SELECT RolID, NombreRol FROM roles ORDER BY NombreRol")->fetch_all(MYSQLI_ASSOC);
+$is_admin_or_operador = (isset($_SESSION['user_rol_name']) && ($_SESSION['user_rol_name'] === 'Admin' || $_SESSION['user_rol_name'] === 'Operador'));
+$two_fa_enabled = (isset($_SESSION['twofa_enabled']) && $_SESSION['twofa_enabled'] === true);
 ?>
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0">Gestionar Usuarios</h1>
-    </div>
-
-    <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" value="1" id="mostrar_inactivos" 
-            <?php echo $mostrarInactivos ? 'checked' : ''; ?> 
-            onchange="window.location.href = this.checked ? '?mostrar_inactivos=1' : '?mostrar_inactivos=0'">
-        <label class="form-check-label" for="mostrar_inactivos">
-            Mostrar usuarios desactivados (bloqueados)
-        </label>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Estado Verificacion</th>
-                    <th>Rol</th>
-                    <th style="min-width: 220px;">Acciones</th> <?php ?>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($usuarios)): ?>
-                    <tr><td colspan="6" class="text-center">No se encontraron usuarios<?php echo $mostrarInactivos ? ' inactivos' : ' activos'; ?>.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($usuarios as $usuario):
-                        $isBlocked = ($usuario['LockoutUntil'] && strtotime($usuario['LockoutUntil']) > time());
-                        $isPrincipalAdmin = ($usuario['UserID'] == 1); 
-                        $nombreCompleto = trim(htmlspecialchars($usuario['PrimerNombre'] . ' ' . $usuario['SegundoNombre'] . ' ' . $usuario['PrimerApellido'] . ' ' . $usuario['SegundoApellido']));
-                    ?>
-                        <tr id="user-row-<?php echo $usuario['UserID']; ?>">
-                            <td><?php echo $usuario['UserID']; ?></td>
-                            <td><?php echo $nombreCompleto; ?></td>
-                            <td><?php echo htmlspecialchars($usuario['Email']); ?></td>
-                            <td>
-                                <span class="badge <?php echo $usuario['VerificacionEstadoNombre'] == 'Verificado' ? 'bg-success' : ($usuario['VerificacionEstadoNombre'] == 'Pendiente' ? 'bg-warning text-dark' : ($usuario['VerificacionEstadoNombre'] == 'Rechazado' ? 'bg-danger' : 'bg-secondary')); ?>">
-                                    <?php echo htmlspecialchars($usuario['VerificacionEstadoNombre'] ?? 'N/A'); ?>
-                                </span>
-                            </td>
-                            
-                            <td>
-                                <select class="form-select form-select-sm admin-role-select" 
-                                        data-user-id="<?php echo $usuario['UserID']; ?>" 
-                                        data-original-role-id="<?php echo $usuario['RolID']; ?>"
-                                        aria-label="Seleccionar rol de usuario"
-                                        <?php echo $isPrincipalAdmin ? 'disabled' : ''; ?>>
-                                    
-                                    <option value="">Seleccionar...</option>
-                                    <?php foreach ($rolesDisponibles as $rol): ?>
-                                        <option value="<?php echo $rol['RolID']; ?>" <?php echo ($usuario['RolID'] == $rol['RolID']) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($rol['NombreRol']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </td>
-                            
-                            <td>
-                                <button class="btn btn-sm btn-info view-user-details-btn"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#userDetailsModal"
-                                        data-user-id="<?php echo $usuario['UserID']; ?>"
-                                        data-nombre-completo="<?php echo $nombreCompleto; ?>"
-                                        data-email="<?php echo htmlspecialchars($usuario['Email']); ?>"
-                                        data-telefono="<?php echo htmlspecialchars($usuario['Telefono'] ?? 'No registrado'); ?>"
-                                        data-fecha-registro="<?php echo htmlspecialchars(date("d/m/Y H:i", strtotime($usuario['FechaRegistro']))); ?>"
-                                        data-two-fa-status="<?php echo $usuario['twofa_enabled'] ? '1' : '0'; ?>"
-                                        data-verificacion-status="<?php echo htmlspecialchars($usuario['VerificacionEstadoNombre'] ?? 'N/A'); ?>"
-                                        data-doc-frente="<?php echo htmlspecialchars($usuario['DocumentoImagenURL_Frente'] ?? ''); ?>"
-                                        data-doc-reverso="<?php echo htmlspecialchars($usuario['DocumentoImagenURL_Reverso'] ?? ''); ?>"
-                                        title="Ver Ficha de Usuario">
-                                    <i class="bi bi-eye-fill"></i>
-                                </button>
-                                <button class="btn btn-sm block-user-btn <?php echo $isBlocked ? 'btn-success' : 'btn-warning'; ?>" 
-                                        data-user-id="<?php echo $usuario['UserID']; ?>"
-                                        data-current-status="<?php echo $isBlocked ? 'blocked' : 'active'; ?>"
-                                        title="<?php echo $isBlocked ? 'Desbloquear' : 'Bloquear'; ?> usuario"
-                                        <?php echo $isPrincipalAdmin ? 'disabled' : ''; ?>>
-                                    <i class="bi <?php echo $isBlocked ? 'bi-unlock-fill' : 'bi-lock-fill'; ?>"></i>
-                                </button>
-                                
-                                <?php ?>
-                                <?php if (!$isBlocked): ?>
-                                    <button class="btn btn-sm btn-danger admin-delete-user-btn ms-1"
-                                            data-user-id="<?php echo $usuario['UserID']; ?>"
-                                            data-user-name="<?php echo $nombreCompleto; ?>"
-                                            title="Desactivar usuario (eliminación lógica)"
-                                            <?php echo $isPrincipalAdmin ? 'disabled' : ''; ?>>
-                                        <i class="bi bi-trash-fill"></i>
-                                    </button>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card p-4 p-md-5 shadow-sm">
+                
+                <?php if (!$two_fa_enabled): ?>
+                    <?php if ($is_admin_or_operador): ?>
+                        <div class="alert alert-danger" role="alert">
+                            <h4 class="alert-heading"><i class="bi bi-shield-lock-fill"></i> ¡Acción Requerida!</h4>
+                            <p>Para los roles de Administrador y Operador, es obligatorio configurar la autenticación de dos
+                                factores (2FA) antes de continuar.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-info" role="alert">
+                            <h4 class="alert-heading"><i class="bi bi-shield-check"></i> Protege tu Cuenta (Opcional)</h4>
+                            <p>Recomendamos activar la autenticación de dos factores (2FA) para añadir una capa extra de
+                                seguridad a tu cuenta.</p>
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
-            </tbody>
-        </table>
+                
+                <h1 class="mb-4">Seguridad de la Cuenta</h1>
+
+                <div id="2fa-status-container">
+                    <div class="d-flex align-items-center">
+                        <strong>Estado 2FA:</strong>
+                        <div class="spinner-border spinner-border-sm ms-2" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div id="setup-2fa-section" class="d-none">
+                    <h3 class="h4">Configurar Doble Factor (2FA)</h3>
+                    <p>Escanea el siguiente código QR con tu aplicación de autenticación (como Google Authenticator,
+                        Authy, etc.).</p>
+
+                    <div class="text-center my-3" style="min-height: 200px;">
+                        <div id="qr-code-container" class="d-inline-block border p-2">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando QR...</span>
+                            </div>
+                        </div>
+                        <p class="mt-2">O ingresa manualmente esta clave:</p>
+                        <code id="secret-key-display"
+                            class="fs-5 user-select-all bg-light p-2 rounded">Cargando...</code>
+                    </div>
+
+                    <form id="verify-2fa-form">
+                        <div class="mb-3">
+                            <label for="2fa-code" class="form-label">Código de Verificación</label>
+                            <input type="text" class="form-control" id="2fa-code" name="code" inputmode="numeric"
+                                maxlength="6" required autocomplete="off" placeholder="Ingresa el código de 6 dígitos">
+                        </div>
+                        <button type="submit" class="btn btn-success">Activar y Verificar</button>
+                    </form>
+                </div>
+
+                <div id="disable-2fa-section" class="d-none">
+                    <h3 class="h4 text-danger">Desactivar Doble Factor (2FA)</h3>
+                    <p class="<?php echo $is_admin_or_operador ? 'text-danger' : 'text-muted'; ?>">
+                        <?php echo $is_admin_or_operador ? 'La desactivación de 2FA no está permitida para roles de Administrador/Operador.' : 'Tu cuenta estará menos segura si desactivas la autenticación de doble factor.'; ?>
+                    </p>
+                    
+                    <?php if (!$is_admin_or_operador): ?>
+                        <div class="mb-3 p-3 bg-light border rounded">
+                            <label for="disable-code" class="form-label fw-bold">Confirma con tu código actual:</label>
+                            <input type="text" class="form-control" id="disable-code" placeholder="Ej: 123456" maxlength="6" autocomplete="off">
+                            <div class="form-text">Por seguridad, ingresa el código de tu app para confirmar la desactivación.</div>
+                        </div>
+                    <?php endif; ?>
+
+                    <button id="disable-2fa-btn" class="btn btn-outline-danger" <?php echo $is_admin_or_operador ? 'disabled' : ''; ?>>
+                        Confirmar y Desactivar
+                    </button>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
+
+<div class="modal fade" id="backupCodesModal" tabindex="-1" aria-labelledby="backupCodesModalLabel" aria-hidden="true"
+    data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="backupCodesModalLabel">¡2FA Activado! Guarda tus Códigos de Respaldo</h5>
+            </div>
+            <div class="modal-body">
+                <p class="lead">Guarda estos códigos en un lugar seguro (como un gestor de contraseñas). Te permitirán
+                    acceder a tu cuenta si pierdes tu dispositivo.</p>
+                <div class="bg-light p-3 rounded">
+                    <ul id="backup-codes-list" class="list-unstyled mb-0"
+                        style="font-family: monospace; font-size: 1.1rem; column-count: 2;">
+                    </ul>
+                </div>
+                <p class="mt-3 text-danger fw-bold">No volverás a ver estos códigos. Cópialos antes de cerrar.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido, los he
+                    guardado</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <?php
 require_once __DIR__ . '/../../remesas_private/src/templates/footer.php';

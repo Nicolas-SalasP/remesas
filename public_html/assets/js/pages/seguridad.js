@@ -127,6 +127,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     disableBtn?.addEventListener('click', async () => {
+        const codeInput = document.getElementById('disable-code');
+        const code = codeInput ? codeInput.value.trim() : '';
+
+        if (!code) {
+             window.showInfoModal('Código Requerido', 'Por seguridad, debes ingresar el código actual de tu autenticador para desactivar la protección.', false);
+             if(codeInput) codeInput.focus();
+             return;
+        }
+
         const confirmed = await window.showConfirmModal(
             'Confirmar Desactivación',
             '¿Estás seguro de que quieres desactivar 2FA? Tu cuenta será menos segura.'
@@ -135,21 +144,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         disableBtn.disabled = true;
         disableBtn.textContent = 'Desactivando...';
+        
         try {
-            const response = await fetch('../api/?accion=disable2FA', { method: 'POST' });
+            const response = await fetch('../api/?accion=disable2FA', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            });
+            
             const result = await response.json();
-            if (!result.success) throw new Error(result.error || "Error desconocido");
+            
+            if (!result.success) {
+                throw new Error(result.error || "Código incorrecto o error desconocido");
+            }
             
             is2FAEnabled = false;
             update2FAStatus();
-            window.showInfoModal('2FA Desactivado', 'El doble factor ha sido desactivado.', true);
+            if(codeInput) codeInput.value = '';
+            window.showInfoModal('2FA Desactivado', 'El doble factor ha sido desactivado correctamente.', true);
 
         } catch (e) {
             console.error(e);
-            window.showInfoModal('Error', e.message, false);
+            window.showInfoModal('Error al Desactivar', e.message, false);
         } finally {
             disableBtn.disabled = false;
-            disableBtn.textContent = 'Desactivar 2FA';
+            disableBtn.textContent = 'Confirmar y Desactivar';
         }
     });
 
