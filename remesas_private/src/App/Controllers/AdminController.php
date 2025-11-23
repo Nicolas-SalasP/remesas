@@ -131,7 +131,7 @@ class AdminController extends BaseController
         $data = $this->getJsonInput();
         
         $targetUserId = (int)($data['userId'] ?? 0);
-        $newStatusName = (string)($data['newStatus'] ?? ''); // Ej: "Verificado" o "Rechazado"
+        $newStatusName = (string)($data['newStatus'] ?? '');
 
         if ($targetUserId <= 0 || empty($newStatusName)) {
              $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o estado inválidos.'], 400);
@@ -168,17 +168,21 @@ class AdminController extends BaseController
     {
         $adminId = $this->ensureLoggedIn();
         $data = $this->getJsonInput();
-        
-        $targetUserId = (int)($data['userId'] ?? 0);
-        $newRoleId = (int)($data['newRoleId'] ?? 0);
+        $targetUserId = (int) ($data['userId'] ?? 0);
+        $newRoleId = (int) ($data['newRoleId'] ?? 0);
 
         if ($targetUserId <= 0 || $newRoleId <= 0) {
-             $this->sendJsonResponse(['success' => false, 'error' => 'Datos de usuario o rol inválidos.'], 400);
-             return;
+            $this->sendJsonResponse(['success' => false, 'error' => 'Datos inválidos.'], 400);
+            return;
         }
-        
-        $this->userService->adminUpdateUserRole($adminId, $targetUserId, $newRoleId);
-        $this->sendJsonResponse(['success' => true, 'message' => 'Rol actualizado correctamente.']);
+
+        try {
+            $this->userService->adminUpdateUserRole($adminId, $targetUserId, $newRoleId);
+            $this->sendJsonResponse(['success' => true, 'message' => 'Rol actualizado.']);
+        } catch (Exception $e) {
+            $code = $e->getCode() ?: 400;
+            $this->sendJsonResponse(['success' => false, 'error' => $e->getMessage()], $code);
+        }
     }
 
     public function deleteUser(): void

@@ -34,6 +34,16 @@ class UserRepository
 
         return $result;
     }
+    
+    public function countAdmins(): int
+    {
+        $sql = "SELECT COUNT(*) as total FROM usuarios WHERE RolID = 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($result['total'] ?? 0);
+    }
 
     public function create(array $data): int
     {
@@ -112,7 +122,6 @@ class UserRepository
         return $result;
     }
 
-    // --- MÉTODOS DE LOGIN Y BLOQUEO ---
     public function updateLoginAttempts(int $userId, int $attempts, ?string $lockoutUntil): bool
     {
         $sql = "UPDATE usuarios SET FailedLoginAttempts = ?, LockoutUntil = ? WHERE UserID = ?";
@@ -123,7 +132,6 @@ class UserRepository
         return $success;
     }
 
-    // --- MÉTODOS DE RESTABLECIMIENTO DE CONTRASEÑA ---
     public function createResetToken(int $userId, string $token, string $expiresAt): bool
     {
         $this->invalidatePreviousTokens($userId);
@@ -192,7 +200,6 @@ class UserRepository
         $stmt->close();
     }
 
-    // --- MÉTODOS DE VERIFICACIÓN ---
     public function updateVerificationDocuments(int $userId, string $pathFrente, string $pathReverso, int $estadoPendienteID): bool
     {
         $sql = "UPDATE usuarios SET DocumentoImagenURL_Frente = ?, DocumentoImagenURL_Reverso = ?, VerificacionEstadoID = ? WHERE UserID = ?";
@@ -213,12 +220,21 @@ class UserRepository
         return $success;
     }
     
-    // --- MÉTODOS DE GESTIÓN DE ADMIN ---
     public function updateRole(int $userId, int $rolId): bool
     {
         $sql = "UPDATE usuarios SET RolID = ? WHERE UserID = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->bind_param("ii", $rolId, $userId);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+    
+    public function addGanancia(int $userId, float $monto): bool
+    {
+        $sql = "UPDATE usuarios SET SaldoGanancias = SaldoGanancias + ? WHERE UserID = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("di", $monto, $userId);
         $success = $stmt->execute();
         $stmt->close();
         return $success;
@@ -234,8 +250,6 @@ class UserRepository
         return $success;
     }
 
-
-    // --- MÉTODOS DE CONTEO Y UTILIDAD ---
     public function countAll(): int
     {
         $adminRolID = 1;
