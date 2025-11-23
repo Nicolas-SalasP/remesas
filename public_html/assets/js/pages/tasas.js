@@ -148,15 +148,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="rate-max-cell">${formatCurrency(max)}</td>
                 <td class="rate-value-cell">${valor}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary edit-rate-btn"
+                    <button class="btn btn-sm btn-outline-primary edit-rate-btn me-1"
                             data-tasa-id="${tasaId}"
                             data-origen-id="${origenId}"
                             data-destino-id="${destinoId}"
                             data-valor="${valor}"
                             data-min="${min}"
                             data-max="${max}"
-                            title="Editar esta tasa">
+                            title="Editar">
                         <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-rate-btn"
+                            data-tasa-id="${tasaId}"
+                            title="Eliminar Tasa">
+                        <i class="bi bi-trash-fill"></i>
                     </button>
                 </td>
             `;
@@ -168,35 +173,77 @@ document.addEventListener('DOMContentLoaded', () => {
     paisDestinoSelect.addEventListener('change', enableEditor);
     form.addEventListener('submit', handleSaveRate);
 
-    ratesTableBody.addEventListener('click', (e) => {
+    ratesTableBody.addEventListener('click', async (e) => {
         const editButton = e.target.closest('.edit-rate-btn');
-        if (!editButton) return;
-
-        const tasaId = editButton.dataset.tasaId;
-        const origenId = editButton.dataset.origenId;
-        const destinoId = editButton.dataset.destinoId;
-        const valor = editButton.dataset.valor;
-        const min = editButton.dataset.min;
-        const max = editButton.dataset.max;
-
-        paisOrigenSelect.value = origenId;
-        paisDestinoSelect.value = destinoId;
+        const deleteButton = e.target.closest('.delete-rate-btn');
         
-        rateValueInput.value = valor;
-        montoMinInput.value = min;
-        montoMaxInput.value = max;
-        currentTasaIdInput.value = tasaId;
+        if (editButton) {
+            const tasaId = editButton.dataset.tasaId;
+            const origenId = editButton.dataset.origenId;
+            const destinoId = editButton.dataset.destinoId;
+            const valor = editButton.dataset.valor;
+            const min = editButton.dataset.min;
+            const max = editButton.dataset.max;
+    
+            paisOrigenSelect.value = origenId;
+            paisDestinoSelect.value = destinoId;
+            
+            rateValueInput.value = valor;
+            montoMinInput.value = min;
+            montoMaxInput.value = max;
+            currentTasaIdInput.value = tasaId;
+    
+            enableEditor();
+    
+            form.scrollIntoView({ behavior: 'smooth' });
+            
+            const cardBody = form.closest('.card-body');
+            cardBody.style.transition = 'background-color 0.5s ease-out';
+            cardBody.style.backgroundColor = '#e6f7ff';
+            setTimeout(() => {
+                cardBody.style.backgroundColor = '';
+            }, 1500);
+        }
 
-        enableEditor();
+        if (deleteButton) {
+            const tasaId = deleteButton.dataset.tasaId;
+            
+            const confirmed = await window.showConfirmModal(
+                'Eliminar Tasa', 
+                '¿Estás seguro de que quieres eliminar esta configuración de tasa? Esto podría dejar a la ruta sin precio.'
+            );
 
-        form.scrollIntoView({ behavior: 'smooth' });
-        
-        const cardBody = form.closest('.card-body');
-        cardBody.style.transition = 'background-color 0.5s ease-out';
-        cardBody.style.backgroundColor = '#e6f7ff';
-        setTimeout(() => {
-            cardBody.style.backgroundColor = '';
-        }, 1500);
+            if (confirmed) {
+                try {
+                    const response = await fetch('../api/?accion=deleteRate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tasaId: tasaId })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const row = document.getElementById(`tasa-row-${tasaId}`);
+                        if (row) row.remove();
+                        
+                        if (ratesTableBody.children.length === 0) {
+                            ratesTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No hay tasas configuradas.</td></tr>';
+                        }
+                        
+                        window.showInfoModal('Éxito', 'Tasa eliminada correctamente.', true);
+                        
+                        if (currentTasaIdInput.value === tasaId) {
+                            resetEditor(true);
+                        }
+                    } else {
+                        window.showInfoModal('Error', result.error || 'No se pudo eliminar.', false);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    window.showInfoModal('Error', 'Error de conexión.', false);
+                }
+            }
+        }
     });
 
     resetEditor();

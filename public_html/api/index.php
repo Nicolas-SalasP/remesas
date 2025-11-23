@@ -15,7 +15,8 @@ use App\Repositories\{
     FormaPagoRepository,
     TipoBeneficiarioRepository,
     ContabilidadRepository,
-    TasasHistoricoRepository // Para el gráfico
+    TasasHistoricoRepository,
+    CuentasAdminRepository
 };
 use App\Services\{
     LogService,
@@ -73,6 +74,7 @@ class Container {
             TipoBeneficiarioRepository::class => new TipoBeneficiarioRepository($this->getDb()),
             ContabilidadRepository::class => new ContabilidadRepository($this->getDb()),
             TasasHistoricoRepository::class => new TasasHistoricoRepository($this->getDb()),
+            CuentasAdminRepository::class => new CuentasAdminRepository($this->getDb()),
 
             // Services
             LogService::class => new LogService($this->getDb()),
@@ -115,7 +117,7 @@ class Container {
                 $this->get(ContabilidadService::class),
                 $this->get(CuentasBeneficiariasRepository::class)
             ),
-             DashboardService::class => new DashboardService(
+            DashboardService::class => new DashboardService(
                 $this->get(TransactionRepository::class),
                 $this->get(UserRepository::class),
                 $this->get(RateRepository::class),
@@ -142,7 +144,8 @@ class Container {
                 $this->get(PricingService::class),
                 $this->get(UserService::class),
                 $this->get(DashboardService::class),
-                $this->get(RolRepository::class)
+                $this->get(RolRepository::class),
+                $this->get(CuentasAdminRepository::class)
             ),
             DashboardController::class => new DashboardController(
                 $this->get(DashboardService::class),
@@ -194,6 +197,7 @@ try {
         'disable2FA'            => [ClientController::class, 'disable2FA', 'POST'],
 
         'updateRate'            => [AdminController::class, 'upsertRate', 'POST'],
+        'deleteRate'            => [AdminController::class, 'deleteRate', 'POST'],
         'addPais'               => [AdminController::class, 'addPais', 'POST'],
         'updatePais'            => [AdminController::class, 'updatePais', 'POST'],
         'updatePaisRol'         => [AdminController::class, 'updatePaisRol', 'POST'],
@@ -206,6 +210,9 @@ try {
         'getDashboardStats'     => [AdminController::class, 'getDashboardStats', 'GET'],
         'updateUserRole'        => [AdminController::class, 'updateUserRole', 'POST'],
         'deleteUser'            => [AdminController::class, 'deleteUser', 'POST'],
+        'getCuentasAdmin'       => [AdminController::class, 'getCuentasAdmin', 'GET'],
+        'saveCuentaAdmin'       => [AdminController::class, 'saveCuentaAdmin', 'POST'],
+        'deleteCuentaAdmin'     => [AdminController::class, 'deleteCuentaAdmin', 'POST'],
 
         'getSaldosContables'    => [ContabilidadController::class, 'getSaldos', 'GET'],
         'agregarFondos'         => [ContabilidadController::class, 'agregarFondos', 'POST'],

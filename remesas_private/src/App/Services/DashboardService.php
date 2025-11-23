@@ -94,14 +94,27 @@ class DashboardService
     public function getDolarBcvData(int $origenId, int $destinoId, int $days = 30): array
     {
         $history = $this->tasasHistoricoRepo->getRateHistoryByDate($origenId, $destinoId, $days);
-        $currentRateInfo = $this->rateRepository->findCurrentRate($origenId, $destinoId, 0);
-        $valorActual = (float)($currentRateInfo['ValorTasa'] ?? 0);
+        $range = $this->rateRepository->getMinMaxRates($origenId, $destinoId);
+        $minRate = (float)($range['MinTasa'] ?? 0);
+        $maxRate = (float)($range['MaxTasa'] ?? 0);
+
+        $valorActual = $maxRate;
+        $textoTasa = null;
+
+        if ($minRate > 0 && $maxRate > 0) {
+            if ($minRate != $maxRate) {
+                $dec = ($maxRate < 1000) ? 4 : 2;
+                $textoTasa = number_format($minRate, $dec, ',', '.') . ' - ' . number_format($maxRate, $dec, ',', '.');
+            } else {
+                $valorActual = $maxRate;
+            }
+        }
+
         $monedaOrigen = $this->countryRepository->findMonedaById($origenId) ?? 'N/A';
         $monedaDestino = $this->countryRepository->findMonedaById($destinoId) ?? 'N/A';
 
         $labels = [];
         $dataPoints = [];
-
         if (empty($history)) {
             $labels[] = date("d/m");
             $dataPoints[] = $valorActual;
@@ -111,30 +124,27 @@ class DashboardService
                 $dataPoints[] = (float)$row['TasaPromedio'];
             }
         }
-        
-        $lastDataPoint = end($dataPoints);
-        $lastLabel = end($labels);
-        $todayLabel = date("d/m");
 
         if ($valorActual > 0) {
-            if ($lastLabel === $todayLabel) {
-                $dataPoints[count($dataPoints) - 1] = $valorActual;
-            } elseif (empty($history) || $lastDataPoint !== $valorActual) {
+             $lastLabel = end($labels);
+             $todayLabel = date("d/m");
+             if ($lastLabel !== $todayLabel) {
                  $labels[] = $todayLabel;
                  $dataPoints[] = $valorActual;
-            }
+             } else {
+                 $dataPoints[count($dataPoints)-1] = $valorActual;
+             }
         }
 
-        $output = [
+        return [
             'success' => true,
             'valorActual' => $valorActual,
+            'textoTasa' => $textoTasa,
             'monedaOrigen' => $monedaOrigen,
             'monedaDestino' => $monedaDestino,
             'lastUpdate' => date('Y-m-d H:i:s'),
             'labels' => $labels,
             'data' => $dataPoints
         ];
-
-        return $output;
     }
 }

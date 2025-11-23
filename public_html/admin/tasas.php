@@ -23,7 +23,7 @@ $tasasExistentes = $conexion->query("
     FROM tasas T
     JOIN paises PO ON T.PaisOrigenID = PO.PaisID
     JOIN paises PD ON T.PaisDestinoID = PD.PaisID
-    WHERE PO.Activo = TRUE AND PD.Activo = TRUE
+    WHERE PO.Activo = TRUE AND PD.Activo = TRUE AND T.Activa = 1 
     ORDER BY PO.NombrePais, PD.NombrePais, T.MontoMinimo
 ")->fetch_all(MYSQLI_ASSOC);
 
@@ -127,15 +127,20 @@ foreach ($paisesActivos as $pais) {
                                     <td class="rate-max-cell"><?php echo htmlspecialchars(number_format($tasa['MontoMaximo'], 2, ',', '.')); ?></td>
                                     <td class="rate-value-cell"><?php echo htmlspecialchars($tasa['ValorTasa']); ?></td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-primary edit-rate-btn"
+                                        <button class="btn btn-sm btn-outline-primary edit-rate-btn me-1"
                                                 data-tasa-id="<?php echo $tasa['TasaID']; ?>"
                                                 data-origen-id="<?php echo $tasa['OrigenID']; ?>"
                                                 data-destino-id="<?php echo $tasa['DestinoID']; ?>"
                                                 data-valor="<?php echo $tasa['ValorTasa']; ?>"
                                                 data-min="<?php echo $tasa['MontoMinimo']; ?>"
                                                 data-max="<?php echo $tasa['MontoMaximo']; ?>"
-                                                title="Editar esta tasa">
+                                                title="Editar">
                                             <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-rate-btn"
+                                                data-tasa-id="<?php echo $tasa['TasaID']; ?>"
+                                                title="Eliminar Tasa">
+                                            <i class="bi bi-trash-fill"></i>
                                         </button>
                                     </td>
                                 </tr>

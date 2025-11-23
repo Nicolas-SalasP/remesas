@@ -113,10 +113,11 @@ class PricingService
         return $success;
     }
 
-
     public function adminUpsertRate(int $adminId, array $data): array
     {
         $tasaId = $data['tasaId'] ?? 'new';
+        $currentTasaId = ($tasaId === 'new') ? 0 : (int)$tasaId;
+
         $nuevoValor = (float)($data['nuevoValor'] ?? 0);
         $origenId = (int)($data['origenId'] ?? 0);
         $destinoId = (int)($data['destinoId'] ?? 0);
@@ -131,24 +132,27 @@ class PricingService
         if ($origenId <= 0 || $destinoId <= 0) {
              throw new Exception("IDs de país de origen o destino inválidos.", 400);
         }
+        if ($montoMin >= $montoMax) {
+            throw new Exception("El monto mínimo debe ser menor al máximo.", 400);
+        }
+
+        if ($this->rateRepository->checkOverlap($origenId, $destinoId, $montoMin, $montoMax, $currentTasaId)) {
+            throw new Exception("Error: El rango de montos ($montoMin - $montoMax) entra en conflicto con otra tasa ya existente para esta ruta. Ajusta los limites o elimina la tasa anterior.", 409);
+        }
 
         $origenNombre = $this->countryRepository->findNameById($origenId) ?? "ID $origenId";
         $destinoNombre = $this->countryRepository->findNameById($destinoId) ?? "ID $destinoId";
         $rutaLog = "[$origenNombre -> $destinoNombre] Rango: [$montoMin - $montoMax]";
 
-        $currentTasaId = 0;
-
-        if ($tasaId === 'new') {
+        if ($currentTasaId === 0) {
             $newTasaId = $this->rateRepository->createRate($origenId, $destinoId, $nuevoValor, $montoMin, $montoMax);
             $this->notificationService->logAdminAction($adminId, 'Admin creó tasa', "Ruta: $rutaLog, Valor: $nuevoValor, Nuevo TasaID: $newTasaId");
             $currentTasaId = $newTasaId;
         } else {
-            $tasaIdInt = (int)$tasaId;
-            $success = $this->rateRepository->updateRateValue($tasaIdInt, $nuevoValor, $montoMin, $montoMax);
+            $success = $this->rateRepository->updateRateValue($currentTasaId, $nuevoValor, $montoMin, $montoMax);
             if ($success) {
                 $this->notificationService->logAdminAction($adminId, 'Admin actualizó tasa', "Ruta: $rutaLog , Nuevo Valor: $nuevoValor");
             }
-            $currentTasaId = $tasaIdInt;
         }
 
         if ($currentTasaId > 0) {
@@ -156,5 +160,16 @@ class PricingService
         }
 
         return ['TasaID' => $currentTasaId];
+    }
+
+    public function adminDeleteRate(int $adminId, int $tasaId): void
+    {
+        if ($tasaId <= 0) throw new Exception("ID de tasa inválido.", 400);
+
+        if ($this->rateRepository->delete($tasaId)) {
+            $this->notificationService->logAdminAction($adminId, 'Admin eliminó tasa', "Tasa ID: $tasaId eliminada.");
+        } else {
+            throw new Exception("No se pudo eliminar la tasa.", 500);
+        }
     }
 }

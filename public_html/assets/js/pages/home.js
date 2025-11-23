@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         valorActualEl.innerHTML = `<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>`;
         descriptionEl.textContent = 'Cargando tasa...';
         ultimaActualizacionEl.textContent = '';
+        
         if (rateChartInstance) {
             rateChartInstance.destroy();
         }
@@ -35,17 +36,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (!data.success) throw new Error(data.error || 'La API devolvió datos incompletos.');
 
-            const valorActual = parseFloat(data.valorActual) || 0;
-            const valorFormateado = new Intl.NumberFormat('es-ES', {
-                style: 'currency',
-                currency: data.monedaDestino || 'VES',
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 6
-            }).format(valorActual);
+            const monedaDestino = data.monedaDestino || 'VES';
+            const monedaOrigen = data.monedaOrigen || 'CLP';
 
-            valorActualEl.textContent = valorFormateado;
+            // --- LÓGICA DE VISUALIZACIÓN (RANGO vs ÚNICA) ---
+            if (data.textoTasa) {
+                // Caso A: Hay múltiples tasas (Ej: 23.21 - 25.00)
+                valorActualEl.textContent = `${data.textoTasa} ${monedaDestino}`;
+                descriptionEl.textContent = `Dependiendo del monto enviado.`;
+            } else {
+                // Caso B: Tasa única
+                const valorActual = parseFloat(data.valorActual) || 0;
+                const valorFormateado = new Intl.NumberFormat('es-ES', {
+                    style: 'currency',
+                    currency: monedaDestino,
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 4
+                }).format(valorActual);
+
+                valorActualEl.textContent = valorFormateado;
+                descriptionEl.textContent = `1 ${monedaOrigen} = ${valorFormateado}`;
+            }
             
-            descriptionEl.textContent = `1 ${data.monedaOrigen || 'CLP'} = ${valorFormateado}`;
             ultimaActualizacionEl.textContent = `Tasa de referencia actual.`;
 
             rateChartInstance = new Chart(ctx, {
@@ -53,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 data: {
                     labels: data.labels,
                     datasets: [{
-                        label: `Tasa Promedio (${data.monedaDestino || 'N/A'})`,
+                        label: `Tasa Promedio (${monedaDestino})`,
                         data: data.data,
                         fill: true,
                         backgroundColor: 'rgba(0, 123, 255, 0.1)',
